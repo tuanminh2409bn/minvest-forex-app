@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/auth/screens/welcome_screen.dart';
-import 'package:minvest_forex_app/features/signals/screens/signal_dashboard_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/verification_screen.dart';
+import 'package:minvest_forex_app/app/main_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -29,7 +29,7 @@ class AuthGate extends StatelessWidget {
                 final data = userSnapshot.data!.data() as Map<String, dynamic>?;
 
                 if (data != null && data['subscriptionTier'] != null) {
-                  return const SignalDashboardScreen();
+                  return const MainScreen();
                 }
               }
 

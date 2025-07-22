@@ -3,6 +3,7 @@ import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -17,53 +18,59 @@ class WelcomeScreen extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0D1117), Color(0xFF7A7F85), Color.fromARGB(255, 20, 29, 110)],
+            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             stops: [0.0, 0.5, 1.0],
           ),
         ),
+        // ------------------------------------------
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- THAY ĐỔI 2: Thêm Padding để dịch lá cờ xuống ---
                 Padding(
-                  padding: const EdgeInsets.only(top: 25),
+                  padding: const EdgeInsets.only(top: 30),
                   child: Align(
                     alignment: Alignment.topRight,
                     child: PopupMenuButton<Locale>(
-                        onSelected: (Locale locale) => languageProvider.setLocale(locale),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(value: Locale('en'), child: Text('English')),
-                          const PopupMenuItem(value: Locale('vi'), child: Text('Tiếng Việt')),
-                        ],
-                        child: Consumer<LanguageProvider>(
-                          builder: (context, provider, child) {
-                            // --- THAY ĐỔI 3: Chuyển cờ sang hình chữ nhật ---
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(4.0),
-                              child: Image.asset(
-                                provider.locale?.languageCode == 'vi'
-                                    ? 'assets/images/vn_flag.png'
-                                    : 'assets/images/us_flag.png',
-                                height: 24,
-                                width: 36,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          },
-                        )
+                      onSelected: (Locale locale) => languageProvider.setLocale(locale),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: Locale('en'), child: Text('English')),
+                        const PopupMenuItem(value: Locale('vi'), child: Text('Tiếng Việt')),
+                      ],
+                      child: Consumer<LanguageProvider>(
+                        builder: (context, provider, child) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(4.0),
+                            child: Image.asset(
+                              provider.locale?.languageCode == 'vi'
+                                  ? 'assets/images/vn_flag.png'
+                                  : 'assets/images/us_flag.png',
+                              height: 24,
+                              width: 36,
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
                 const Spacer(),
-                const Text('Welcome to', style: TextStyle(fontSize: 18, color: Colors.white)),
+                const Text(
+                  'Welcome to',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  // --- THAY ĐỔI 1: Tăng kích thước logo ---
-                  child: Image.asset('assets/images/minvest_logo.png', height: 80),
+                  child: SvgPicture.asset(
+                    'assets/images/minvest_logo.svg',
+                    height: 150,
+                  ),
                 ),
                 const Text(
                   'Enhance your trading with intelligent signals.',
@@ -71,7 +78,11 @@ class WelcomeScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 16, color: Colors.white, height: 1.5),
                 ),
                 const SizedBox(height: 50),
-                const Text('Sign in', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Sign in',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 24),
 
                 _SocialSignInButton(
@@ -80,26 +91,23 @@ class WelcomeScreen extends StatelessWidget {
                   onPressed: () => authService.signInWithGoogle(),
                 ),
                 const SizedBox(height: 16),
-
-                // Nút Apple sẽ chỉ hoạt động trên iOS nhưng vẫn hiển thị
-                SignInWithAppleButton(
-                  onPressed: () {
-                    if (Platform.isIOS || Platform.isMacOS) {
-                      authService.signInWithApple();
-                    }
-                  },
-                  // --- THAY ĐỔI 4: Đổi style nút Apple cho phù hợp ---
-                  style: SignInWithAppleButtonStyle.white,
-                  borderRadius: BorderRadius.circular(12),
-                  height: 48,
-                ),
-                const SizedBox(height: 16),
-
                 _SocialSignInButton(
                   iconPath: 'assets/images/facebook_logo.png',
                   text: 'Continue by Facebook',
                   onPressed: () => authService.signInWithFacebook(),
                 ),
+                const SizedBox(height: 16),
+                if (Platform.isIOS || Platform.isAndroid)
+                  SignInWithAppleButton(
+                    onPressed: () {
+                      if (Platform.isIOS || Platform.isMacOS) {
+                        authService.signInWithApple();
+                      }
+                    },
+                    style: SignInWithAppleButtonStyle.black,
+                    borderRadius: BorderRadius.circular(12),
+                    height: 50,
+                  ),
                 const Spacer(flex: 2),
               ],
             ),
@@ -123,15 +131,52 @@ class _SocialSignInButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Image.asset(iconPath, height: 30, width: 30),
-      label: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      style: ElevatedButton.styleFrom(
-        // --- THAY ĐỔI 4: Đổi màu nút sang màu xanh mờ ---
-        backgroundColor: Colors.blue.withOpacity(0.10),
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Ink(
+          decoration: BoxDecoration(
+            // --- THAY ĐỔI Ở ĐÂY ---
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF0C0938), // Màu xanh đậm
+                Color(0xFF141A4C), // Lặp lại màu xanh đậm
+                Color(0xFF1D2B62), // Màu xanh nhạt (pha trắng)
+              ],
+              // "stops" kiểm soát vị trí của mỗi màu
+              // [ 0.0,   0.7,   1.0 ]
+              //   |      |      |
+              //   |      |      └-> Màu trắng bắt đầu và kết thúc ở cuối (100%)
+              //   |      └-> Màu xanh đậm kết thúc ở 70%
+              //   └-> Màu xanh đậm bắt đầu ở đầu (0%)
+              stops: [0.0, 0.5, 1.0],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            // ---------------------
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Image.asset(iconPath, height: 24, width: 24),
+                const SizedBox(width: 24),
+                Text(
+                    text,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

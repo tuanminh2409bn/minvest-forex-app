@@ -38,5 +38,8 @@
   "buttonSelectScreenshot": "Chọn Ảnh Chụp Mới",
   "buttonSubmitReview": "Gửi Đi Để Xét Duyệt",
   "dontHaveAccount": "Chưa có tài khoản?",
-  "signUpButton": "Đăng Ký"
+  "signUpButton": "Đăng Ký",
+  "tabSignal": "Tín hiệu",
+  "tabChart": "Biểu đồ",
+  "tabProfile": "Hồ sơ"
 }

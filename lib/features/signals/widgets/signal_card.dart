@@ -1,146 +1,165 @@
-// lib/features/signals/widgets/signal_card.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class SignalCard extends StatelessWidget {
   final Signal signal;
+  final String userTier;
+  final int signalIndex; // Thêm chỉ số của tín hiệu
 
-  const SignalCard({super.key, required this.signal});
+  const SignalCard({
+    super.key,
+    required this.signal,
+    required this.userTier,
+    required this.signalIndex,
+  });
+
+  String _getFlagAsset(String currency) {
+    return 'assets/images/${currency.toLowerCase()}_flag.png';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final bool isBuy = signal.type.toLowerCase() == 'buy';
-    final Color signalColor = isBuy ? Colors.green.shade400 : Colors.red.shade400;
-    final String translatedType = isBuy ? l10n.signalTypeBuy : l10n.signalTypeSell;
+    final Color signalColor = isBuy ? const Color(0xFF00B894) : const Color(0xFFD63031);
 
-    return Card(
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: signalColor.withOpacity(0.5), width: 1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () {
+    // --- LOGIC MỚI CHO TÀI KHOẢN DEMO ---
+    // Che mờ thông tin nếu là tài khoản Demo và tín hiệu thứ 9 trở đi
+    final bool shouldObfuscate = userTier == 'demo' && signalIndex >= 8;
+
+    return GestureDetector(
+      onTap: () {
+        // Chỉ cho phép xem chi tiết nếu không phải tài khoản Free/Demo
+        if (userTier != 'free' && !shouldObfuscate) {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => SignalDetailScreen(signal: signal),
-            ),
+            MaterialPageRoute(builder: (context) => SignalDetailScreen(signal: signal)),
           );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- Hàng đầu tiên: Symbol, Type và Thời gian ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF2D3436).withOpacity(0.8),
+              const Color(0xFF1E272E).withOpacity(0.5),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                SizedBox(
+                  width: 50,
+                  height: 30,
+                  child: Stack(
                     children: [
-                      Text(
-                        signal.symbol,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Positioned(
+                        left: 0,
+                        child: Image.asset(_getFlagAsset(signal.symbol.substring(0, 3)), height: 30, width: 45, fit: BoxFit.cover),
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: signalColor,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          translatedType,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
+                      Positioned(
+                        right: 0,
+                        child: Image.asset(_getFlagAsset(signal.symbol.substring(3, 6)), height: 30, width: 45, fit: BoxFit.cover),
                       ),
                     ],
                   ),
-                  Text(
-                    DateFormat('HH:mm dd/MM').format(signal.createdAt.toDate()),
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                ),
+                const SizedBox(width: 12),
+                Text(signal.symbol, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: signalColor,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
-              ),
-              const Divider(height: 24),
-              // --- Hàng thứ hai: Entry và Stop Loss ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildInfoColumn(l10n.entry, signal.entryPrice.toString()),
-                  _buildInfoColumn(l10n.stopLoss, signal.stopLoss.toString()),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // --- Hàng thứ ba: Các mức Take Profit ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildInfoColumn(l10n.takeProfit1, signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toString() : '—', color: Colors.blue.shade300),
-                  _buildInfoColumn(l10n.takeProfit2, signal.takeProfits.length > 1 ? signal.takeProfits[1].toString() : '—', color: Colors.blue.shade300),
-                  _buildInfoColumn(l10n.takeProfit3, signal.takeProfits.length > 2 ? signal.takeProfits[2].toString() : '—', color: Colors.blue.shade300),
-                ],
-              ),
+                  child: Text(
+                    signal.type.toUpperCase(),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24, color: Colors.white12),
 
-              // =========== THÊM MỚI Ở ĐÂY ===========
-              const Divider(height: 24, thickness: 0.1),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    l10n.viewDetails,
-                    style: TextStyle(
-                      color: Colors.blue.shade400,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: Colors.blue.shade400,
-                  ),
-                ],
-              ),
-              // ======================================
-            ],
-          ),
+            // --- HIỂN THỊ DỮ LIỆU HOẶC NÚT UPGRADE ---
+            shouldObfuscate ? _buildUpgradeView() : _buildSignalData(signalColor),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoColumn(String title, String value, {Color? color}) {
+  // Giao diện cho tài khoản VIP/Elite
+  Widget _buildSignalData(Color signalColor) {
     return Column(
       children: [
-        Text(
-          title,
-          style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildInfoColumn("Entry", signal.entryPrice.toStringAsFixed(5)),
+            _buildInfoColumn("Stop loss", signal.stopLoss.toStringAsFixed(5)),
+            _buildInfoColumn("Take profit", signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(5) : "---"),
+          ],
         ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              DateFormat('HH:mm - dd/MM/yyyy').format(signal.createdAt.toDate()),
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: signal.isMatched ? signalColor : Colors.grey.shade700,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                signal.isMatched ? "MATCHED" : "NOT MATCHED",
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        )
+      ],
+    );
+  }
+
+  // Giao diện cho tài khoản Demo (bị che mờ)
+  Widget _buildUpgradeView() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        const Icon(Icons.lock_outline, color: Colors.amber, size: 24),
+        Column(
+          children: [
+            const Text("UPGRADE", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+            Text("to see signal details", style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+          ],
+        ),
+        const Icon(Icons.workspace_premium, color: Colors.amber, size: 24),
+      ],
+    );
+  }
+
+  Widget _buildInfoColumn(String title, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
+        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }

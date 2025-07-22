@@ -3,14 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class SignalService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Lấy một Stream các tín hiệu đang chạy, sắp xếp mới nhất lên đầu
+  // --- SỬA LỖI Ở ĐÂY: Thêm tham số {String? userTier} ---
   Stream<QuerySnapshot> getRunningSignals({String? userTier}) {
     Query query = _firestore
         .collection('signals')
         .where('status', isEqualTo: 'running')
         .orderBy('createdAt', descending: true);
 
-    // Nếu là demo, chỉ lấy 8 tín hiệu
+    // Nếu là tài khoản Demo, chỉ lấy 8 tín hiệu
     if (userTier == 'demo') {
       query = query.limit(8);
     }
@@ -18,11 +18,18 @@ class SignalService {
     return query.snapshots();
   }
 
-  Stream<QuerySnapshot> getClosedSignals() {
-    return _firestore
+  // --- SỬA LỖI Ở ĐÂY: Thêm tham số {String? userTier} ---
+  Stream<QuerySnapshot> getClosedSignals({String? userTier}) {
+    Query query = _firestore
         .collection('signals')
         .where('status', isEqualTo: 'closed')
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+        .orderBy('createdAt', descending: true);
+
+    // Bạn có thể thêm logic giới hạn cho tài khoản Demo ở đây nếu muốn
+    // if (userTier == 'demo') {
+    //   query = query.limit(20); // Ví dụ: giới hạn xem 20 lệnh lịch sử
+    // }
+
+    return query.snapshots();
   }
 }

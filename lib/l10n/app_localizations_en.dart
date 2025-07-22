@@ -128,4 +128,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signUpButton => 'Sign Up';
+
+  @override
+  String get tabSignal => 'Signal';
+
+  @override
+  String get tabChart => 'Chart';
+
+  @override
+  String get tabProfile => 'Profile';
 }

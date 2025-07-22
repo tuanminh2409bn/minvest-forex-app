@@ -331,6 +331,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign Up'**
   String get signUpButton;
+
+  /// No description provided for @tabSignal.
+  ///
+  /// In en, this message translates to:
+  /// **'Signal'**
+  String get tabSignal;
+
+  /// No description provided for @tabChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Chart'**
+  String get tabChart;
+
+  /// No description provided for @tabProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get tabProfile;
 }
 
 class _AppLocalizationsDelegate

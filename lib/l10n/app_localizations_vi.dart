@@ -126,4 +126,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get signUpButton => 'Đăng Ký';
+
+  @override
+  String get tabSignal => 'Tín hiệu';
+
+  @override
+  String get tabChart => 'Biểu đồ';
+
+  @override
+  String get tabProfile => 'Hồ sơ';
 }

@@ -12,6 +12,8 @@ class Signal {
   final String? result;
   final num? pips;
   final String? reason;
+  // --- THÊM TRƯỜNG MỚI THEO THIẾT KẾ ---
+  final bool isMatched; // Trạng thái khớp lệnh
 
   Signal({
     required this.id,
@@ -25,6 +27,7 @@ class Signal {
     this.result,
     this.pips,
     this.reason,
+    this.isMatched = false, // Giá trị mặc định
   });
 
   factory Signal.fromFirestore(DocumentSnapshot doc) {
@@ -41,6 +44,8 @@ class Signal {
       result: data['result'],
       pips: data['pips'],
       reason: data['reason'],
+      // --- LẤY DỮ LIỆU MỚI TỪ FIRESTORE ---
+      isMatched: data['isMatched'] ?? false,
     );
   }
 }

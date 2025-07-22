@@ -38,5 +38,8 @@
   "buttonSelectScreenshot": "Select New Screenshot",
   "buttonSubmitReview": "Submit for Review",
   "dontHaveAccount": "Don't have an account?",
-  "signUpButton": "Sign Up"
+  "signUpButton": "Sign Up",
+  "tabSignal": "Signal",
+  "tabChart": "Chart",
+  "tabProfile": "Profile"
 }
