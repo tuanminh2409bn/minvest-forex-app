@@ -141,7 +141,6 @@ class _SocialSignInButton extends StatelessWidget {
         ),
         child: Ink(
           decoration: BoxDecoration(
-            // --- THAY ĐỔI Ở ĐÂY ---
             gradient: const LinearGradient(
               colors: [
                 Color(0xFF0C0938), // Màu xanh đậm

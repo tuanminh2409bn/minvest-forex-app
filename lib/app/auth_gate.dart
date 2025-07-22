@@ -37,7 +37,6 @@ class AuthGate extends StatelessWidget {
             },
           );
         }
-        // SỬA LỖI Ở ĐÂY: Thêm return cho trường hợp chưa đăng nhập
         return const WelcomeScreen();
       },
     );
