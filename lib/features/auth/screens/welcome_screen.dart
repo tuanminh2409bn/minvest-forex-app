@@ -148,12 +148,6 @@ class _SocialSignInButton extends StatelessWidget {
                 Color(0xFF141A4C), // Lặp lại màu xanh đậm
                 Color(0xFF1D2B62), // Màu xanh nhạt (pha trắng)
               ],
-              // "stops" kiểm soát vị trí của mỗi màu
-              // [ 0.0,   0.7,   1.0 ]
-              //   |      |      |
-              //   |      |      └-> Màu trắng bắt đầu và kết thúc ở cuối (100%)
-              //   |      └-> Màu xanh đậm kết thúc ở 70%
-              //   └-> Màu xanh đậm bắt đầu ở đầu (0%)
               stops: [0.0, 0.5, 1.0],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,

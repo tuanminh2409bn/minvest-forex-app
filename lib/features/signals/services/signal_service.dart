@@ -24,12 +24,6 @@ class SignalService {
         .collection('signals')
         .where('status', isEqualTo: 'closed')
         .orderBy('createdAt', descending: true);
-
-    // Bạn có thể thêm logic giới hạn cho tài khoản Demo ở đây nếu muốn
-    // if (userTier == 'demo') {
-    //   query = query.limit(20); // Ví dụ: giới hạn xem 20 lệnh lịch sử
-    // }
-
     return query.snapshots();
   }
 }

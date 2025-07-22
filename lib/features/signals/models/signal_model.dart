@@ -12,7 +12,9 @@ class Signal {
   final String? result;
   final num? pips;
   final String? reason;
-  // --- THÊM TRƯỜNG MỚI THEO THIẾT KẾ ---
+  // --- THÊM CÁC TRƯỜNG MỚI THEO THIẾT KẾ ---
+  final String matchStatus; // 'MATCHED' hoặc 'NOT MATCHED'
+  final List<int> hitTps; // Danh sách các TP đã hit, ví dụ: [1, 2]
   final bool isMatched; // Trạng thái khớp lệnh
 
   Signal({
@@ -27,7 +29,9 @@ class Signal {
     this.result,
     this.pips,
     this.reason,
-    this.isMatched = false, // Giá trị mặc định
+    required this.matchStatus,
+    this.hitTps = const [],
+    this.isMatched = false, // Thêm vào constructor
   });
 
   factory Signal.fromFirestore(DocumentSnapshot doc) {
@@ -45,7 +49,9 @@ class Signal {
       pips: data['pips'],
       reason: data['reason'],
       // --- LẤY DỮ LIỆU MỚI TỪ FIRESTORE ---
-      isMatched: data['isMatched'] ?? false,
+      matchStatus: data['matchStatus'] ?? 'NOT MATCHED',
+      hitTps: List<int>.from(data['hitTps'] ?? []),
+      isMatched: data['isMatched'] ?? false, // Lấy dữ liệu isMatched
     );
   }
 }
