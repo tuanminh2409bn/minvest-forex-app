@@ -25,64 +25,61 @@ class _SignalScreenState extends State<SignalScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final userTier = userProvider.userTier ?? 'free';
 
+    // YÊU CẦU: Bỏ AppBar
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: null,
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leadingWidth: 140,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: _buildTabs(),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              // TODO: Điều hướng đến màn hình Notification
-            },
-            icon: const Icon(Icons.notifications_none),
-          ),
-        ],
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: Column(
-          children: [
-            _buildFilters(),
-            Expanded(
-              child: userTier == 'free'
-                  ? _buildFreeUserView(context)
-                  : _buildSignalList(userTier),
+      body: SafeArea(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.5, 1.0],
             ),
-          ],
+          ),
+          child: Column(
+            children: [
+              // Đặt các thành phần của AppBar cũ vào đây
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildTabs(),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.notifications_none),
+                    ),
+                  ],
+                ),
+              ),
+              _buildFilters(),
+              Expanded(
+                child: userTier == 'free'
+                    ? _buildFreeUserView(context)
+                    : _buildSignalList(userTier),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Giao diện cho tài khoản Free
   Widget _buildFreeUserView(BuildContext context) {
-    // SỬA LỖI OVERFLOW: Bọc trong SingleChildScrollView để có thể cuộn nhẹ khi cần
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20.0),
+      child: Container(
+        height: MediaQuery.of(context).size.height - 150, // Điều chỉnh chiều cao linh hoạt
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Spacer(flex: 2),
             _buildLockedCardPlaceholder(),
             _buildLockedCardPlaceholder(),
-            const SizedBox(height: 30),
+            const Spacer(flex: 1),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SizedBox(
@@ -137,14 +134,14 @@ class _SignalScreenState extends State<SignalScreen> {
                   ),
                 ),
               ),
-            )
+            ),
+            const Spacer(flex: 3),
           ],
         ),
       ),
     );
   }
 
-  // Card tín hiệu bị khóa đã được tinh chỉnh
   Widget _buildLockedCardPlaceholder() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -157,53 +154,49 @@ class _SignalScreenState extends State<SignalScreen> {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Image.asset('assets/images/us_flag.png', height: 24, width: 36, fit: BoxFit.cover),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("XAU/USD", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    Text("AI SIGNAL", style: TextStyle(fontSize: 9, color: Colors.grey)),
-                  ],
-                ),
+              ClipOval(
+                child: Image.asset('assets/images/us_flag.png', height: 22, width: 22, fit: BoxFit.cover),
               ),
+              const SizedBox(width: 8),
+              const Text("XAU/USD", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(width: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF238636),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text("MUA", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                child: const Text("MUA", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
               ),
-              const SizedBox(width: 8),
+              const Spacer(),
               const Text("NOT MATCHED", style: TextStyle(color: Colors.grey, fontSize: 11)),
             ],
           ),
-          const Divider(height: 20, color: Colors.blueGrey),
+          const Divider(height: 16, color: Colors.blueGrey),
           Row(
             children: [
               _buildUpgradeItem("Entry"),
               _buildUpgradeItem("SL"),
-              _buildUpgradeItem("TP1"),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             children: [
+              _buildUpgradeItem("TP1"),
               _buildUpgradeItem("TP2"),
               _buildUpgradeItem("TP3"),
-              const Expanded(child: SizedBox()),
             ],
           ),
-          const SizedBox(height: 10),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 8),
+          // SỬA LỖI OVERFLOW TRIỆT ĐỂ
+          Row(
             children: [
-              Text("20:03 07/08", style: TextStyle(color: Colors.grey, fontSize: 11)),
+              const Text("20:03 07/08", style: TextStyle(color: Colors.grey, fontSize: 11)),
+              const Spacer(),
               Row(
-                children: [
+                children: const [
                   Text("see details", style: TextStyle(color: Color(0xFF5865F2), fontSize: 11)),
                   Icon(Icons.arrow_forward_ios, size: 11, color: Color(0xFF5865F2)),
                 ],
@@ -215,7 +208,6 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  // Widget con cho các mục bị khóa
   Widget _buildUpgradeItem(String title) {
     return Expanded(
       child: Column(
@@ -227,7 +219,6 @@ class _SignalScreenState extends State<SignalScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text("Upgrade", style: TextStyle(color: Colors.white, fontSize: 13)),
-              // YÊU CẦU: Giảm khoảng cách
               const SizedBox(width: 2),
               Image.asset(
                 'assets/images/crown_icon.png',
@@ -241,20 +232,25 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  // Tabs Live/End đã được tinh chỉnh
   Widget _buildTabs() {
     return Container(
-      height: 35,
-      // YÊU CẦU: Nút hình chữ nhật
-      width: 120,
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(child: _buildTabItem("LIVE", _isLive, () => setState(() => _isLive = true))),
-          Expanded(child: _buildTabItem("END", !_isLive, () => setState(() => _isLive = false))),
+          SizedBox(
+              width: 60,
+              height: 32,
+              child: _buildTabItem("LIVE", _isLive, () => setState(() => _isLive = true))
+          ),
+          SizedBox(
+              width: 60,
+              height: 32,
+              child: _buildTabItem("END", !_isLive, () => setState(() => _isLive = false))
+          ),
         ],
       ),
     );
@@ -276,17 +272,20 @@ class _SignalScreenState extends State<SignalScreen> {
             end: Alignment.centerRight,
           )
               : null,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: Center(child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+        child: Center(
+            child: Text(
+              text,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            )),
       ),
     );
   }
 
-  // YÊU CẦU: Widget filter được thiết kế lại
   Widget _buildFilters() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -303,7 +302,6 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  // ---- CÁC HÀM KHÁC GIỮ NGUYÊN ----
   Widget _buildSignalList(String userTier) {
     return StreamBuilder<QuerySnapshot>(
       stream: _isLive
@@ -334,7 +332,6 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 }
 
-// YÊU CẦU: Widget mới cho các nút filter
 class _GradientFilterButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -343,29 +340,33 @@ class _GradientFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 35,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 120),
+      child: Container(
+        height: 32,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+          ),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.blueGrey.withOpacity(0.5)),
         ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blueGrey.withOpacity(0.5)),
-      ),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(text, style: const TextStyle(fontSize: 12)),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down, size: 20),
-          ],
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(text, style: const TextStyle(fontSize: 11)),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, size: 18),
+            ],
+          ),
         ),
       ),
     );

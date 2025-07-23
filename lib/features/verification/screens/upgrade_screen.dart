@@ -1,192 +1,204 @@
-import 'dart:io';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:minvest_forex_app/core/providers/user_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart';
+import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
 
-class UpgradeScreen extends StatefulWidget {
+class UpgradeScreen extends StatelessWidget {
   const UpgradeScreen({super.key});
 
   @override
-  State<UpgradeScreen> createState() => _UpgradeScreenState();
-}
-
-class _UpgradeScreenState extends State<UpgradeScreen> {
-  // Khai báo lại các biến trạng thái
-  File? _imageFile;
-  bool _isLoading = false;
-  String _statusMessageKey = 'uploadPrompt';
-
-  final ImagePicker _picker = ImagePicker();
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final User? _currentUser = FirebaseAuth.instance.currentUser;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Provider.of<UserProvider>(context, listen: false).addListener(_handleVerificationResult);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    Provider.of<UserProvider>(context, listen: false).removeListener(_handleVerificationResult);
-    super.dispose();
-  }
-
-  void _handleVerificationResult() {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.verificationStatus == 'failed') {
-      final errorMessage = userProvider.verificationError ?? 'An unknown error occurred.';
-      if (mounted) {
-        _showFeedbackSnackbar(errorMessage, isError: true);
-        setState(() {
-          _isLoading = false;
-          _statusMessageKey = 'statusUploadFailed';
-        });
-      }
-      userProvider.clearVerificationStatus();
-    }
-  }
-
-  void _showFeedbackSnackbar(String message, {bool isError = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade600,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-      margin: const EdgeInsets.all(10.0),
-    ));
-  }
-
-  Future<void> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-        _statusMessageKey = 'statusImageSelected';
-      });
-    }
-  }
-
-  Future<void> _uploadImage() async {
-    if (_imageFile == null || _currentUser == null) return;
-    final l10n = AppLocalizations.of(context)!;
-
-    setState(() {
-      _isLoading = true;
-      _statusMessageKey = 'statusUploading';
-    });
-
-    try {
-      final ref = _storage.ref().child('verification_images/${_currentUser!.uid}.jpg');
-      await ref.putFile(_imageFile!);
-      if (!mounted) return;
-
-      _showFeedbackSnackbar(l10n.statusUploadSuccess);
-
-    } catch (e) {
-      if (!mounted) return;
-      _showFeedbackSnackbar(l10n.statusUploadFailed, isError: true);
-      print('Lỗi tải ảnh: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  String _getTranslatedStatus(BuildContext context, String key) {
-    final l10n = AppLocalizations.of(context)!;
-    switch (key) {
-      case 'uploadPrompt': return l10n.uploadPrompt;
-      case 'statusImageSelected': return l10n.statusImageSelected;
-      case 'statusUploading': return l10n.statusUploading;
-      case 'statusUploadSuccess': return l10n.statusUploadSuccess;
-      case 'statusUploadFailed': return l10n.statusUploadFailed;
-      default: return l10n.uploadPrompt;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.upgradeScreenTitle)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l10n.compareTiers, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            Table(
-              border: TableBorder.all(color: Colors.grey.shade700, width: 0.5, borderRadius: BorderRadius.circular(8)),
-              columnWidths: const { 0: FlexColumnWidth(2), 1: FlexColumnWidth(1.2), 2: FlexColumnWidth(1.2), 3: FlexColumnWidth(1.2), },
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text(
+          'UPGRADE ACCOUNT',
+          // YÊU CẦU: Cỡ chữ nhỏ hơn, in đậm
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: SingleChildScrollView( // Thêm để tránh lỗi tràn trên các màn hình nhỏ
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
               children: [
-                _buildTableHeader([l10n.feature, l10n.tierDemo, l10n.tierVIP, l10n.tierElite]),
-                _buildTableRow([l10n.balance, '< \$200', '>= \$200', '>= \$500']),
-                _buildTableRow([l10n.signalTime, '8h-17h', '8h-17h', 'Fulltime']),
-                _buildTableRow([l10n.signalQty, '7-8', 'Full', 'Full']),
-                _buildTableRow([l10n.analysis, 'NO', 'NO', 'YES']),
-                _buildTableRow([l10n.mobileWebApp, 'NO', 'YES', 'YES']),
+                const SizedBox(height: 20),
+                const Center(
+                  child: Text(
+                    'COMPARE TIERS',
+                    // YÊU CẦU: Cỡ chữ to hơn
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildTiersTable(),
+                const SizedBox(height: 30),
+                _buildActionButton(
+                  context,
+                  text: 'Open exness account!',
+                  onPressed: () {},
+                  isPrimary: false,
+                ),
+                const SizedBox(height: 16),
+                _buildActionButton(
+                  context,
+                  text: 'Account verification with Exness',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AccountVerificationScreen()),
+                    );
+                  },
+                  isPrimary: true,
+                ),
+                const SizedBox(height: 16),
+                _buildActionButton(
+                  context,
+                  text: 'Pay in app to upgrade',
+                  onPressed: () {},
+                  isPrimary: true,
+                ),
+                const SizedBox(height: 16),
+                _buildActionButton(
+                  context,
+                  text: 'Bank transfer to upgrade',
+                  onPressed: () {},
+                  isPrimary: true,
+                ),
+                const SizedBox(height: 30),
               ],
             ),
-            const SizedBox(height: 40),
-            Text(_getTranslatedStatus(context, _statusMessageKey), textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: Colors.grey.shade300)),
-            const SizedBox(height: 16),
-            if (_imageFile != null) ...[
-              ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(_imageFile!, height: 250, fit: BoxFit.contain)),
-              const SizedBox(height: 16),
-            ],
-            OutlinedButton.icon(
-              onPressed: _isLoading ? null : _pickImage,
-              icon: const Icon(Icons.photo_library_outlined),
-              label: Text(l10n.buttonSelectScreenshot),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: (_imageFile == null || _isLoading) ? null : _uploadImage,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600, padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: _isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
-                  : Text(l10n.buttonSubmitReview, style: const TextStyle(fontSize: 16)),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  TableRow _buildTableHeader(List<String> cells) => TableRow(
-    decoration: BoxDecoration(color: Colors.grey.shade800),
-    children: cells.map((cell) => Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Text(cell, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center),
-    )).toList(),
-  );
+  Widget _buildTiersTable() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Table(
+        border: TableBorder(
+          horizontalInside: BorderSide(color: Colors.blueGrey.withOpacity(0.3), width: 1),
+          verticalInside: BorderSide(color: Colors.blueGrey.withOpacity(0.3), width: 1),
+        ),
+        // YÊU CẦU: Điều chỉnh lại độ rộng cột cho nhỏ gọn
+        columnWidths: const {
+          0: FlexColumnWidth(1.6),
+          1: FlexColumnWidth(1),
+          2: FlexColumnWidth(1),
+          3: FlexColumnWidth(1),
+        },
+        children: [
+          _buildTableRow(['Feature', 'Demo', 'Vip', 'Elite'], isHeader: true),
+          _buildTableRow(['Balance', '< \$200', '> \$200', '> \$500']),
+          _buildTableRow(['Signal time', '8h-17h', '8h-17h', 'fulltime']),
+          _buildTableRow(['Signal Qty', '7-8/day', 'full', 'full']),
+          _buildTableRow(['Analysis', 'icon:cancel', 'icon:cancel', 'icon:check']),
+          _buildTableRow(['Lot/week', '0.05', '0.3', '0.5']),
+        ],
+      ),
+    );
+  }
 
-  TableRow _buildTableRow(List<String> cells) => TableRow(
-    children: cells.map((cell) {
-      Widget child;
-      if (cell == 'YES') {
-        child = const Icon(Icons.check_circle, color: Colors.green, size: 20);
-      } else if (cell == 'NO') {
-        child = const Icon(Icons.cancel, color: Colors.red, size: 20);
-      } else {
-        child = Text(cell, textAlign: TextAlign.center);
-      }
-      return Padding(padding: const EdgeInsets.all(12.0), child: child);
-    }).toList(),
-  );
+  TableRow _buildTableRow(List<String> cells, {bool isHeader = false}) {
+    return TableRow(
+      // YÊU CẦU: Áp dụng màu nền cho cả hàng tiêu đề
+      decoration: isHeader ? const BoxDecoration(color: Color(0xFF151a2e)) : null,
+      children: cells.map((cell) {
+        final isFirstCell = cells.indexOf(cell) == 0;
+        Widget cellWidget;
+
+        if (cell.startsWith('icon:')) {
+          IconData iconData = cell == 'icon:check' ? Icons.check_circle : Icons.cancel;
+          Color iconColor = cell == 'icon:check' ? Colors.greenAccent : Colors.redAccent;
+          cellWidget = Icon(iconData, color: iconColor, size: 18);
+        } else {
+          cellWidget = Text(
+            cell,
+            textAlign: isFirstCell ? TextAlign.left : TextAlign.center,
+            // YÊU CẦU: Không xuống dòng
+            softWrap: false,
+            overflow: TextOverflow.fade,
+            style: TextStyle(
+              fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+              color: isHeader ? Colors.white : Colors.white,
+              // YÊU CẦU: Giảm cỡ chữ cho nhỏ gọn
+              fontSize: 13,
+            ),
+          );
+        }
+
+        // YÊU CẦU: Thêm gradient cho ô tiêu đề
+        return TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Container(
+            decoration: (isHeader && !isFirstCell)
+                ? BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)],
+              ),
+            )
+                : (isHeader && isFirstCell) // Ô Feature
+                ? BoxDecoration(
+              color: const Color(0xFF172AFE),
+            )
+                : null,
+            child: Padding(
+              // YÊU CẦU: Giảm padding cho nhỏ gọn
+              padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: isFirstCell ? 12.0 : 4.0),
+              child: cellWidget,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, {required String text, required VoidCallback onPressed, required bool isPrimary}) {
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: isPrimary
+                ? const LinearGradient(
+              colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            )
+                : null,
+            color: isPrimary ? null : const Color(0xFF151a2e),
+            borderRadius: BorderRadius.circular(12),
+            border: isPrimary ? null : Border.all(color: Colors.blueAccent),
+          ),
+          child: Container(
+            alignment: Alignment.center,
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
