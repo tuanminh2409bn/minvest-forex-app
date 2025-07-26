@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
+import 'package:minvest_forex_app/features/verification/screens/package_screen.dart';
 
 class UpgradeScreen extends StatelessWidget {
   const UpgradeScreen({super.key});
@@ -11,7 +12,6 @@ class UpgradeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'UPGRADE ACCOUNT',
-          // YÊU CẦU: Cỡ chữ nhỏ hơn, in đậm
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
@@ -29,7 +29,7 @@ class UpgradeScreen extends StatelessWidget {
             stops: [0.0, 0.5, 1.0],
           ),
         ),
-        child: SingleChildScrollView( // Thêm để tránh lỗi tràn trên các màn hình nhỏ
+        child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
@@ -38,7 +38,6 @@ class UpgradeScreen extends StatelessWidget {
                 const Center(
                   child: Text(
                     'COMPARE TIERS',
-                    // YÊU CẦU: Cỡ chữ to hơn
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ),
@@ -48,7 +47,9 @@ class UpgradeScreen extends StatelessWidget {
                 _buildActionButton(
                   context,
                   text: 'Open exness account!',
-                  onPressed: () {},
+                  onPressed: () {
+                    // TODO: Mở URL giới thiệu của Exness
+                  },
                   isPrimary: false,
                 ),
                 const SizedBox(height: 16),
@@ -64,17 +65,29 @@ class UpgradeScreen extends StatelessWidget {
                   isPrimary: true,
                 ),
                 const SizedBox(height: 16),
+                // SỬA LỖI: Điều hướng đến PackageScreen
                 _buildActionButton(
                   context,
                   text: 'Pay in app to upgrade',
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PackageScreen()),
+                    );
+                  },
                   isPrimary: true,
                 ),
                 const SizedBox(height: 16),
+                // SỬA LỖI: Điều hướng đến PackageScreen
                 _buildActionButton(
                   context,
                   text: 'Bank transfer to upgrade',
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PackageScreen()),
+                    );
+                  },
                   isPrimary: true,
                 ),
                 const SizedBox(height: 30),
@@ -94,7 +107,6 @@ class UpgradeScreen extends StatelessWidget {
           horizontalInside: BorderSide(color: Colors.blueGrey.withOpacity(0.3), width: 1),
           verticalInside: BorderSide(color: Colors.blueGrey.withOpacity(0.3), width: 1),
         ),
-        // YÊU CẦU: Điều chỉnh lại độ rộng cột cho nhỏ gọn
         columnWidths: const {
           0: FlexColumnWidth(1.6),
           1: FlexColumnWidth(1),
@@ -115,7 +127,6 @@ class UpgradeScreen extends StatelessWidget {
 
   TableRow _buildTableRow(List<String> cells, {bool isHeader = false}) {
     return TableRow(
-      // YÊU CẦU: Áp dụng màu nền cho cả hàng tiêu đề
       decoration: isHeader ? const BoxDecoration(color: Color(0xFF151a2e)) : null,
       children: cells.map((cell) {
         final isFirstCell = cells.indexOf(cell) == 0;
@@ -129,19 +140,16 @@ class UpgradeScreen extends StatelessWidget {
           cellWidget = Text(
             cell,
             textAlign: isFirstCell ? TextAlign.left : TextAlign.center,
-            // YÊU CẦU: Không xuống dòng
             softWrap: false,
             overflow: TextOverflow.fade,
             style: TextStyle(
               fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-              color: isHeader ? Colors.white : Colors.white,
-              // YÊU CẦU: Giảm cỡ chữ cho nhỏ gọn
+              color: isHeader ? Colors.white : Colors.white70,
               fontSize: 13,
             ),
           );
         }
 
-        // YÊU CẦU: Thêm gradient cho ô tiêu đề
         return TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Container(
@@ -151,13 +159,12 @@ class UpgradeScreen extends StatelessWidget {
                 colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)],
               ),
             )
-                : (isHeader && isFirstCell) // Ô Feature
-                ? BoxDecoration(
-              color: const Color(0xFF172AFE),
+                : (isHeader && isFirstCell)
+                ? const BoxDecoration(
+              color: Color(0xFF172AFE),
             )
                 : null,
             child: Padding(
-              // YÊU CẦU: Giảm padding cho nhỏ gọn
               padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: isFirstCell ? 12.0 : 4.0),
               child: cellWidget,
             ),

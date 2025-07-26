@@ -2,22 +2,30 @@ import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import {ImageAnnotatorClient} from "@google-cloud/vision";
 import {onObjectFinalized} from "firebase-functions/v2/storage";
+import * as crypto from "crypto";
+import * as querystring from "qs";
 
-// Khởi tạo Firebase Admin và Vision Client
+
+// =================================================================
+// === KHỞI TẠO CÁC DỊCH VỤ ===
+// =================================================================
 admin.initializeApp();
 const firestore = admin.firestore();
 const visionClient = new ImageAnnotatorClient();
 
-// Function này sẽ được kích hoạt mỗi khi có file mới được tải lên Storage
+
+// =================================================================
+// === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS (TỰ ĐỘNG KÍCH HOẠT) ===
+// =================================================================
 export const processVerificationImage = onObjectFinalized(
+  // Cấu hình function để chạy ở khu vực gần bạn và có CPU mạnh mẽ
   { region: "asia-southeast1", cpu: 2 },
   async (event) => {
-    // Lấy thông tin file từ event
     const fileBucket = event.data.bucket;
     const filePath = event.data.name;
     const contentType = event.data.contentType;
 
-    // Chỉ xử lý các file ảnh trong thư mục 'verification_images/'
+    // 1. Lọc các file không liên quan
     if (!filePath || !filePath.startsWith("verification_images/")) {
       functions.logger.log(`Bỏ qua file không liên quan: ${filePath}`);
       return null;
@@ -27,23 +35,20 @@ export const processVerificationImage = onObjectFinalized(
       return null;
     }
 
-    // Lấy User ID từ tên file
+    // Lấy User ID từ tên file (ví dụ: verification_images/USER_ID.jpg)
     const userId = filePath.split("/")[1].split(".")[0];
     functions.logger.log(`Bắt đầu xử lý ảnh cho user: ${userId}`);
 
     const userRef = firestore.collection("users").doc(userId);
 
     try {
-      // --- CẬP NHẬT QUAN TRỌNG ---
-      // Trước khi xử lý, xóa trạng thái lỗi cũ để chuẩn bị cho lần xác thực mới.
-      // Điều này ngăn việc thông báo lỗi cũ hiển thị lại sau khi đã thành công.
+      // Xóa trạng thái xác thực cũ để chuẩn bị cho lần mới
       await userRef.update({
         verificationStatus: admin.firestore.FieldValue.delete(),
         verificationError: admin.firestore.FieldValue.delete(),
       });
-      // ----------------------------
 
-      // 1. Dùng Vision AI để đọc văn bản từ ảnh
+      // 2. Dùng Vision AI để đọc văn bản từ ảnh
       const [result] = await visionClient.textDetection(
         `gs://${fileBucket}/${filePath}`
       );
@@ -54,7 +59,7 @@ export const processVerificationImage = onObjectFinalized(
       }
       functions.logger.log("Văn bản đọc được:", fullText);
 
-      // 2. Phân tích văn bản để tìm Số dư và ID
+      // 3. Phân tích văn bản để tìm Số dư và ID Exness
       const balanceRegex = /(\d{1,3}(?:,\d{3})*[.,]\d{2})(?:\s*USD)?/;
       const idRegex = /#\s*(\d{7,})/;
 
@@ -71,7 +76,7 @@ export const processVerificationImage = onObjectFinalized(
 
       functions.logger.log(`Tìm thấy - Số dư: ${balance}, ID Exness: ${exnessId}`);
 
-      // 3. Kiểm tra xem ID Exness này đã được dùng chưa
+      // 4. Kiểm tra xem ID Exness này đã được dùng chưa
       const idDoc = await firestore
         .collection("verifiedExnessIds")
         .doc(exnessId).get();
@@ -80,7 +85,7 @@ export const processVerificationImage = onObjectFinalized(
         throw new Error(`ID Exness ${exnessId} đã được sử dụng.`);
       }
 
-      // 4. Gán quyền dựa trên số dư
+      // 5. Gán quyền dựa trên số dư
       let tier = "demo";
       if (balance >= 500) {
         tier = "elite";
@@ -90,11 +95,11 @@ export const processVerificationImage = onObjectFinalized(
 
       functions.logger.log(`Phân quyền cho user ${userId}: ${tier}`);
 
-      // 5. Cập nhật quyền cho user và lưu lại ID đã dùng
+      // 6. Cập nhật quyền cho user và lưu lại ID đã dùng
       const idRef = firestore.collection("verifiedExnessIds").doc(exnessId);
 
       await Promise.all([
-        userRef.set({subscriptionTier: tier, verificationStatus: 'success'}, {merge: true}),
+        userRef.set({subscriptionTier: tier, verificationStatus: "success"}, {merge: true}),
         idRef.set({userId: userId, processedAt: admin.firestore.FieldValue.serverTimestamp()}),
       ]);
 
@@ -104,7 +109,7 @@ export const processVerificationImage = onObjectFinalized(
       const errorMessage = (error as Error).message;
       functions.logger.error("Xử lý ảnh thất bại:", errorMessage);
 
-      // Cập nhật trạng thái lỗi cho user
+      // Cập nhật trạng thái lỗi cho user trên Firestore
       await userRef.set(
         {verificationStatus: "failed", verificationError: errorMessage},
         {merge: true}
@@ -112,3 +117,63 @@ export const processVerificationImage = onObjectFinalized(
       return null;
     }
   });
+
+
+// =================================================================
+// === FUNCTION TẠO LINK THANH TOÁN VNPAY (ĐÃ SỬA LỖI) ===
+// =================================================================
+const TMN_CODE = "0180ST283XYZ";
+const HASH_SECRET = "OEIJXPNBDF96LT2BH9SSNV3E5UESK8AK";
+const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+const RETURN_URL = "https://sandbox.vnpayment.vn/tryitnow/Home/VnPayReturn";
+const USD_TO_VND_RATE = 25500;
+
+// SỬA LỖI 1: Thay đổi chữ ký function thành (request)
+export const createVnpayOrder = functions.https.onCall(async (request) => {
+  // SỬA LỖI 2: Lấy dữ liệu từ request.data
+  const amountUSD = request.data.amount;
+  const orderInfo = request.data.orderInfo;
+
+  if (!amountUSD || !orderInfo) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Function cần được gọi với 'amount' và 'orderInfo'."
+    );
+  }
+
+  const amountVND = Math.round(amountUSD * USD_TO_VND_RATE) * 100;
+  const createDate = new Date().toISOString().replace(/T/, " ").replace(/\..+/, "").replace(/[-:]/g, "");
+  const orderId = createDate + Math.random().toString().slice(2, 8);
+  // SỬA LỖI 3: Lấy IP từ request.rawRequest.ip
+  const ipAddr = request.rawRequest.ip || "127.0.0.1";
+
+  let vnpParams: any = {};
+  vnpParams["vnp_Version"] = "2.1.0";
+  vnpParams["vnp_Command"] = "pay";
+  vnpParams["vnp_TmnCode"] = TMN_CODE;
+  vnpParams["vnp_Locale"] = "vn";
+  vnpParams["vnp_CurrCode"] = "VND";
+  vnpParams["vnp_TxnRef"] = orderId;
+  vnpParams["vnp_OrderInfo"] = orderInfo;
+  vnpParams["vnp_OrderType"] = "other";
+  vnpParams["vnp_Amount"] = amountVND;
+  vnpParams["vnp_ReturnUrl"] = RETURN_URL;
+  vnpParams["vnp_IpAddr"] = ipAddr;
+  vnpParams["vnp_CreateDate"] = createDate;
+
+  vnpParams = Object.keys(vnpParams)
+    .sort()
+    .reduce((acc, key) => {
+      acc[key] = vnpParams[key];
+      return acc;
+    }, {} as any);
+
+  const signData = querystring.stringify(vnpParams, {encode: false});
+  const hmac = crypto.createHmac("sha512", HASH_SECRET);
+  const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+  vnpParams["vnp_SecureHash"] = signed;
+
+  const paymentUrl = VNP_URL + "?" + querystring.stringify(vnpParams, {encode: true});
+
+  return {paymentUrl: paymentUrl};
+});

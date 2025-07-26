@@ -24,6 +24,8 @@ dependencies:
   sign_in_with_apple: ^6.1.1
   flutter_facebook_auth: ^7.0.0
   flutter_svg: ^2.0.9
+  webview_flutter: ^4.7.0
+  cloud_functions: ^4.6.10
 
 dev_dependencies:
   flutter_test:
