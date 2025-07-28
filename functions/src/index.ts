@@ -120,17 +120,17 @@ export const processVerificationImage = onObjectFinalized(
 
 
 // =================================================================
-// === FUNCTION TẠO LINK THANH TOÁN VNPAY (ĐÃ SỬA LỖI) ===
+// === FUNCTION TẠO LINK THANH TOÁN VNPAY
 // =================================================================
-const TMN_CODE = "0180ST283XYZ";
-const HASH_SECRET = "OEIJXPNBDF96LT2BH9SSNV3E5UESK8AK";
+const TMN_CODE = "EZTRTEST";
+const HASH_SECRET = "DGTXQMK0DF9NZTZBH63RV3AM3E53K8AX";
 const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
 const RETURN_URL = "https://sandbox.vnpayment.vn/tryitnow/Home/VnPayReturn";
 const USD_TO_VND_RATE = 25500;
 
-// SỬA LỖI 1: Thay đổi chữ ký function thành (request)
 export const createVnpayOrder = functions.https.onCall(async (request) => {
-  // SỬA LỖI 2: Lấy dữ liệu từ request.data
+  functions.logger.info("Đã nhận được yêu cầu thanh toán với dữ liệu:", request.data);
+
   const amountUSD = request.data.amount;
   const orderInfo = request.data.orderInfo;
 
@@ -142,9 +142,8 @@ export const createVnpayOrder = functions.https.onCall(async (request) => {
   }
 
   const amountVND = Math.round(amountUSD * USD_TO_VND_RATE) * 100;
-  const createDate = new Date().toISOString().replace(/T/, " ").replace(/\..+/, "").replace(/[-:]/g, "");
+  const createDate = new Date().toISOString().replace(/T|Z|\..*$/g, "").replace(/[-:]/g, "");
   const orderId = createDate + Math.random().toString().slice(2, 8);
-  // SỬA LỖI 3: Lấy IP từ request.rawRequest.ip
   const ipAddr = request.rawRequest.ip || "127.0.0.1";
 
   let vnpParams: any = {};
@@ -168,12 +167,16 @@ export const createVnpayOrder = functions.https.onCall(async (request) => {
       return acc;
     }, {} as any);
 
+  functions.logger.info("Các tham số VNPay đã sắp xếp:", vnpParams);
+
   const signData = querystring.stringify(vnpParams, {encode: false});
   const hmac = crypto.createHmac("sha512", HASH_SECRET);
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
   vnpParams["vnp_SecureHash"] = signed;
 
   const paymentUrl = VNP_URL + "?" + querystring.stringify(vnpParams, {encode: true});
+
+  functions.logger.info("URL thanh toán được tạo:", paymentUrl);
 
   return {paymentUrl: paymentUrl};
 });

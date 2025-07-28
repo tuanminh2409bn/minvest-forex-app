@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/package_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UpgradeScreen extends StatelessWidget {
   const UpgradeScreen({super.key});
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +55,7 @@ class UpgradeScreen extends StatelessWidget {
                   context,
                   text: 'Open exness account!',
                   onPressed: () {
-                    // TODO: Mở URL giới thiệu của Exness
+                    _launchURL('https://my.exmarkets.guide/accounts/sign-up/303589?utm_source=partners&ex_ol=1');
                   },
                   isPrimary: false,
                 ),

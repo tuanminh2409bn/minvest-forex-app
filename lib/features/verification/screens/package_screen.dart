@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/bank_transfer_screen.dart';
 
+
 class PackageScreen extends StatelessWidget {
   const PackageScreen({super.key});
 
@@ -41,7 +42,6 @@ class PackageScreen extends StatelessWidget {
                   'Analyze the reason for entering the order',
                   'High-precision AI signal',
                 ],
-                // SỬA LỖI: Thêm logic điều hướng và truyền dữ liệu
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -64,7 +64,6 @@ class PackageScreen extends StatelessWidget {
                   'Analyze the reason for entering the order',
                   'High-precision AI signal',
                 ],
-                // SỬA LỖI: Thêm logic điều hướng và truyền dữ liệu
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -109,7 +108,16 @@ class _PackageCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            // YÊU CẦU: ĐỔI MÀU GRADIENT CỦA THẺ
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF157CC9),
+                Color(0xFF2A43B9),
+                Color(0xFFC611CE),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: Colors.white.withOpacity(0.4),
@@ -117,29 +125,11 @@ class _PackageCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF212C61).withOpacity(0.6),
-                blurRadius: 15.0,
-                spreadRadius: 2.0,
-              ),
-              BoxShadow(
-                color: const Color(0xFF2D3161).withOpacity(0.4),
-                blurRadius: 30.0,
+                color: const Color(0xFFC611CE).withOpacity(0.5),
+                blurRadius: 25.0,
                 spreadRadius: 5.0,
               ),
-              BoxShadow(
-                color: const Color(0xFF221C48).withOpacity(0.3),
-                blurRadius: 45.0,
-                spreadRadius: 10.0,
-              ),
             ],
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF2F3565).withOpacity(0.2),
-                const Color(0xFF2B2F5F).withOpacity(0.1),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
