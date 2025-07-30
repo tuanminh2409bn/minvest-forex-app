@@ -7,6 +7,7 @@ import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
 import 'package:minvest_forex_app/features/signals/widgets/signal_card.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
+import 'package:minvest_forex_app/features/notifications/screens/notification_screen.dart';
 import 'package:provider/provider.dart';
 
 class SignalScreen extends StatefulWidget {
@@ -50,7 +51,13 @@ class _SignalScreenState extends State<SignalScreen> {
                   children: [
                     _buildTabs(),
                     IconButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // THAY ĐỔI Ở ĐÂY
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                        );
+                      },
                       icon: const Icon(Icons.notifications_none),
                     ),
                   ],
