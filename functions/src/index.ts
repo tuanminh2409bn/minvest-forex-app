@@ -15,7 +15,7 @@ const visionClient = new ImageAnnotatorClient();
 
 
 // =================================================================
-// === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS (TỰ ĐỘNG KÍCH HOẠT) ===
+// === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS ===
 // =================================================================
 export const processVerificationImage = onObjectFinalized(
   // Cấu hình function để chạy ở khu vực gần bạn và có CPU mạnh mẽ
@@ -120,7 +120,7 @@ export const processVerificationImage = onObjectFinalized(
 
 
 // =================================================================
-// === FUNCTION TẠO LINK THANH TOÁN VNPAY
+// === FUNCTION TẠO LINK THANH TOÁN VNPAY ===
 // =================================================================
 const TMN_CODE = "EZTRTEST";
 const HASH_SECRET = "DGTXQMK0DF9NZTZBH63RV3AM3E53K8AX";
@@ -167,9 +167,12 @@ export const createVnpayOrder = functions.https.onCall(async (request) => {
       return acc;
     }, {} as any);
 
-  functions.logger.info("Các tham số VNPay đã sắp xếp:", vnpParams);
+  // SỬA LỖI: Mã hóa chuỗi dữ liệu và thay thế %20 bằng +
+  let signData = querystring.stringify(vnpParams, { encode: true });
+  signData = signData.replace(/%20/g, "+");
 
-  const signData = querystring.stringify(vnpParams, {encode: false});
+  functions.logger.info("Chuỗi hashData cuối cùng:", signData);
+
   const hmac = crypto.createHmac("sha512", HASH_SECRET);
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
   vnpParams["vnp_SecureHash"] = signed;

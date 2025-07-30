@@ -1,20 +1,70 @@
+// lib/features/verification/screens/package_screen.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:minvest_forex_app/core/services/purchase_service.dart';
+import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
 import 'package:minvest_forex_app/features/verification/screens/bank_transfer_screen.dart';
+import 'package:provider/provider.dart';
 
+class PackageScreen extends StatefulWidget {
+  final PaymentMethod paymentMethod;
 
-class PackageScreen extends StatelessWidget {
-  const PackageScreen({super.key});
+  const PackageScreen({super.key, required this.paymentMethod});
+
+  @override
+  State<PackageScreen> createState() => _PackageScreenState();
+}
+
+class _PackageScreenState extends State<PackageScreen> {
+  final PurchaseService _purchaseService = PurchaseService();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.paymentMethod == PaymentMethod.inAppPurchase) {
+      _purchaseService.initialize();
+    }
+  }
+
+  @override
+  void dispose() {
+    _purchaseService.dispose();
+    super.dispose();
+  }
+
+  void _handlePurchase(BuildContext context, {
+    required double amountUSD,
+    required String orderInfo,
+    ProductDetails? productDetails,
+  }) {
+    if (widget.paymentMethod == PaymentMethod.vnPay) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BankTransferScreen(
+            amountUSD: amountUSD,
+            orderInfo: orderInfo,
+          ),
+        ),
+      );
+    } else if (widget.paymentMethod == PaymentMethod.inAppPurchase && productDetails != null) {
+      if (productDetails.id.isNotEmpty && productDetails.price != 'N/A') {
+        _purchaseService.buyProduct(productDetails);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sản phẩm chưa sẵn sàng, vui lòng thử lại sau.')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text(
-          'PACKAGE',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        title: const Text('PACKAGE', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -29,61 +79,116 @@ class PackageScreen extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-          child: Column(
-            children: [
-              _PackageCard(
-                tier: 'ELITE',
-                duration: '1 month',
-                price: '\$78',
-                features: const [
-                  'Receive all signals of the day',
-                  'Analyze the reason for entering the order',
-                  'High-precision AI signal',
-                ],
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const BankTransferScreen(
-                        amountUSD: 78,
-                        orderInfo: 'Thanh toan goi Elite 1 thang',
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-              _PackageCard(
-                tier: 'ELITE',
-                duration: '12 month',
-                price: '\$460',
-                features: const [
-                  'Receive all signals of the day',
-                  'Analyze the reason for entering the order',
-                  'High-precision AI signal',
-                ],
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const BankTransferScreen(
-                        amountUSD: 460,
-                        orderInfo: 'Thanh toan goi Elite 12 thang',
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
+        child: widget.paymentMethod == PaymentMethod.inAppPurchase
+            ? _buildIapContent()
+            : _buildVnPayContent(),
       ),
+    );
+  }
+
+  Widget _buildVnPayContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+      child: Column(
+        children: [
+          _PackageCard(
+            tier: 'ELITE',
+            duration: '1 month',
+            price: '\$78',
+            features: const [
+              'Receive all signals of the day',
+              'Analyze the reason for entering the order',
+              'High-precision AI signal',
+            ],
+            onPressed: () => _handlePurchase(context, amountUSD: 78, orderInfo: 'Thanh toan goi Elite 1 thang'),
+          ),
+          const SizedBox(height: 24),
+          _PackageCard(
+            tier: 'ELITE',
+            duration: '12 month',
+            price: '\$460',
+            features: const [
+              'Receive all signals of the day',
+              'Analyze the reason for entering the order',
+              'High-precision AI signal',
+            ],
+            onPressed: () => _handlePurchase(context, amountUSD: 460, orderInfo: 'Thanh toan goi Elite 12 thang'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIapContent() {
+    return ChangeNotifierProvider.value(
+      value: _purchaseService,
+      child: Consumer<PurchaseService>(
+        builder: (context, service, child) {
+          if (!service.isStoreAvailable) {
+            return const Center(child: Text("Cửa hàng không khả dụng.", style: TextStyle(color: Colors.white)));
+          }
+          if (service.products.isEmpty && service.isStoreAvailable) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (service.products.isEmpty && !service.isStoreAvailable) {
+            return const Center(child: Text("Không thể tải sản phẩm.", style: TextStyle(color: Colors.white)));
+          }
+
+          final product1Month = service.products.firstWhere(
+                  (p) => p.id == 'elite_1_month',
+              orElse: () => _createEmptyProduct('elite_1_month'));
+          final product12Months = service.products.firstWhere(
+                  (p) => p.id == 'elite_12_months',
+              orElse: () => _createEmptyProduct('elite_12_months'));
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            child: Column(
+              children: [
+                _PackageCard(
+                  tier: 'ELITE',
+                  duration: '1 month',
+                  price: product1Month.price,
+                  features: const [
+                    'Receive all signals of the day',
+                    'Analyze the reason for entering the order',
+                    'High-precision AI signal',
+                  ],
+                  onPressed: () => _handlePurchase(context, amountUSD: 78, orderInfo: 'Thanh toan goi Elite 1 thang', productDetails: product1Month),
+                ),
+                const SizedBox(height: 24),
+                _PackageCard(
+                  tier: 'ELITE',
+                  duration: '12 month',
+                  price: product12Months.price,
+                  features: const [
+                    'Receive all signals of the day',
+                    'Analyze the reason for entering the order',
+                    'High-precision AI signal',
+                  ],
+                  onPressed: () => _handlePurchase(context, amountUSD: 460, orderInfo: 'Thanh toan goi Elite 12 thang', productDetails: product12Months),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  ProductDetails _createEmptyProduct(String id) {
+    return ProductDetails(
+      id: '',
+      title: 'Loading...',
+      description: '',
+      price: '...',
+      rawPrice: 0.0,
+      currencyCode: '',
     );
   }
 }
 
+// ... (_PackageCard và _buildActionButton giữ nguyên từ file gốc của bạn)
 class _PackageCard extends StatelessWidget {
   final String tier;
   final String duration;
@@ -108,7 +213,6 @@ class _PackageCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            // YÊU CẦU: ĐỔI MÀU GRADIENT CỦA THẺ
             gradient: const LinearGradient(
               colors: [
                 Color(0xFF157CC9),

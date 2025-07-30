@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/package_screen.dart';
+import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class UpgradeScreen extends StatelessWidget {
@@ -72,27 +73,25 @@ class UpgradeScreen extends StatelessWidget {
                   isPrimary: true,
                 ),
                 const SizedBox(height: 16),
-                // SỬA LỖI: Điều hướng đến PackageScreen
                 _buildActionButton(
                   context,
                   text: 'Pay in app to upgrade',
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PackageScreen()),
+                      MaterialPageRoute(builder: (context) => const PackageScreen(paymentMethod: PaymentMethod.inAppPurchase)),
                     );
                   },
                   isPrimary: true,
                 ),
                 const SizedBox(height: 16),
-                // SỬA LỖI: Điều hướng đến PackageScreen
                 _buildActionButton(
                   context,
                   text: 'Bank transfer to upgrade',
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PackageScreen()),
+                      MaterialPageRoute(builder: (context) => const PackageScreen(paymentMethod: PaymentMethod.vnPay)),
                     );
                   },
                   isPrimary: true,
