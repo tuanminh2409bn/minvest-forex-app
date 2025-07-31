@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:minvest_forex_app/features/auth/screens/welcome_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
@@ -41,8 +42,60 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      // Could not launch the url
     }
   }
+
+  // --- TÁCH HÀM XỬ LÝ ĐĂNG XUẤT ---
+  Future<void> _handleLogout(BuildContext context) async {
+    // Hiển thị hộp thoại xác nhận trước khi đăng xuất
+    final bool? confirmLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161B22),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Confirm Logout', style: TextStyle(color: Colors.white)),
+          content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false); // User chose not to logout
+              },
+            ),
+            TextButton(
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true); // User confirmed logout
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    // Nếu người dùng không xác nhận, không làm gì cả
+    if (confirmLogout != true) {
+      return;
+    }
+
+    // Kiểm tra `context` có còn hợp lệ không trước khi sử dụng
+    if (!context.mounted) return;
+
+    // Tiến hành đăng xuất
+    await AuthService().signOut();
+
+    // Kiểm tra `context` một lần nữa sau khi thực hiện hành động bất đồng bộ
+    if (!context.mounted) return;
+
+    // Điều hướng về màn hình Welcome và xóa tất cả các màn hình trước đó
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+          (Route<dynamic> route) => false,
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -125,13 +178,13 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildActionButton(
                     text: 'Logout',
-                    onPressed: () async {
-                      await AuthService().signOut();
+                    onPressed: () {
+                      // Gọi hàm xử lý đã tách
+                      _handleLogout(context);
                     },
                   ),
                   const SizedBox(height: 40),
 
-                  // YÊU CẦU: Chữ màu trắng
                   const Text('Follow Minvest', style: TextStyle(color: Colors.white70)),
                   const SizedBox(height: 10),
                   Row(
@@ -209,7 +262,6 @@ class _UpgradeCard extends StatelessWidget {
   }
 }
 
-// YÊU CẦU: Nút bấm có Gradient
 Widget _buildActionButton({required String text, required VoidCallback onPressed}) {
   return SizedBox(
     width: double.infinity,
@@ -217,6 +269,8 @@ Widget _buildActionButton({required String text, required VoidCallback onPressed
     child: ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        shadowColor: Colors.transparent,
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

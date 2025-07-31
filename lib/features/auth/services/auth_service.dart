@@ -10,6 +10,7 @@ class AuthService {
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
+  // --- CÁC HÀM SIGN-IN GIỮ NGUYÊN NHƯ CỦA BẠN ---
   Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
@@ -45,7 +46,6 @@ class AuthService {
       final LoginResult result = await FacebookAuth.instance.login();
       if (result.status == LoginStatus.success) {
         final AccessToken accessToken = result.accessToken!;
-        // SỬA LỖI Ở ĐÂY: Dùng accessToken.tokenString
         final OAuthCredential credential = FacebookAuthProvider.credential(accessToken.tokenString);
         final UserCredential userCredential = await _firebaseAuth.signInWithCredential(credential);
         final User? user = userCredential.user;
@@ -90,9 +90,47 @@ class AuthService {
     }
   }
 
+  // --- HÀM SIGN OUT ĐÃ ĐƯỢC SỬA LẠI HOÀN CHỈNH ---
   Future<void> signOut() async {
-    await GoogleSignIn().signOut();
-    await FacebookAuth.instance.logOut();
-    await _firebaseAuth.signOut();
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        // Người dùng đã đăng xuất rồi, không cần làm gì thêm.
+        return;
+      }
+
+      // Lặp qua tất cả các nhà cung cấp mà người dùng đã liên kết
+      for (final provider in user.providerData) {
+        switch (provider.providerId) {
+          case 'google.com':
+          // Chỉ đăng xuất Google nếu người dùng đã đăng nhập bằng Google
+            await GoogleSignIn().signOut();
+            print("Signed out from Google");
+            break;
+          case 'facebook.com':
+          // Chỉ đăng xuất Facebook nếu người dùng đã đăng nhập bằng Facebook
+          // Thêm kiểm tra accessToken để chắc chắn
+            final accessToken = await FacebookAuth.instance.accessToken;
+            if (accessToken != null) {
+              await FacebookAuth.instance.logOut();
+              print("Signed out from Facebook");
+            }
+            break;
+          case 'apple.com':
+          // Đăng nhập bằng Apple không yêu cầu một lệnh signOut riêng biệt từ client.
+          // Việc signOut khỏi Firebase là đủ.
+            print("Apple user signing out (handled by Firebase signOut)");
+            break;
+        }
+      }
+    } catch (e) {
+      // Ghi lại lỗi nếu có, nhưng không dừng quá trình đăng xuất
+      print("Error during social sign out: $e");
+    } finally {
+      // QUAN TRỌNG: Luôn đăng xuất khỏi Firebase ở cuối cùng,
+      // bất kể các bước trên thành công hay thất bại.
+      await _firebaseAuth.signOut();
+      print("Signed out from Firebase");
+    }
   }
 }

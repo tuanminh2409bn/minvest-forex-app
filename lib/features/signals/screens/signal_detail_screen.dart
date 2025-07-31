@@ -11,27 +11,74 @@ class SignalDetailScreen extends StatelessWidget {
 
   const SignalDetailScreen({super.key, required this.signal});
 
+  // --- LOGIC HIỂN THỊ CỜ (TÁI SỬ DỤNG) ---
+  static const Map<String, String> _currencyFlags = {
+    'AUD': 'assets/images/aud_flag.png',
+    'CHF': 'assets/images/chf_flag.jpg',
+    'EUR': 'assets/images/eur_flag.png',
+    'GBP': 'assets/images/gbp_flag.png',
+    'JPY': 'assets/images/jpy_flag.png',
+    'NZD': 'assets/images/nzd_flag.png',
+    'USD': 'assets/images/us_flag.png',
+    'XAU': 'assets/images/crown_icon.png',
+  };
+
+  List<String> _getFlagPathsFromSymbol(String symbol) {
+    final parts = symbol.toUpperCase().split('/');
+    if (parts.length == 2) {
+      final path1 = _currencyFlags[parts[0]];
+      final path2 = _currencyFlags[parts[1]];
+      return [
+        if (path1 != null) path1,
+        if (path2 != null) path2,
+      ];
+    }
+    return [];
+  }
+  // --- KẾT THÚC LOGIC HIỂN THỊ CỜ ---
+
   @override
   Widget build(BuildContext context) {
     final userTier = Provider.of<UserProvider>(context, listen: false).userTier;
     final bool canViewReason = userTier == 'elite';
+    // Lấy danh sách đường dẫn cờ
+    final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: false, // Căn tiêu đề sang trái
         title: Row(
           children: [
-            ClipOval(
-              child: Image.asset('assets/images/us_flag.png', height: 24, width: 24, fit: BoxFit.cover),
-            ),
+            // --- WIDGET HIỂN THỊ CẶP CỜ ĐỘNG ---
+            if (flagPaths.isNotEmpty)
+              SizedBox(
+                width: 42,
+                height: 28,
+                child: Stack(
+                  children: List.generate(flagPaths.length, (index) {
+                    return Positioned(
+                      left: index * 14.0,
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.grey.shade800,
+                        backgroundImage: AssetImage(flagPaths[index]),
+                      ),
+                    );
+                  }),
+                ),
+              ),
             const SizedBox(width: 10),
-            Text(signal.symbol, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              signal.symbol,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
           ],
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -57,6 +104,9 @@ class SignalDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDetailCard(BuildContext context, bool canViewReason) {
+    // Cải thiện: Tự động xác định số chữ số thập phân
+    final int decimalPlaces = signal.symbol.toUpperCase().contains('JPY') ? 2 : 4;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -70,12 +120,12 @@ class SignalDetailScreen extends StatelessWidget {
               valueColor: signal.status == 'running' ? Colors.amber : Colors.grey),
           _buildInfoRow('Sent on', DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate())),
           const Divider(height: 30, color: Colors.blueGrey),
-          // YÊU CẦU: Sửa định dạng số
-          _buildPriceRow('Entry price', signal.entryPrice.toStringAsFixed(1), signal.result),
-          _buildPriceRow('Stop loss', signal.stopLoss.toStringAsFixed(1), signal.result),
-          _buildPriceRow('Take profit 1', signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(1) : '—', signal.result),
-          _buildPriceRow('Take profit 2', signal.takeProfits.length > 1 ? signal.takeProfits[1].toStringAsFixed(1) : '—', signal.result),
-          _buildPriceRow('Take profit 3', signal.takeProfits.length > 2 ? signal.takeProfits[2].toStringAsFixed(1) : '—', signal.result),
+          // --- SỬA ĐỊNH DẠNG SỐ ---
+          _buildPriceRow('Entry price', signal.entryPrice.toStringAsFixed(decimalPlaces), signal.result),
+          _buildPriceRow('Stop loss', signal.stopLoss.toStringAsFixed(decimalPlaces), signal.result),
+          _buildPriceRow('Take profit 1', signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(decimalPlaces) : '—', signal.result),
+          _buildPriceRow('Take profit 2', signal.takeProfits.length > 1 ? signal.takeProfits[1].toStringAsFixed(decimalPlaces) : '—', signal.result),
+          _buildPriceRow('Take profit 3', signal.takeProfits.length > 2 ? signal.takeProfits[2].toStringAsFixed(decimalPlaces) : '—', signal.result),
           const Divider(height: 30, color: Colors.blueGrey),
           const Text(
             'REASON',
@@ -142,62 +192,59 @@ class SignalDetailScreen extends StatelessWidget {
   }
 
   Widget _buildUpgradeToView(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Upgrade your account to Elite to view the analysis and reasons for entering the order.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, height: 1.5, fontSize: 14),
-          ),
-          const SizedBox(height: 20),
-          // --- BẮT ĐẦU ĐOẠN CODE ĐÃ SỬA ---
-          SizedBox(
-            height: 50, // Đặt chiều cao cho nút
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const UpgradeScreen()),
-                );
-              },
-              // Bỏ padding và màu nền ở đây
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Ink(
-                decoration: BoxDecoration(
-                  // Áp dụng gradient bạn yêu cầu
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF172AFE),
-                      Color(0xFF3C4BFE),
-                      Color(0xFF5E69FD),
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Text(
+          'Upgrade your account to Elite to view the analysis and reasons for entering the order.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, height: 1.5, fontSize: 14),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          height: 50,
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UpgradeScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+            ),
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF172AFE),
+                    Color(0xFF3C4BFE),
+                    Color(0xFF5E69FD),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-                child: Container(
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset('assets/images/crown_icon.png', height: 30, width: 30),
-                      const SizedBox(width: 8),
-                      const Text("Upgrade to see more"),
-                    ],
-                  ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Container(
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/images/crown_icon.png', height: 30, width: 30),
+                    const SizedBox(width: 8),
+                    const Text("Upgrade to see more", style: TextStyle(color: Colors.white)),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

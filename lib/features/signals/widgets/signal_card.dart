@@ -18,6 +18,35 @@ class SignalCard extends StatelessWidget {
     required this.signalIndex,
   });
 
+  // Map chứa đường dẫn cờ. Dễ dàng quản lý và mở rộng.
+  static const Map<String, String> _currencyFlags = {
+    'AUD': 'assets/images/aud_flag.png',
+    'CHF': 'assets/images/chf_flag.png',
+    'EUR': 'assets/images/eur_flag.png',
+    'GBP': 'assets/images/gbp_flag.png',
+    'JPY': 'assets/images/jpy_flag.png',
+    'NZD': 'assets/images/nzd_flag.png',
+    'USD': 'assets/images/us_flag.png',
+    'XAU': 'assets/images/crown_icon.png',
+  };
+
+  // Hàm lấy cặp cờ từ symbol
+  List<String> _getFlagPathsFromSymbol(String symbol) {
+    // Tách symbol thành các phần, ví dụ "EUR/USD" -> ["EUR", "USD"]
+    final parts = symbol.toUpperCase().split('/');
+    if (parts.length == 2) {
+      final path1 = _currencyFlags[parts[0]];
+      final path2 = _currencyFlags[parts[1]];
+      // Trả về danh sách các đường dẫn cờ hợp lệ
+      return [
+        if (path1 != null) path1,
+        if (path2 != null) path2,
+      ];
+    }
+    return []; // Trả về rỗng nếu không phân tích được
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final bool shouldObfuscate = userTier == 'demo' && signalIndex >= 8;
@@ -55,16 +84,37 @@ class SignalCard extends StatelessWidget {
     );
   }
 
+  // Widget header hiển thị cặp cờ tự động
   Widget _buildCardHeader() {
     final bool isBuy = signal.type.toLowerCase() == 'buy';
     final Color signalColor = isBuy ? const Color(0xFF238636) : const Color(0xFFDA3633);
+    // Lấy danh sách đường dẫn cờ một cách tự động
+    final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        ClipOval(
-          child: Image.asset('assets/images/us_flag.png', height: 22, width: 22, fit: BoxFit.cover),
-        ),
+        // Widget hiển thị cặp cờ tự động
+        if (flagPaths.isNotEmpty)
+          SizedBox(
+            width: 42, // Chiều rộng đủ để chứa 2 cờ chồng lên nhau
+            height: 28,
+            child: Stack(
+              children: List.generate(flagPaths.length, (index) {
+                // Đặt cờ thứ hai lệch sang phải 14px để tạo hiệu ứng chồng
+                return Positioned(
+                  left: index * 14.0,
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: Colors.grey.shade800,
+                    // Sử dụng đường dẫn cờ từ danh sách đã lấy
+                    backgroundImage: AssetImage(flagPaths[index]),
+                  ),
+                );
+              }),
+            ),
+          ),
+
         const SizedBox(width: 8),
         Text(signal.symbol, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(width: 10),
@@ -86,15 +136,17 @@ class SignalCard extends StatelessWidget {
   }
 
   Widget _buildSignalData() {
+    // Cải thiện: Tự động xác định số chữ số thập phân
+    final int decimalPlaces = signal.symbol.toUpperCase().contains('JPY') ? 2 : 4;
+
     return Column(
       children: [
         Row(
           children: [
-            _buildInfoColumn("Entry", signal.entryPrice.toStringAsFixed(1)),
-            // YÊU CẦU: Thêm icon dấu X đỏ cho SL
+            _buildInfoColumn("Entry", signal.entryPrice.toStringAsFixed(decimalPlaces)),
             _buildInfoColumn(
               "SL",
-              signal.stopLoss.toStringAsFixed(1),
+              signal.stopLoss.toStringAsFixed(decimalPlaces),
               valueColor: Colors.red,
               icon: const Icon(Icons.cancel, color: Colors.red, size: 14),
             ),
@@ -103,15 +155,14 @@ class SignalCard extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            // YÊU CẦU: Thêm icon dấu tích xanh cho TP1
             _buildInfoColumn(
               "TP1",
-              signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(1) : "---",
+              signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(decimalPlaces) : "---",
               valueColor: Colors.green,
               icon: const Icon(Icons.check_circle, color: Colors.green, size: 14),
             ),
-            _buildInfoColumn("TP2", signal.takeProfits.length > 1 ? signal.takeProfits[1].toStringAsFixed(1) : "---", valueColor: Colors.green),
-            _buildInfoColumn("TP3", signal.takeProfits.length > 2 ? signal.takeProfits[2].toStringAsFixed(1) : "---", valueColor: Colors.green),
+            _buildInfoColumn("TP2", signal.takeProfits.length > 1 ? signal.takeProfits[1].toStringAsFixed(decimalPlaces) : "---", valueColor: Colors.green),
+            _buildInfoColumn("TP3", signal.takeProfits.length > 2 ? signal.takeProfits[2].toStringAsFixed(decimalPlaces) : "---", valueColor: Colors.green),
           ],
         ),
         const SizedBox(height: 8),
@@ -185,7 +236,6 @@ class SignalCard extends StatelessWidget {
     );
   }
 
-  // Widget con hiển thị thông tin giá đã được nâng cấp
   Widget _buildInfoColumn(String title, String value, {Color? valueColor, Widget? icon}) {
     return Expanded(
       child: Column(
@@ -197,7 +247,6 @@ class SignalCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: valueColor ?? Colors.white)),
-              // Hiển thị icon nếu được cung cấp
               if (icon != null) ...[
                 const SizedBox(width: 4),
                 icon,

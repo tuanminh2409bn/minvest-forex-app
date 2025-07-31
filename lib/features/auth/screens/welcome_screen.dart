@@ -24,7 +24,6 @@ class WelcomeScreen extends StatelessWidget {
             stops: [0.0, 0.5, 1.0],
           ),
         ),
-        // ------------------------------------------
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -81,32 +80,31 @@ class WelcomeScreen extends StatelessWidget {
                 const Text(
                   'Sign in',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 24),
 
+                // Nút Google
                 _SocialSignInButton(
-                  iconPath: 'assets/images/google_logo.png',
+                  icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
                   text: 'Continue by Google',
                   onPressed: () => authService.signInWithGoogle(),
                 ),
                 const SizedBox(height: 16),
+
+                // Nút Facebook
                 _SocialSignInButton(
-                  iconPath: 'assets/images/facebook_logo.png',
+                  icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
                   text: 'Continue by Facebook',
                   onPressed: () => authService.signInWithFacebook(),
                 ),
                 const SizedBox(height: 16),
-                if (Platform.isIOS || Platform.isAndroid)
-                  SignInWithAppleButton(
-                    onPressed: () {
-                      if (Platform.isIOS || Platform.isMacOS) {
-                        authService.signInWithApple();
-                      }
-                    },
-                    style: SignInWithAppleButtonStyle.black,
-                    borderRadius: BorderRadius.circular(12),
-                    height: 50,
+
+                // Nút Apple
+                  _SocialSignInButton(
+                    icon: const Icon(Icons.apple, color: Colors.white, size: 24),
+                    text: 'Continue by Apple',
+                    onPressed: () => authService.signInWithApple(),
                   ),
                 const Spacer(flex: 2),
               ],
@@ -118,13 +116,15 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
+// Sửa lại widget _SocialSignInButton để linh hoạt hơn
 class _SocialSignInButton extends StatelessWidget {
-  final String iconPath;
+  // Thay vì dùng `iconPath`, chúng ta dùng thẳng `icon` kiểu Widget
+  final Widget icon;
   final String text;
   final VoidCallback onPressed;
 
   const _SocialSignInButton({
-    required this.iconPath,
+    required this.icon,
     required this.text,
     required this.onPressed,
   });
@@ -136,6 +136,8 @@ class _SocialSignInButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
           padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -143,15 +145,14 @@ class _SocialSignInButton extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [
-                Color(0xFF0C0938), // Màu xanh đậm
-                Color(0xFF141A4C), // Lặp lại màu xanh đậm
-                Color(0xFF1D2B62), // Màu xanh nhạt (pha trắng)
+                Color(0xFF0C0938),
+                Color(0xFF141A4C),
+                Color(0xFF1D2B62),
               ],
               stops: [0.0, 0.5, 1.0],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
-            // ---------------------
             borderRadius: BorderRadius.circular(12),
           ),
           child: Container(
@@ -160,7 +161,8 @@ class _SocialSignInButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Image.asset(iconPath, height: 24, width: 24),
+                // Hiển thị widget icon được truyền vào
+                icon,
                 const SizedBox(width: 24),
                 Text(
                     text,

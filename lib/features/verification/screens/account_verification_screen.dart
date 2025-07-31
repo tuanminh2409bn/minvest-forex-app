@@ -50,6 +50,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
       final imageRef = storageRef.child('verification_images/$userId.jpg');
 
       await imageRef.putFile(_selectedImage!);
+      // Sau khi upload xong, lắng nghe sự thay đổi từ provider
       _listenForVerificationResult();
 
     } catch (e) {
@@ -60,26 +61,37 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
+  // Hàm lắng nghe kết quả từ UserProvider
   void _listenForVerificationResult() {
-    // Giả lập việc lắng nghe provider
+    // Sử dụng Provider.of với listen: true trong một hàm riêng
+    // để nó có thể rebuild khi provider thay đổi.
+    // Tuy nhiên, cách tiếp cận tốt hơn là dùng Consumer hoặc Selector.
+    // Ở đây, chúng ta sẽ đơn giản hóa bằng cách kiểm tra trong didChangeDependencies.
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Lắng nghe sự thay đổi của UserProvider
     final userProvider = Provider.of<UserProvider>(context);
 
     if (_currentState == VerificationState.loading) {
       if (userProvider.verificationStatus == 'success') {
-        setState(() {
-          _currentState = VerificationState.success;
-          _successTier = userProvider.userTier ?? 'N/A';
-        });
+        // Cập nhật trạng thái khi xác thực thành công
+        if (mounted) {
+          setState(() {
+            _currentState = VerificationState.success;
+            _successTier = userProvider.userTier ?? 'N/A';
+          });
+        }
       } else if (userProvider.verificationStatus == 'failed') {
-        setState(() {
-          _currentState = VerificationState.failure;
-          _errorMessage = userProvider.verificationError ?? 'Verification failed.';
-        });
+        // Cập nhật trạng thái khi xác thực thất bại
+        if (mounted) {
+          setState(() {
+            _currentState = VerificationState.failure;
+            _errorMessage = userProvider.verificationError ?? 'Verification failed.';
+          });
+        }
       }
     }
   }
@@ -90,14 +102,14 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        // YÊU CẦU: Cho chữ nhỏ lại
         title: const Text(
           'ACCOUNT VERIFICATION',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
         width: double.infinity,
@@ -166,7 +178,6 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
             const Text(
               'Please upload a screenshot of your Exness account to be authorized (your account must be opened under Minvest\'s Exness link)',
               textAlign: TextAlign.center,
-              // YÊU CẦU: Chữ màu trắng
               style: TextStyle(color: Colors.white, height: 1.5, fontSize: 14),
             ),
             const SizedBox(height: 30),
@@ -187,33 +198,121 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
+  // --- WIDGET SUCCESS VIEW ĐÃ ĐƯỢC SỬA LẠI ---
   Widget _buildSuccessView() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center, // Đảm bảo căn giữa theo chiều ngang
       children: [
         const Icon(Icons.check_circle, color: Colors.green, size: 80),
         const SizedBox(height: 20),
-        const Text('ACCOUNT VERIFIED SUCCESSFULLY', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text(
+          'ACCOUNT VERIFIED SUCCESSFULLY',
+          textAlign: TextAlign.center, // Đảm bảo text nhiều dòng được căn giữa
+          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 10),
-        Text('Your account is ${_successTier.toUpperCase()}', style: const TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          'Your account is ${_successTier.toUpperCase()}',
+          style: const TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 30),
+
+        // Thêm widget hiển thị quyền lợi
+        _buildTierBenefitsCard(_successTier),
+
         const SizedBox(height: 40),
         TextButton(
           onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-          child: const Text('Return to home page >', style: TextStyle(color: Colors.blueAccent)),
+          child: const Text(
+            'Return to home page >',
+            style: TextStyle(color: Colors.blueAccent, fontSize: 16),
+          ),
         ),
       ],
     );
   }
 
+  // --- WIDGET MỚI: HIỂN THỊ QUYỀN LỢI CỦA TÀI KHOẢN ---
+  Widget _buildTierBenefitsCard(String tier) {
+    final Map<String, String> tierInfo = _getTierInfo(tier);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151a2e),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blueGrey.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          _buildBenefitRow('Signal time:', tierInfo['signal_time']!),
+          _buildBenefitRow('Lot/week:', tierInfo['lot_week']!),
+          _buildBenefitRow('Signal Quantity:', tierInfo['signal_qty']!),
+        ],
+      ),
+    );
+  }
+
+  // Widget con để hiển thị một dòng quyền lợi
+  Widget _buildBenefitRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  // Hàm lấy thông tin quyền lợi (tái sử dụng)
+  Map<String, String> _getTierInfo(String tier) {
+    switch (tier.toLowerCase()) {
+      case 'demo':
+        return {
+          'signal_time': '8h-17h',
+          'lot_week': '0.05',
+          'signal_qty': '7-8 per day',
+        };
+      case 'vip':
+        return {
+          'signal_time': '8h-17h',
+          'lot_week': '0.3',
+          'signal_qty': 'full',
+        };
+      case 'elite':
+        return {
+          'signal_time': 'fulltime',
+          'lot_week': '0.5',
+          'signal_qty': 'full',
+        };
+      default:
+        return {
+          'signal_time': 'N/A',
+          'lot_week': 'N/A',
+          'signal_qty': 'N/A',
+        };
+    }
+  }
+
+
   Widget _buildFailureView() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center, // Đảm bảo căn giữa
       children: [
         const Icon(Icons.error, color: Colors.red, size: 80),
         const SizedBox(height: 20),
         const Text('Upgrade failed!', style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-        Text(_errorMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+        Text(
+            _errorMessage,
+            textAlign: TextAlign.center, // Đảm bảo căn giữa
+            style: const TextStyle(color: Colors.white70)
+        ),
         const SizedBox(height: 40),
         _buildActionButton(
           text: 'Re-upload the image',
