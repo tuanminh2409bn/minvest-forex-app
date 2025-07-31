@@ -2,9 +2,10 @@ import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import {ImageAnnotatorClient} from "@google-cloud/vision";
 import {onObjectFinalized} from "firebase-functions/v2/storage";
+import {onCall} from "firebase-functions/v2/https"; // Sửa lại: Chỉ import onCall khi cần
 import * as crypto from "crypto";
 import * as querystring from "qs";
-
+import axios from "axios";
 
 // =================================================================
 // === KHỞI TẠO CÁC DỊCH VỤ ===
@@ -18,14 +19,12 @@ const visionClient = new ImageAnnotatorClient();
 // === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS ===
 // =================================================================
 export const processVerificationImage = onObjectFinalized(
-  // Cấu hình function để chạy ở khu vực gần bạn và có CPU mạnh mẽ
   { region: "asia-southeast1", cpu: 2 },
   async (event) => {
     const fileBucket = event.data.bucket;
     const filePath = event.data.name;
     const contentType = event.data.contentType;
 
-    // 1. Lọc các file không liên quan
     if (!filePath || !filePath.startsWith("verification_images/")) {
       functions.logger.log(`Bỏ qua file không liên quan: ${filePath}`);
       return null;
@@ -35,20 +34,17 @@ export const processVerificationImage = onObjectFinalized(
       return null;
     }
 
-    // Lấy User ID từ tên file (ví dụ: verification_images/USER_ID.jpg)
     const userId = filePath.split("/")[1].split(".")[0];
     functions.logger.log(`Bắt đầu xử lý ảnh cho user: ${userId}`);
 
     const userRef = firestore.collection("users").doc(userId);
 
     try {
-      // Xóa trạng thái xác thực cũ để chuẩn bị cho lần mới
       await userRef.update({
         verificationStatus: admin.firestore.FieldValue.delete(),
         verificationError: admin.firestore.FieldValue.delete(),
       });
 
-      // 2. Dùng Vision AI để đọc văn bản từ ảnh
       const [result] = await visionClient.textDetection(
         `gs://${fileBucket}/${filePath}`
       );
@@ -59,7 +55,6 @@ export const processVerificationImage = onObjectFinalized(
       }
       functions.logger.log("Văn bản đọc được:", fullText);
 
-      // 3. Phân tích văn bản để tìm Số dư và ID Exness
       const balanceRegex = /(\d{1,3}(?:,\d{3})*[.,]\d{2})(?:\s*USD)?/;
       const idRegex = /#\s*(\d{7,})/;
 
@@ -76,16 +71,28 @@ export const processVerificationImage = onObjectFinalized(
 
       functions.logger.log(`Tìm thấy - Số dư: ${balance}, ID Exness: ${exnessId}`);
 
-      // 4. Kiểm tra xem ID Exness này đã được dùng chưa
+      const affiliateCheckUrl = `https://chcke.minvest.vn/api/users/check-allocation?mt4Account=${exnessId}`;
+      functions.logger.log("Đang gọi API kiểm tra affiliate:", affiliateCheckUrl);
+
+      try {
+        const response = await axios.get(affiliateCheckUrl);
+        if (!response.data || !response.data.client_uid) {
+          throw new Error("API không trả về dữ liệu hợp lệ.");
+        }
+        functions.logger.log("Kiểm tra affiliate thành công, kết quả:", response.data);
+      } catch (apiError) {
+        functions.logger.error("Lỗi khi kiểm tra affiliate:", apiError);
+        throw new Error(`Account ${exnessId} is not under mInvest's affiliate link.`);
+      }
+
       const idDoc = await firestore
         .collection("verifiedExnessIds")
         .doc(exnessId).get();
 
       if (idDoc.exists) {
-        throw new Error(`ID Exness ${exnessId} đã được sử dụng.`);
+        throw new Error(`ID Exness ${exnessId} has already been used.`);
       }
 
-      // 5. Gán quyền dựa trên số dư
       let tier = "demo";
       if (balance >= 500) {
         tier = "elite";
@@ -95,7 +102,6 @@ export const processVerificationImage = onObjectFinalized(
 
       functions.logger.log(`Phân quyền cho user ${userId}: ${tier}`);
 
-      // 6. Cập nhật quyền cho user và lưu lại ID đã dùng
       const idRef = firestore.collection("verifiedExnessIds").doc(exnessId);
 
       await Promise.all([
@@ -109,7 +115,6 @@ export const processVerificationImage = onObjectFinalized(
       const errorMessage = (error as Error).message;
       functions.logger.error("Xử lý ảnh thất bại:", errorMessage);
 
-      // Cập nhật trạng thái lỗi cho user trên Firestore
       await userRef.set(
         {verificationStatus: "failed", verificationError: errorMessage},
         {merge: true}
@@ -128,7 +133,7 @@ const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
 const RETURN_URL = "https://sandbox.vnpayment.vn/tryitnow/Home/VnPayReturn";
 const USD_TO_VND_RATE = 25500;
 
-export const createVnpayOrder = functions.https.onCall(async (request) => {
+export const createVnpayOrder = onCall(async (request) => {
   functions.logger.info("Đã nhận được yêu cầu thanh toán với dữ liệu:", request.data);
 
   const amountUSD = request.data.amount;
@@ -167,7 +172,6 @@ export const createVnpayOrder = functions.https.onCall(async (request) => {
       return acc;
     }, {} as any);
 
-  // SỬA LỖI: Mã hóa chuỗi dữ liệu và thay thế %20 bằng +
   let signData = querystring.stringify(vnpParams, { encode: true });
   signData = signData.replace(/%20/g, "+");
 
@@ -183,3 +187,106 @@ export const createVnpayOrder = functions.https.onCall(async (request) => {
 
   return {paymentUrl: paymentUrl};
 });
+
+
+// =================================================================
+// === FUNCTION MỚI: WEBHOOK CHO TELEGRAM BOT ===
+// =================================================================
+const TELEGRAM_CHAT_ID = "-1002866162244"; // ID nhóm của bạn
+
+export const telegramWebhook = functions.https.onRequest(async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(403).send("Forbidden!");
+    return;
+  }
+
+  const update = req.body;
+  const message = update.message || update.channel_post;
+
+  if (!message || message.chat.id.toString() !== TELEGRAM_CHAT_ID) {
+    functions.logger.info("Bỏ qua tin nhắn từ chat ID không xác định:", message?.chat.id);
+    res.status(200).send("OK");
+    return;
+  }
+
+  const messageText = message.text;
+  if (!messageText) {
+    res.status(200).send("OK");
+    return;
+  }
+
+  functions.logger.log("Đã nhận được tin nhắn từ nhóm:", messageText);
+
+  try {
+    const signalData = parseSignalMessage(messageText);
+
+    if (signalData) {
+      await firestore.collection("signals").add({
+        ...signalData,
+        telegramMessageId: message.message_id,
+        createdAt: admin.firestore.Timestamp.fromMillis(message.date * 1000),
+        status: "pending",
+        isMatched: false,
+        sourceTier: "elite",
+      });
+      functions.logger.log("Đã tạo tín hiệu mới thành công!", signalData);
+    } else {
+      functions.logger.log("Tin nhắn không phải là tín hiệu mới, bỏ qua.");
+    }
+
+    res.status(200).send("OK");
+  } catch (error) {
+    functions.logger.error("Lỗi khi xử lý tin nhắn Telegram:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+function parseSignalMessage(text: string): any | null {
+  if (!text.includes("Tín hiệu:") || !text.includes("GIẢI THÍCH")) {
+    return null;
+  }
+
+  const lines = text.split("\n");
+  const signal: any = {
+    takeProfits: [],
+  };
+
+  const symbolRegex = /([A-Z]{3}\/[A-Z]{3}|XAU\/USD)/;
+  const entryRegex = /Entry:\s*([\d.]+)/;
+  const slRegex = /SL:\s*([\d.]+)/;
+  const tpRegex = /TP(\d):\s*([\d.]+)/g;
+
+  const symbolMatch = text.match(symbolRegex);
+  if (symbolMatch) {
+    signal.symbol = symbolMatch[0];
+  } else {
+    return null;
+  }
+
+  for (const line of lines) {
+    if (line.includes("Tín hiệu: BUY")) signal.type = "buy";
+    if (line.includes("Tín hiệu: SELL")) signal.type = "sell";
+
+    const entryMatch = line.match(entryRegex);
+    if (entryMatch) signal.entryPrice = parseFloat(entryMatch[1]);
+
+    const slMatch = line.match(slRegex);
+    if (slMatch) signal.stopLoss = parseFloat(slMatch[1]);
+
+    let tpMatch;
+    while ((tpMatch = tpRegex.exec(line)) !== null) {
+      signal.takeProfits.push(parseFloat(tpMatch[2]));
+    }
+  }
+
+  const reasonIndex = text.indexOf("=== GIẢI THÍCH ===");
+  if (reasonIndex !== -1) {
+    signal.reason = text.substring(reasonIndex).replace("=== GIẢI THÍCH ===", "").trim();
+  }
+
+  if (signal.type && signal.symbol && signal.entryPrice && signal.stopLoss) {
+    return signal;
+  }
+
+  return null;
+}
