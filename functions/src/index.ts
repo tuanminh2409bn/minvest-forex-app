@@ -198,7 +198,7 @@ export const telegramWebhook = functions.https.onRequest(
   {
     region: "asia-southeast1",
     timeoutSeconds: 30,
-    memory: "128MiB",
+    memory: "256MiB",
   },
   // ▼▼▼ PHẦN ĐÃ SỬA LỖI CUỐI CÙNG ▼▼▼
   async (req: functions.https.Request, res: Response) => {
