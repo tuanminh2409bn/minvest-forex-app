@@ -1,26 +1,28 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
+// ▼▼▼ THÊM DÒNG NÀY ĐỂ SỬA LỖI ▼▼▼
+import { Response } from "express";
+// ▲▲▲ KẾT THÚC PHẦN THÊM MỚI ▲▲▲
 import {ImageAnnotatorClient} from "@google-cloud/vision";
 import {onObjectFinalized} from "firebase-functions/v2/storage";
-import {onCall} from "firebase-functions/v2/https"; // Sửa lại: Chỉ import onCall khi cần
+import {onCall} from "firebase-functions/v2/https";
 import * as crypto from "crypto";
 import * as querystring from "qs";
 import axios from "axios";
 
 // =================================================================
-// === KHỞI TẠO CÁC DỊCH VỤ ===
+// === KHỞI TẠO CÁC DỊCH VỤ CƠ BẢN ===
 // =================================================================
 admin.initializeApp();
 const firestore = admin.firestore();
-const visionClient = new ImageAnnotatorClient();
-
 
 // =================================================================
 // === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS ===
 // =================================================================
 export const processVerificationImage = onObjectFinalized(
-  { region: "asia-southeast1", cpu: 2 },
+  { region: "asia-southeast1", cpu: 2, memory: "1GiB" },
   async (event) => {
+    const visionClient = new ImageAnnotatorClient();
     const fileBucket = event.data.bucket;
     const filePath = event.data.name;
     const contentType = event.data.contentType;
@@ -133,7 +135,7 @@ const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
 const RETURN_URL = "https://sandbox.vnpayment.vn/tryitnow/Home/VnPayReturn";
 const USD_TO_VND_RATE = 25500;
 
-export const createVnpayOrder = onCall(async (request) => {
+export const createVnpayOrder = onCall({ region: "asia-southeast1" }, async (request) => {
   functions.logger.info("Đã nhận được yêu cầu thanh toán với dữ liệu:", request.data);
 
   const amountUSD = request.data.amount;
@@ -175,8 +177,6 @@ export const createVnpayOrder = onCall(async (request) => {
   let signData = querystring.stringify(vnpParams, { encode: true });
   signData = signData.replace(/%20/g, "+");
 
-  functions.logger.info("Chuỗi hashData cuối cùng:", signData);
-
   const hmac = crypto.createHmac("sha512", HASH_SECRET);
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
   vnpParams["vnp_SecureHash"] = signed;
@@ -190,56 +190,65 @@ export const createVnpayOrder = onCall(async (request) => {
 
 
 // =================================================================
-// === FUNCTION MỚI: WEBHOOK CHO TELEGRAM BOT ===
+// === FUNCTION WEBHOOK CHO TELEGRAM BOT ===
 // =================================================================
-const TELEGRAM_CHAT_ID = "-1002866162244"; // ID nhóm của bạn
+const TELEGRAM_CHAT_ID = "-1002866162244";
 
-export const telegramWebhook = functions.https.onRequest(async (req, res) => {
-  if (req.method !== "POST") {
-    res.status(403).send("Forbidden!");
-    return;
-  }
-
-  const update = req.body;
-  const message = update.message || update.channel_post;
-
-  if (!message || message.chat.id.toString() !== TELEGRAM_CHAT_ID) {
-    functions.logger.info("Bỏ qua tin nhắn từ chat ID không xác định:", message?.chat.id);
-    res.status(200).send("OK");
-    return;
-  }
-
-  const messageText = message.text;
-  if (!messageText) {
-    res.status(200).send("OK");
-    return;
-  }
-
-  functions.logger.log("Đã nhận được tin nhắn từ nhóm:", messageText);
-
-  try {
-    const signalData = parseSignalMessage(messageText);
-
-    if (signalData) {
-      await firestore.collection("signals").add({
-        ...signalData,
-        telegramMessageId: message.message_id,
-        createdAt: admin.firestore.Timestamp.fromMillis(message.date * 1000),
-        status: "pending",
-        isMatched: false,
-        sourceTier: "elite",
-      });
-      functions.logger.log("Đã tạo tín hiệu mới thành công!", signalData);
-    } else {
-      functions.logger.log("Tin nhắn không phải là tín hiệu mới, bỏ qua.");
+export const telegramWebhook = functions.https.onRequest(
+  {
+    region: "asia-southeast1",
+    timeoutSeconds: 30,
+    memory: "128MiB",
+  },
+  // ▼▼▼ PHẦN ĐÃ SỬA LỖI CUỐI CÙNG ▼▼▼
+  async (req: functions.https.Request, res: Response) => {
+  // ▲▲▲ KẾT THÚC PHẦN SỬA LỖI ▲▲▲
+    if (req.method !== "POST") {
+      res.status(403).send("Forbidden!");
+      return;
     }
 
-    res.status(200).send("OK");
-  } catch (error) {
-    functions.logger.error("Lỗi khi xử lý tin nhắn Telegram:", error);
-    res.status(500).send("Internal Server Error");
+    const update = req.body;
+    const message = update.message || update.channel_post;
+
+    if (!message || message.chat.id.toString() !== TELEGRAM_CHAT_ID) {
+      functions.logger.info(`Bỏ qua tin nhắn từ chat ID không xác định: ${message?.chat.id}`);
+      res.status(200).send("OK");
+      return;
+    }
+
+    const messageText = message.text;
+    if (!messageText) {
+      res.status(200).send("OK");
+      return;
+    }
+
+    functions.logger.log("Đã nhận được tin nhắn từ nhóm:", messageText);
+
+    try {
+      const signalData = parseSignalMessage(messageText);
+
+      if (signalData) {
+        await firestore.collection("signals").add({
+          ...signalData,
+          telegramMessageId: message.message_id,
+          createdAt: admin.firestore.Timestamp.fromMillis(message.date * 1000),
+          status: "pending",
+          isMatched: false,
+          sourceTier: "elite",
+        });
+        functions.logger.log("Đã tạo tín hiệu mới thành công!", signalData);
+      } else {
+        functions.logger.log("Tin nhắn không phải là tín hiệu mới, bỏ qua.");
+      }
+
+      res.status(200).send("OK");
+    } catch (error) {
+      functions.logger.error("Lỗi khi xử lý tin nhắn Telegram:", error);
+      res.status(500).send("Internal Server Error");
+    }
   }
-});
+);
 
 function parseSignalMessage(text: string): any | null {
   if (!text.includes("Tín hiệu:") || !text.includes("GIẢI THÍCH")) {
@@ -251,16 +260,16 @@ function parseSignalMessage(text: string): any | null {
     takeProfits: [],
   };
 
-  const symbolRegex = /([A-Z]{3}\/[A-Z]{3}|XAU\/USD)/;
+  const symbolRegex = /([A-Z]{3}\/[A-Z]{3}|XAU\/USD)/i;
   const entryRegex = /Entry:\s*([\d.]+)/;
   const slRegex = /SL:\s*([\d.]+)/;
-  const tpRegex = /TP(\d):\s*([\d.]+)/g;
+  const tpRegex = /TP(\d*):\s*([\d.]+)/g;
 
   const symbolMatch = text.match(symbolRegex);
   if (symbolMatch) {
-    signal.symbol = symbolMatch[0];
+    signal.symbol = symbolMatch[0].toUpperCase();
   } else {
-    return null;
+    signal.symbol = "XAU/USD";
   }
 
   for (const line of lines) {
@@ -281,7 +290,7 @@ function parseSignalMessage(text: string): any | null {
 
   const reasonIndex = text.indexOf("=== GIẢI THÍCH ===");
   if (reasonIndex !== -1) {
-    signal.reason = text.substring(reasonIndex).replace("=== GIẢI THÍCH ===", "").trim();
+    signal.reason = text.substring(reasonIndex).replace(/=== GIẢI THÍCH ===/i, "").trim();
   }
 
   if (signal.type && signal.symbol && signal.entryPrice && signal.stopLoss) {
