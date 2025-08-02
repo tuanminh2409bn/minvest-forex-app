@@ -1,8 +1,6 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
-// ▼▼▼ THÊM DÒNG NÀY ĐỂ SỬA LỖI ▼▼▼
 import { Response } from "express";
-// ▲▲▲ KẾT THÚC PHẦN THÊM MỚI ▲▲▲
 import {ImageAnnotatorClient} from "@google-cloud/vision";
 import {onObjectFinalized} from "firebase-functions/v2/storage";
 import {onCall} from "firebase-functions/v2/https";
@@ -177,7 +175,7 @@ export const createVnpayOrder = onCall({ region: "asia-southeast1" }, async (req
   let signData = querystring.stringify(vnpParams, { encode: true });
   signData = signData.replace(/%20/g, "+");
 
-  const hmac = crypto.createHmac("sha512", HASH_SECRET);
+  const hmac = crypto.createHmac("sha521", HASH_SECRET);
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
   vnpParams["vnp_SecureHash"] = signed;
 
@@ -200,9 +198,7 @@ export const telegramWebhook = functions.https.onRequest(
     timeoutSeconds: 30,
     memory: "256MiB",
   },
-  // ▼▼▼ PHẦN ĐÃ SỬA LỖI CUỐI CÙNG ▼▼▼
   async (req: functions.https.Request, res: Response) => {
-  // ▲▲▲ KẾT THÚC PHẦN SỬA LỖI ▲▲▲
     if (req.method !== "POST") {
       res.status(403).send("Forbidden!");
       return;
@@ -217,85 +213,116 @@ export const telegramWebhook = functions.https.onRequest(
       return;
     }
 
-    const messageText = message.text;
-    if (!messageText) {
-      res.status(200).send("OK");
-      return;
-    }
-
-    functions.logger.log("Đã nhận được tin nhắn từ nhóm:", messageText);
-
     try {
-      const signalData = parseSignalMessage(messageText);
+      // Trường hợp 1: Tin nhắn trả lời (cập nhật trạng thái END)
+      if (message.reply_to_message && message.text) {
+        functions.logger.log("Phát hiện tin nhắn trả lời, bắt đầu xử lý cập nhật trạng thái...");
 
-      if (signalData) {
-        await firestore.collection("signals").add({
-          ...signalData,
-          telegramMessageId: message.message_id,
-          createdAt: admin.firestore.Timestamp.fromMillis(message.date * 1000),
-          status: "pending",
-          isMatched: false,
-          sourceTier: "elite",
+        const originalMessageId = message.reply_to_message.message_id;
+        const updateText = message.text.toLowerCase();
+
+        const signalQuery = await firestore.collection("signals")
+            .where("telegramMessageId", "==", originalMessageId).limit(1).get();
+
+        if (signalQuery.empty) {
+          functions.logger.warn(`Không tìm thấy tín hiệu gốc với ID tin nhắn: ${originalMessageId}`);
+          res.status(200).send("OK. No original signal found.");
+          return;
+        }
+
+        const signalDoc = signalQuery.docs[0];
+        let resultText = "Exited";
+
+        if (updateText.includes("sl hit")) resultText = "SL Hit";
+        else if (updateText.includes("tp1 hit")) resultText = "TP1 Hit";
+        else if (updateText.includes("tp2 hit")) resultText = "TP2 Hit";
+        else if (updateText.includes("tp3 hit")) resultText = "TP3 Hit";
+        else if (updateText.includes("exit tại giá") || updateText.includes("exit lệnh")) resultText = "Exited by Admin";
+        else if (updateText.includes("bỏ tín hiệu")) resultText = "Cancelled";
+
+        await signalDoc.ref.update({
+          status: "closed",
+          result: resultText,
+          closedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        functions.logger.log("Đã tạo tín hiệu mới thành công!", signalData);
-      } else {
-        functions.logger.log("Tin nhắn không phải là tín hiệu mới, bỏ qua.");
+
+        functions.logger.log(`Thành công! Đã cập nhật tín hiệu ${signalDoc.id} sang trạng thái END với kết quả: ${resultText}`);
+
+      // Trường hợp 2: Tin nhắn mới (tạo tín hiệu)
+      } else if (message.text) {
+        functions.logger.log("Phát hiện tin nhắn mới, bắt đầu xử lý tạo tín hiệu...");
+        const signalData = parseSignalMessage(message.text);
+
+        if (signalData) {
+          await firestore.collection("signals").add({
+            ...signalData,
+            telegramMessageId: message.message_id,
+            createdAt: admin.firestore.Timestamp.fromMillis(message.date * 1000),
+            status: "running",
+            isMatched: false,
+            sourceTier: "elite",
+          });
+          functions.logger.log("Thành công! Đã tạo tín hiệu mới.", signalData);
+        } else {
+          functions.logger.log("Tin nhắn không phải là tín hiệu hợp lệ, bỏ qua.");
+        }
       }
 
       res.status(200).send("OK");
     } catch (error) {
-      functions.logger.error("Lỗi khi xử lý tin nhắn Telegram:", error);
+      functions.logger.error("Lỗi nghiêm trọng khi xử lý tin nhắn Telegram:", error);
       res.status(500).send("Internal Server Error");
     }
   }
 );
 
+// Hàm phân tích tin nhắn (đã tinh chỉnh)
 function parseSignalMessage(text: string): any | null {
-  if (!text.includes("Tín hiệu:") || !text.includes("GIẢI THÍCH")) {
-    return null;
-  }
+    const signal: any = { takeProfits: [] };
 
-  const lines = text.split("\n");
-  const signal: any = {
-    takeProfits: [],
-  };
+    const signalPart = text.split("=== GIẢI THÍCH ===")[0];
+    if (!signalPart) return null;
 
-  const symbolRegex = /([A-Z]{3}\/[A-Z]{3}|XAU\/USD)/i;
-  const entryRegex = /Entry:\s*([\d.]+)/;
-  const slRegex = /SL:\s*([\d.]+)/;
-  const tpRegex = /TP(\d*):\s*([\d.]+)/g;
+    const lines = signalPart.split("\n");
+    const titleLine = lines.find((line) => line.includes("Tín hiệu:"));
+    if (!titleLine) return null;
 
-  const symbolMatch = text.match(symbolRegex);
-  if (symbolMatch) {
-    signal.symbol = symbolMatch[0].toUpperCase();
-  } else {
-    signal.symbol = "XAU/USD";
-  }
+    if (titleLine.includes("BUY")) signal.type = "buy";
+    else if (titleLine.includes("SELL")) signal.type = "sell";
+    else return null; // Bắt buộc phải có BUY hoặc SELL
 
-  for (const line of lines) {
-    if (line.includes("Tín hiệu: BUY")) signal.type = "buy";
-    if (line.includes("Tín hiệu: SELL")) signal.type = "sell";
-
-    const entryMatch = line.match(entryRegex);
-    if (entryMatch) signal.entryPrice = parseFloat(entryMatch[1]);
-
-    const slMatch = line.match(slRegex);
-    if (slMatch) signal.stopLoss = parseFloat(slMatch[1]);
-
-    let tpMatch;
-    while ((tpMatch = tpRegex.exec(line)) !== null) {
-      signal.takeProfits.push(parseFloat(tpMatch[2]));
+    const symbolRegex = /\b([A-Z]{3}\/[A-Z]{3}|XAU\/USD)\b/i;
+    const symbolMatch = titleLine.match(symbolRegex);
+    if (symbolMatch) {
+        signal.symbol = symbolMatch[0].toUpperCase();
+    } else {
+        signal.symbol = "XAU/USD";
     }
-  }
 
-  const reasonIndex = text.indexOf("=== GIẢI THÍCH ===");
-  if (reasonIndex !== -1) {
-    signal.reason = text.substring(reasonIndex).replace(/=== GIẢI THÍCH ===/i, "").trim();
-  }
+    for (const line of lines) {
+        const entryRegex = /Entry:\s*([\d.]+)/;
+        const entryMatch = line.match(entryRegex);
+        if (entryMatch) signal.entryPrice = parseFloat(entryMatch[1]);
 
-  if (signal.type && signal.symbol && signal.entryPrice && signal.stopLoss) {
-    return signal;
-  }
+        const slRegex = /SL:\s*([\d.]+)/;
+        const slMatch = line.match(slRegex);
+        if (slMatch) signal.stopLoss = parseFloat(slMatch[1]);
 
-  return null;
+        const tpRegex = /TP\d*:\s*([\d.]+)/g;
+        let tpMatch;
+        while ((tpMatch = tpRegex.exec(line)) !== null) {
+            signal.takeProfits.push(parseFloat(tpMatch[1]));
+        }
+    }
+
+    const reasonIndex = text.indexOf("=== GIẢI THÍCH ===");
+    if (reasonIndex !== -1) {
+        signal.reason = text.substring(reasonIndex).replace(/=== GIẢI THÍCH ===/i, "").trim();
+    }
+
+    if (signal.type && signal.symbol && signal.entryPrice && signal.stopLoss && signal.takeProfits.length > 0) {
+        return signal;
+    }
+
+    return null;
 }
