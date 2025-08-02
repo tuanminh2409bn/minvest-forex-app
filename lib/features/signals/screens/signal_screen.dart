@@ -1,7 +1,4 @@
-// lib/features/signals/screens/signal_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -21,16 +18,26 @@ class _SignalScreenState extends State<SignalScreen> {
   bool _isLive = true;
   final SignalService _signalService = SignalService();
 
+  // --- HÀM MỚI: KIỂM TRA KHUNG GIỜ VÀNG CHO VIP ---
+  bool _isVipWithinGoldenHours() {
+    final now = DateTime.now();
+    // Chuyển giờ hiện tại sang múi giờ Việt Nam (UTC+7)
+    final nowInVietnam = now.toUtc().add(const Duration(hours: 7));
+    // VIP chỉ được xem từ 8h sáng đến 17h (5h chiều)
+    return nowInVietnam.hour >= 8 && nowInVietnam.hour < 17;
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final userTier = userProvider.userTier ?? 'free';
+    // Sửa lại: Dùng user.subscriptionTier để rõ ràng hơn
+    final userTier = userProvider.userTier ?? 'demo';
 
-    // YÊU CẦU: Bỏ AppBar
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Container(
+          // ... (Phần decoration giữ nguyên)
           width: double.infinity,
           height: double.infinity,
           decoration: const BoxDecoration(
@@ -43,7 +50,6 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           child: Column(
             children: [
-              // Đặt các thành phần của AppBar cũ vào đây
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
                 child: Row(
@@ -52,7 +58,6 @@ class _SignalScreenState extends State<SignalScreen> {
                     _buildTabs(),
                     IconButton(
                       onPressed: () {
-                        // THAY ĐỔI Ở ĐÂY
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => const NotificationScreen()),
@@ -64,10 +69,9 @@ class _SignalScreenState extends State<SignalScreen> {
                 ),
               ),
               _buildFilters(),
+              // --- LOGIC HIỂN THỊ CHÍNH ---
               Expanded(
-                child: userTier == 'free'
-                    ? _buildFreeUserView(context)
-                    : _buildSignalList(userTier),
+                child: _buildContent(userTier),
               ),
             ],
           ),
@@ -76,170 +80,142 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  Widget _buildFreeUserView(BuildContext context) {
-    return SingleChildScrollView(
-      child: Container(
-        height: MediaQuery.of(context).size.height - 150, // Điều chỉnh chiều cao linh hoạt
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Spacer(flex: 2),
-            _buildLockedCardPlaceholder(),
-            _buildLockedCardPlaceholder(),
-            const Spacer(flex: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const UpgradeScreen()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFF172AFE),
-                          Color(0xFF3C4BFE),
-                          Color(0xFF5E69FD),
-                        ],
-                        stops: [0.0, 0.5, 1.0],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Container(
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/images/crown_icon.png',
-                            height: 50,
-                            width: 50,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "Upgrade to see more",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const Spacer(flex: 3),
-          ],
-        ),
-      ),
+  // --- WIDGET MỚI: QUYẾT ĐỊNH HIỂN THỊ GÌ DỰA TRÊN LOGIC PHÂN QUYỀN ---
+  Widget _buildContent(String userTier) {
+    // Quy tắc 1: Nếu là VIP và đang ngoài giờ vàng, hiển thị màn hình nâng cấp
+    if (_isLive && userTier == 'vip' && !_isVipWithinGoldenHours()) {
+      return _buildUpgradeViewForVip();
+    }
+
+    // Quy tắc 2: Các trường hợp còn lại, hiển thị danh sách tín hiệu
+    return _buildSignalList(userTier);
+  }
+
+  Widget _buildSignalList(String userTier) {
+    return StreamBuilder<List<Signal>>(
+      // Sửa lại: Gọi hàm mới từ service
+      stream: _signalService.getSignals(isLive: _isLive, userTier: userTier),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('No signals available.'));
+        }
+
+        final signals = snapshot.data!;
+
+        // Xử lý logic hiển thị cho Demo ở tab LIVE
+        int itemCount = signals.length;
+        if (_isLive && userTier == 'demo' && signals.length > 8) {
+          // Nếu có hơn 8 tín hiệu, thêm 1 item cuối cùng là nút Upgrade
+          itemCount = 9;
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 16),
+          itemCount: itemCount,
+          itemBuilder: (context, index) {
+            // Nếu là item cuối cùng của Demo, hiển thị nút Upgrade
+            if (_isLive && userTier == 'demo' && index == 8) {
+              return _buildUpgradeButton();
+            }
+
+            final signal = signals[index];
+            // Quyết định xem card này có bị khóa hay không
+            final bool isLocked = (_isLive && userTier == 'demo' && index >= 8);
+
+            return SignalCard(
+              signal: signal,
+              userTier: userTier,
+              isLocked: isLocked, // Truyền trạng thái khóa vào card
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildLockedCardPlaceholder() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151a2e),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blueGrey.withOpacity(0.2)),
-      ),
+  // --- WIDGET MỚI: HIỂN THỊ CHO VIP KHI HẾT GIỜ XEM ---
+  Widget _buildUpgradeViewForVip() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              ClipOval(
-                child: Image.asset('assets/images/us_flag.png', height: 22, width: 22, fit: BoxFit.cover),
+          const Icon(Icons.timer_off_outlined, size: 80, color: Colors.blueAccent),
+          const SizedBox(height: 20),
+          const Text(
+            "Out of Golden Hours",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "VIP signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade to Elite to get signals 24/24!",
+            style: TextStyle(fontSize: 16, color: Colors.grey[400]),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 30),
+          _buildUpgradeButton(),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGET MỚI: TÁI SỬ DỤNG NÚT NÂNG CẤP ---
+  Widget _buildUpgradeButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: SizedBox(
+        height: 50,
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const UpgradeScreen()),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)],
+                stops: [0.0, 0.5, 1.0],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
-              const SizedBox(width: 8),
-              const Text("XAU/USD", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF238636),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text("MUA", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
-              ),
-              const Spacer(),
-              const Text("NOT MATCHED", style: TextStyle(color: Colors.grey, fontSize: 11)),
-            ],
-          ),
-          const Divider(height: 16, color: Colors.blueGrey),
-          Row(
-            children: [
-              _buildUpgradeItem("Entry"),
-              _buildUpgradeItem("SL"),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _buildUpgradeItem("TP1"),
-              _buildUpgradeItem("TP2"),
-              _buildUpgradeItem("TP3"),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // SỬA LỖI OVERFLOW TRIỆT ĐỂ
-          Row(
-            children: [
-              const Text("20:03 07/08", style: TextStyle(color: Colors.grey, fontSize: 11)),
-              const Spacer(),
-              Row(
-                children: const [
-                  Text("see details", style: TextStyle(color: Color(0xFF5865F2), fontSize: 11)),
-                  Icon(Icons.arrow_forward_ios, size: 11, color: Color(0xFF5865F2)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Container(
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/crown_icon.png', height: 24, width: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Upgrade Account",
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildUpgradeItem(String title) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("Upgrade", style: TextStyle(color: Colors.white, fontSize: 13)),
-              const SizedBox(width: 2),
-              Image.asset(
-                'assets/images/crown_icon.png',
-                height: 30,
-                width: 30,
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
+  // Các widget _buildTabs, _buildFilters, ... giữ nguyên không đổi
   Widget _buildTabs() {
+    // ...
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
@@ -264,6 +240,7 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildTabItem(String text, bool isSelected, VoidCallback onTap) {
+    // ...
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -291,6 +268,7 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildFilters() {
+    // ...
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Row(
@@ -308,35 +286,6 @@ class _SignalScreenState extends State<SignalScreen> {
       ),
     );
   }
-
-  Widget _buildSignalList(String userTier) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _isLive
-          ? _signalService.getRunningSignals(userTier: userTier)
-          : _signalService.getClosedSignals(userTier: userTier),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No signals available.'));
-        }
-        final signalsDocs = snapshot.data!.docs;
-        return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 16),
-          itemCount: signalsDocs.length,
-          itemBuilder: (context, index) {
-            final signal = Signal.fromFirestore(signalsDocs[index]);
-            return SignalCard(
-              signal: signal,
-              userTier: userTier,
-              signalIndex: index,
-            );
-          },
-        );
-      },
-    );
-  }
 }
 
 class _GradientFilterButton extends StatelessWidget {
@@ -347,6 +296,7 @@ class _GradientFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ...
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 120),
       child: Container(

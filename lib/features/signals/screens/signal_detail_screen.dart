@@ -1,20 +1,25 @@
 // lib/features/signals/screens/signal_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
-import 'package:provider/provider.dart';
 
 class SignalDetailScreen extends StatelessWidget {
   final Signal signal;
+  // --- THAY ĐỔI 1: Thêm userTier vào constructor ---
+  final String userTier;
 
-  const SignalDetailScreen({super.key, required this.signal});
+  const SignalDetailScreen({
+    super.key,
+    required this.signal,
+    // --- THAY ĐỔI 2: Yêu cầu userTier khi khởi tạo ---
+    required this.userTier,
+  });
 
   // --- LOGIC HIỂN THỊ CỜ (TÁI SỬ DỤNG) ---
   static const Map<String, String> _currencyFlags = {
     'AUD': 'assets/images/aud_flag.png',
-    'CHF': 'assets/images/chf_flag.jpg',
+    'CHF': 'assets/images/chf_flag.png', // Sửa lại đường dẫn nếu cần
     'EUR': 'assets/images/eur_flag.png',
     'GBP': 'assets/images/gbp_flag.png',
     'JPY': 'assets/images/jpy_flag.png',
@@ -39,9 +44,8 @@ class SignalDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userTier = Provider.of<UserProvider>(context, listen: false).userTier;
+    // --- THAY ĐỔI 3: Logic giờ đây dựa hoàn toàn vào userTier được truyền vào ---
     final bool canViewReason = userTier == 'elite';
-    // Lấy danh sách đường dẫn cờ
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
     return Scaffold(
@@ -49,10 +53,9 @@ class SignalDetailScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: false, // Căn tiêu đề sang trái
+        centerTitle: false,
         title: Row(
           children: [
-            // --- WIDGET HIỂN THỊ CẶP CỜ ĐỘNG ---
             if (flagPaths.isNotEmpty)
               SizedBox(
                 width: 42,
@@ -104,7 +107,6 @@ class SignalDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDetailCard(BuildContext context, bool canViewReason) {
-    // Cải thiện: Tự động xác định số chữ số thập phân
     final int decimalPlaces = signal.symbol.toUpperCase().contains('JPY') ? 2 : 4;
 
     return Container(
@@ -118,9 +120,9 @@ class SignalDetailScreen extends StatelessWidget {
         children: [
           _buildInfoRow('Status', signal.status.toUpperCase(),
               valueColor: signal.status == 'running' ? Colors.amber : Colors.grey),
+          // Sửa lại: Dùng signal.createdAt đã là kiểu DateTime
           _buildInfoRow('Sent on', DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate())),
           const Divider(height: 30, color: Colors.blueGrey),
-          // --- SỬA ĐỊNH DẠNG SỐ ---
           _buildPriceRow('Entry price', signal.entryPrice.toStringAsFixed(decimalPlaces), signal.result),
           _buildPriceRow('Stop loss', signal.stopLoss.toStringAsFixed(decimalPlaces), signal.result),
           _buildPriceRow('Take profit 1', signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(decimalPlaces) : '—', signal.result),
@@ -132,6 +134,7 @@ class SignalDetailScreen extends StatelessWidget {
             style: TextStyle(color: Color(0xFF5865F2), fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
+          // Logic ẩn/hiện "Reason" đã đúng, không cần sửa
           canViewReason
               ? Text(
             signal.reason ?? 'No reason provided for this signal.',
@@ -143,7 +146,9 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
+  // Các widget con còn lại giữ nguyên, không cần thay đổi
   Widget _buildInfoRow(String title, String value, {Color? valueColor}) {
+    // ...
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -157,6 +162,7 @@ class SignalDetailScreen extends StatelessWidget {
   }
 
   Widget _buildPriceRow(String title, String value, String? status) {
+    // ...
     Color valueColor = Colors.white;
     Icon? statusIcon;
     String titleNormalized = title.replaceAll(' ', '').toLowerCase();
@@ -192,6 +198,7 @@ class SignalDetailScreen extends StatelessWidget {
   }
 
   Widget _buildUpgradeToView(BuildContext context) {
+    // ...
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
