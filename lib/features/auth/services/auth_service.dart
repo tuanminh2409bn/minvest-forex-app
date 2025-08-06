@@ -95,21 +95,24 @@ class AuthService {
     try {
       final user = _firebaseAuth.currentUser;
       if (user == null) {
-        // Người dùng đã đăng xuất rồi, không cần làm gì thêm.
         return;
       }
 
-      // Lặp qua tất cả các nhà cung cấp mà người dùng đã liên kết
       for (final provider in user.providerData) {
         switch (provider.providerId) {
+        // ▼▼▼ SỬA ĐOẠN CODE TRONG CASE NÀY ▼▼▼
           case 'google.com':
-          // Chỉ đăng xuất Google nếu người dùng đã đăng nhập bằng Google
+          // Thêm lệnh disconnect() để xóa hoàn toàn session của Google
+          // trên client. Đây là bước quan trọng nhất.
+            await GoogleSignIn().disconnect();
+
+            // Bạn vẫn có thể gọi thêm signOut() để chắc chắn.
             await GoogleSignIn().signOut();
-            print("Signed out from Google");
+            print("Disconnected and Signed out from Google");
             break;
+        // ▲▲▲ KẾT THÚC PHẦN SỬA ĐỔI ▲▲▲
+
           case 'facebook.com':
-          // Chỉ đăng xuất Facebook nếu người dùng đã đăng nhập bằng Facebook
-          // Thêm kiểm tra accessToken để chắc chắn
             final accessToken = await FacebookAuth.instance.accessToken;
             if (accessToken != null) {
               await FacebookAuth.instance.logOut();
@@ -117,18 +120,14 @@ class AuthService {
             }
             break;
           case 'apple.com':
-          // Đăng nhập bằng Apple không yêu cầu một lệnh signOut riêng biệt từ client.
-          // Việc signOut khỏi Firebase là đủ.
             print("Apple user signing out (handled by Firebase signOut)");
             break;
         }
       }
     } catch (e) {
-      // Ghi lại lỗi nếu có, nhưng không dừng quá trình đăng xuất
       print("Error during social sign out: $e");
     } finally {
-      // QUAN TRỌNG: Luôn đăng xuất khỏi Firebase ở cuối cùng,
-      // bất kể các bước trên thành công hay thất bại.
+      // Luôn đăng xuất khỏi Firebase ở cuối cùng
       await _firebaseAuth.signOut();
       print("Signed out from Firebase");
     }
