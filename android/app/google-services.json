@@ -1,0 +1,74 @@
+{
+  "project_info": {
+    "project_number": "245218403052",
+    "project_id": "minvestforexapp-33dff",
+    "storage_bucket": "minvestforexapp-33dff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:245218403052:android:9ef58c4c7b016a17b03bc9",
+        "android_client_info": {
+          "package_name": "com.minvest.aisignals"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "245218403052-4j43e7qgrldk4n8jf8shovk4ovr2sh1t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.minvest.aisignals",
+            "certificate_hash": "85366012b678023dfec95b348d573530e6beab6b"
+          }
+        },
+        {
+          "client_id": "245218403052-8mjnd7tnmldlkk0fo1ku1mt7hm1lsnn5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.minvest.aisignals",
+            "certificate_hash": "d8697372df4d5ddb9ce2a89d4c96240cc5f7dd65"
+          }
+        },
+        {
+          "client_id": "245218403052-hmjojb7uc30u5rismtnchhvg03cikreu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.minvest.aisignals",
+            "certificate_hash": "0de61dea689e3842b92471b8c317fcf26b4da804"
+          }
+        },
+        {
+          "client_id": "245218403052-od4o65p52jq9aljgd7pqlcs3d3d4v5u8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.minvest.aisignals",
+            "certificate_hash": "c8ccfa1ca575d74b92cf61c37cdef9e0e77b1e88"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvzJ4crOk5FYhjHhkLCNX8gBtw5YC9qiU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "245218403052-06rdfbkiogjhskv4l96jselut59pkmge.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.minvestForexApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
