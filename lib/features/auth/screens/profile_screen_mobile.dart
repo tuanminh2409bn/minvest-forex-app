@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/auth/screens/welcome/welcome_screen_mobile.dart';
+import 'package:minvest_forex_app/features/admin/screens/admin_panel_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
@@ -102,6 +103,7 @@ class ProfileScreen extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     final currentUser = FirebaseAuth.instance.currentUser;
     final userTier = userProvider.userTier ?? 'free';
+    final userRole = userProvider.role ?? 'user';
     final tierInfo = _getTierInfo(userTier);
 
     return Scaffold(
@@ -168,6 +170,22 @@ class ProfileScreen extends StatelessWidget {
 
                   _UpgradeCard(),
                   const SizedBox(height: 20),
+
+                  if (userRole == 'admin')
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildActionButton(
+                        text: 'Admin Panel',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminPanelScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
 
                   _buildActionButton(
                     text: 'Contact Us 24/7',

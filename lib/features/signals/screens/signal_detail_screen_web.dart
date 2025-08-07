@@ -1,4 +1,3 @@
-// lib/features/signals/screens/signal_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
@@ -6,17 +5,15 @@ import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.d
 
 class SignalDetailScreen extends StatelessWidget {
   final Signal signal;
-  // --- THAY ĐỔI 1: Thêm userTier vào constructor ---
   final String userTier;
 
   const SignalDetailScreen({
     super.key,
     required this.signal,
-    // --- THAY ĐỔI 2: Yêu cầu userTier khi khởi tạo ---
     required this.userTier,
   });
 
-  // --- LOGIC HIỂN THỊ CỜ (TÁI SỬ DỤNG) ---
+  // --- CÁC HÀM LOGIC CỦA BẠN GIỮ NGUYÊN ---
   static const Map<String, String> _currencyFlags = {
     'AUD': 'assets/images/aud_flag.png',
     'CHF': 'assets/images/chf_flag.png',
@@ -40,13 +37,45 @@ class SignalDetailScreen extends StatelessWidget {
     }
     return [];
   }
-  // --- KẾT THÚC LOGIC HIỂN THỊ CỜ ---
 
+  // ▼▼▼ HÀM NÀY ĐÃ ĐƯỢC NÂNG CẤP HOÀN CHỈNH ▼▼▼
   @override
   Widget build(BuildContext context) {
-    // --- THAY ĐỔI 3: Logic giờ đây dựa hoàn toàn vào userTier được truyền vào ---
     final bool canViewReason = userTier == 'elite';
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
+
+    // --- LOGIC MỚI ĐỂ XỬ LÝ TRẠNG THÁI HIỂN THỊ ---
+    String statusText;
+    Color statusColor;
+
+    if (signal.status == 'running') { // Các tín hiệu LIVE
+      if (signal.result == 'TP1 Hit' || signal.result == 'TP2 Hit') {
+        statusText = signal.result!;
+        statusColor = Colors.tealAccent.shade400;
+      } else if (signal.isMatched) {
+        statusText = 'MATCHED';
+        statusColor = Colors.greenAccent.shade400;
+      } else {
+        statusText = 'NOT MATCHED';
+        statusColor = Colors.amber.shade400;
+      }
+    } else { // Các tín hiệu END
+      statusText = signal.result?.toUpperCase() ?? 'CLOSED';
+      switch (statusText) {
+        case 'SL HIT':
+          statusColor = Colors.redAccent;
+          break;
+        case 'CANCELLED (NEW SIGNAL)':
+        case 'CANCELLED':
+          statusText = 'CANCELLED';
+          statusColor = Colors.grey;
+          break;
+        default: // TP3 HIT, EXITED BY ADMIN, ...
+          statusColor = Colors.blueGrey.shade200;
+          break;
+      }
+    }
+    // --- KẾT THÚC LOGIC MỚI ---
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
@@ -103,7 +132,8 @@ class SignalDetailScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                _buildDetailCard(context, canViewReason),
+                // ▼▼▼ TRUYỀN DỮ LIỆU TRẠNG THÁI MỚI VÀO WIDGET ▼▼▼
+                _buildDetailCard(context, canViewReason, statusText, statusColor),
               ],
             ),
           ),
@@ -112,7 +142,8 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailCard(BuildContext context, bool canViewReason) {
+  // SỬA LẠI HÀM NÀY ĐỂ NHẬN THAM SỐ STATUS
+  Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor) {
     final int decimalPlaces = 2;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -123,9 +154,11 @@ class SignalDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow('Status', signal.status.toUpperCase(),
-              valueColor: signal.status == 'running' ? Colors.amber : Colors.grey),
-          // Sửa lại: Dùng signal.createdAt đã là kiểu DateTime
+          _buildInfoRow(
+            'Status',
+            statusText,
+            valueColor: statusColor,
+          ),
           _buildInfoRow('Sent on', DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate())),
           const Divider(height: 30, color: Colors.blueGrey),
           _buildPriceRow('Entry price', signal.entryPrice.toStringAsFixed(decimalPlaces), signal.result),
@@ -139,7 +172,6 @@ class SignalDetailScreen extends StatelessWidget {
             style: TextStyle(color: Color(0xFF5865F2), fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          // Logic ẩn/hiện "Reason" đã đúng, không cần sửa
           canViewReason
               ? Text(
             signal.reason ?? 'No reason provided for this signal.',
@@ -151,9 +183,8 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  // Các widget con còn lại giữ nguyên, không cần thay đổi
+  // --- CÁC WIDGET CON BÊN DƯỚI GIỮ NGUYÊN KHÔNG ĐỔI ---
   Widget _buildInfoRow(String title, String value, {Color? valueColor}) {
-    // ...
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(

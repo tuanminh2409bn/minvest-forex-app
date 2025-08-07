@@ -47,6 +47,7 @@ class SignalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Hàm build chính giữ nguyên
     return GestureDetector(
       onTap: () {
         if (isLocked) {
@@ -84,10 +85,48 @@ class SignalCard extends StatelessWidget {
     );
   }
 
+  // ▼▼▼ HÀM NÀY ĐÃ ĐƯỢC NÂNG CẤP HOÀN CHỈNH ▼▼▼
   Widget _buildCardHeader() {
     final bool isBuy = signal.type.toLowerCase() == 'buy';
     final Color signalColor = isBuy ? const Color(0xFF238636) : const Color(0xFFDA3633);
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
+
+    // --- LOGIC MỚI ĐỂ XỬ LÝ TRẠNG THÁI HIỂN THỊ ---
+    String statusText;
+    Color statusColor;
+    IconData? statusIcon;
+
+    if (signal.status == 'running') { // Các tín hiệu LIVE
+      if (signal.result == 'TP1 Hit' || signal.result == 'TP2 Hit') {
+        statusText = signal.result!;
+        statusColor = Colors.tealAccent.shade400;
+        statusIcon = Icons.flag_circle;
+      } else if (signal.isMatched) {
+        statusText = 'MATCHED';
+        statusColor = Colors.greenAccent.shade400;
+        statusIcon = Icons.check_circle_outline;
+      } else {
+        statusText = 'NOT MATCHED';
+        statusColor = Colors.amber.shade400;
+        statusIcon = Icons.hourglass_empty;
+      }
+    } else { // Các tín hiệu END
+      statusText = signal.result?.toUpperCase() ?? 'CLOSED';
+      switch (statusText) {
+        case 'SL HIT':
+          statusColor = Colors.redAccent;
+          break;
+        case 'CANCELLED (NEW SIGNAL)':
+        case 'CANCELLED':
+          statusText = 'CANCELLED';
+          statusColor = Colors.grey;
+          break;
+        default: // TP3 HIT, EXITED, ...
+          statusColor = Colors.blueGrey.shade200;
+          break;
+      }
+    }
+    // --- KẾT THÚC LOGIC MỚI ---
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -129,14 +168,20 @@ class SignalCard extends StatelessWidget {
                   color: Colors.white)),
         ),
         const Spacer(),
-        Text(
-          signal.status.toUpperCase(),
-          style: TextStyle(
-              color: signal.status == 'running'
-                  ? Colors.greenAccent
-                  : Colors.grey,
-              fontSize: 11,
-              fontWeight: FontWeight.bold),
+        // Hiển thị trạng thái mới
+        Row(
+          children: [
+            if (statusIcon != null)
+              Icon(statusIcon, color: statusColor, size: 14),
+            if (statusIcon != null) const SizedBox(width: 4),
+            Text(
+              statusText,
+              style: TextStyle(
+                  color: statusColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ],
     );

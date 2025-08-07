@@ -14,6 +14,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
+  // ▼▼▼ SỬA LỖI Ở ĐÂY ▼▼▼
   final List<Widget> _pages = [
     const SignalScreen(),
     const ChartScreen(),
@@ -31,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      body: IndexedStack( // Dùng IndexedStack để giữ trạng thái các trang
+      body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
       ),
@@ -53,7 +54,6 @@ class _MainScreenState extends State<MainScreen> {
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        // --- Tùy chỉnh giao diện theo thiết kế mới ---
         backgroundColor: Colors.black.withOpacity(0.8),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.white,

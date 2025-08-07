@@ -1,5 +1,3 @@
-// features/auth/screens/profile_screen_web.dart
-
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/auth/screens/welcome/welcome_screen.dart';
 import 'package:provider/provider.dart';
@@ -8,14 +6,13 @@ import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:minvest_forex_app/features/admin/screens/admin_panel_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  // --- TẤT CẢ CÁC HÀM LOGIC VÀ WIDGET CON ĐƯỢC GIỮ NGUYÊN ---
-  // Chúng ta chỉ cần copy chúng vào file web này để tái sử dụng.
+  // --- CÁC HÀM LOGIC GIỮ NGUYÊN ---
   Map<String, String> _getTierInfo(String tier) {
-    // ... (Giữ nguyên code của bạn)
     switch (tier.toLowerCase()) {
       case 'demo':
         return {'Signal time': '8h-17h', 'Lot/week': '0.05', 'Signal quantity': '7-8 signals per day'};
@@ -23,19 +20,17 @@ class ProfileScreen extends StatelessWidget {
         return {'Signal time': '8h-17h', 'Lot/week': '0.3', 'Signal quantity': 'full'};
       case 'elite':
         return {'Signal time': 'fulltime', 'Lot/week': '0.5', 'Signal quantity': 'full'};
-      default: // Free tier
+      default:
         return {'Signal time': 'N/A', 'Lot/week': 'N/A', 'Signal quantity': 'N/A'};
     }
   }
 
   Future<void> _launchURL(String url) async {
-    // ... (Giữ nguyên code của bạn)
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {}
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    // ... (Giữ nguyên code của bạn)
     final bool? confirmLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -57,8 +52,7 @@ class ProfileScreen extends StatelessWidget {
         );
       },
     );
-    if (confirmLogout != true) return;
-    if (!context.mounted) return;
+    if (confirmLogout != true || !context.mounted) return;
     await AuthService().signOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -67,141 +61,97 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  // --- BUILD WIDGET CHÍNH ---
   @override
   Widget build(BuildContext context) {
-    // Dữ liệu vẫn được lấy từ Provider và FirebaseAuth như cũ
-    final userProvider = Provider.of<UserProvider>(context);
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final userTier = userProvider.userTier ?? 'free';
-    final tierInfo = _getTierInfo(userTier);
+    // ▼▼▼ SỬ DỤNG CONSUMER ĐỂ LẤY DỮ LIỆU USER ▼▼▼
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final userTier = userProvider.userTier ?? 'free';
+        final userRole = userProvider.role ?? 'user';
+        final tierInfo = _getTierInfo(userTier);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 900) {
+                  // ▼▼▼ TRUYỀN userRole XUỐNG ▼▼▼
+                  return _buildWideLayout(context, currentUser, userTier, tierInfo, userRole);
+                } else {
+                  return _buildNarrowLayout(context, currentUser, userTier, tierInfo, userRole);
+                }
+              },
+            ),
           ),
-        ),
-        // DÙNG LAYOUTBUILDER
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Đặt breakpoint, ví dụ 900px
-            if (constraints.maxWidth > 900) {
-              return _buildWideLayout(context, currentUser, userTier, tierInfo);
-            } else {
-              return _buildNarrowLayout(context, currentUser, userTier, tierInfo);
-            }
-          },
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // GIAO DIỆN CHO MÀN HÌNH RỘNG (WEB)
-  Widget _buildWideLayout(BuildContext context, User? currentUser, String userTier, Map<String, String> tierInfo) {
-    return Center( // Đặt ở giữa màn hình
+  // GIAO DIỆN RỘNG (WEB)
+  Widget _buildWideLayout(BuildContext context, User? currentUser, String userTier, Map<String, String> tierInfo, String userRole) {
+    return Center(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 1100), // Giới hạn chiều rộng tối đa
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+        constraints: const BoxConstraints(maxWidth: 1200), // Tăng giới hạn chiều rộng
+        padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 50.0),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center, // Canh giữa theo chiều dọc
           children: [
-            // --- CỘT BÊN TRÁI ---
+            // CỘT BÊN TRÁI
             Expanded(
-              flex: 1,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: currentUser?.photoURL != null ? NetworkImage(currentUser!.photoURL!) : null,
-                    child: currentUser?.photoURL == null ? const Icon(Icons.person, size: 50) : null,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    currentUser?.displayName ?? 'Your Name',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    currentUser?.email ?? 'your.email@example.com',
-                    style: const TextStyle(fontSize: 15, color: Colors.white70),
-                  ),
-                  const SizedBox(height: 30),
-                  _buildActionButton(
-                    text: 'Contact Us 24/7',
-                    onPressed: () => _launchURL('https://zalo.me/0969156969'),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildActionButton(
-                    text: 'Logout',
-                    onPressed: () => _handleLogout(context),
-                  ),
-                  const SizedBox(height: 40),
-                  const Text('Follow Minvest', style: TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _SocialIcon(iconPath: 'assets/images/facebook_logo.png', url: 'https://www.facebook.com/minvest.vn'),
-                      const SizedBox(width: 20),
-                      _SocialIcon(iconPath: 'assets/images/tiktok_logo.png', url: 'https://www.tiktok.com/@minvest.minh'),
-                      const SizedBox(width: 20),
-                      _SocialIcon(iconPath: 'assets/images/youtube_logo.png', url: 'https://www.youtube.com/@minvestvn'),
-                      const SizedBox(width: 20),
-                      _SocialIcon(iconPath: 'assets/images/telegram_logo.png', url: 'https://t.me/Minvestchungkhoan', size: 32),
-                    ],
-                  ),
-                ],
-              ),
+              flex: 2, // Cho cột trái rộng hơn một chút
+              child: _buildInfoColumn(context, currentUser, userTier, userRole),
             ),
-            const SizedBox(width: 24),
-            const VerticalDivider(width: 24, color: Colors.white24),
-            const SizedBox(width: 24),
+            const VerticalDivider(width: 50, color: Colors.white24, indent: 20, endIndent: 20),
 
-            // --- CỘT BÊN PHẢI ---
+            // CỘT BÊN PHẢI
             Expanded(
-              flex: 2,
-              child: SingleChildScrollView( // Cho phép cuộn nếu nội dung dài
+              flex: 3, // Cột phải rộng hơn
+              child: SingleChildScrollView(
+                // ▼▼▼ THÊM PADDING ĐỂ DỊCH XUỐNG MỘT CHÚT ▼▼▼
+                padding: const EdgeInsets.only(top: 40.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         const Text(
                           "Subscription Details",
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                         const SizedBox(width: 16),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(20)),
-                          child: Text(
-                            userTier.toUpperCase(),
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
+                          child: Text(userTier.toUpperCase(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14)),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 30),
                     ...tierInfo.entries.map((entry) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
+                      padding: const EdgeInsets.only(bottom: 15.0),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${entry.key}:', style: const TextStyle(color: Colors.white70, fontSize: 16)),
-                          Text(entry.value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+                          Text('${entry.key}:', style: const TextStyle(color: Colors.white70, fontSize: 18)),
+                          const Spacer(),
+                          Text(entry.value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
                         ],
                       ),
                     )),
-                    const SizedBox(height: 40),
-                    _UpgradeCard(),
+                    const SizedBox(height: 50),
+                    const _UpgradeCardWeb(), // Dùng thẻ Upgrade cho web
                   ],
                 ),
               ),
@@ -212,73 +162,85 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // GIAO DIỆN CHO MÀN HÌNH HẸP (TÁI SỬ DỤNG CODE MOBILE)
-  Widget _buildNarrowLayout(BuildContext context, User? currentUser, String userTier, Map<String, String> tierInfo) {
+  // GIAO DIỆN HẸP (TABLET/MOBILE)
+  Widget _buildNarrowLayout(BuildContext context, User? currentUser, String userTier, Map<String, String> tierInfo, String userRole) {
     return SafeArea(
       child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: currentUser?.photoURL != null ? NetworkImage(currentUser!.photoURL!) : null,
-                child: currentUser?.photoURL == null ? const Icon(Icons.person, size: 40) : null,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(currentUser?.displayName ?? 'Your Name', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(20)),
-                    child: Text(userTier.toUpperCase(), style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                ],
-              ),
-              Text(currentUser?.email ?? 'your.email@example.com', style: const TextStyle(fontSize: 14, color: Colors.white70)),
-              const SizedBox(height: 30),
-              ...tierInfo.entries.map((entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text('${entry.key}: ${entry.value}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-              )),
-              const SizedBox(height: 30),
-              _UpgradeCard(),
-              const SizedBox(height: 20),
-              _buildActionButton(text: 'Contact Us 24/7', onPressed: () => _launchURL('https://zalo.me/0969156969')),
-              const SizedBox(height: 16),
-              _buildActionButton(text: 'Logout', onPressed: () => _handleLogout(context)),
-              const SizedBox(height: 40),
-              const Text('Follow Minvest', style: TextStyle(color: Colors.white70)),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _SocialIcon(iconPath: 'assets/images/facebook_logo.png', url: 'https://www.facebook.com/minvest.vn'),
-                  const SizedBox(width: 20),
-                  _SocialIcon(iconPath: 'assets/images/tiktok_logo.png', url: 'https://www.tiktok.com/@minvest.minh'),
-                  const SizedBox(width: 20),
-                  _SocialIcon(iconPath: 'assets/images/youtube_logo.png', url: 'https://www.youtube.com/@minvestvn'),
-                  const SizedBox(width: 20),
-                  _SocialIcon(iconPath: 'assets/images/telegram_logo.png', url: 'https://t.me/Minvestchungkhoan', size: 32),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            // ▼▼▼ TÁI SỬ DỤNG CỘT INFO CHUNG ▼▼▼
+            child: _buildInfoColumn(context, currentUser, userTier, userRole, isNarrow: true, tierInfo: tierInfo),
           ),
         ),
       ),
     );
   }
+
+  // ▼▼▼ TÁCH CỘT INFO RA ĐỂ DÙNG CHUNG CHO TIỆN ▼▼▼
+  Widget _buildInfoColumn(BuildContext context, User? currentUser, String userTier, String userRole, {bool isNarrow = false, Map<String, String>? tierInfo}) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (isNarrow) const SizedBox(height: 40),
+        CircleAvatar(radius: 50, backgroundImage: currentUser?.photoURL != null ? NetworkImage(currentUser!.photoURL!) : null, child: currentUser?.photoURL == null ? const Icon(Icons.person, size: 50) : null),
+        const SizedBox(height: 20),
+        Text(currentUser?.displayName ?? 'Your Name', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 8),
+        Text(currentUser?.email ?? 'your.email@example.com', style: const TextStyle(fontSize: 15, color: Colors.white70)),
+
+        // Chỉ hiển thị chi tiết gói trong layout hẹp
+        if(isNarrow && tierInfo != null) ...[
+          const SizedBox(height: 30),
+          ...tierInfo.entries.map((entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text('${entry.key}: ${entry.value}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+          )),
+          const SizedBox(height: 30),
+          const _UpgradeCard(), // Dùng thẻ upgrade mobile
+          const SizedBox(height: 20),
+        ],
+
+        const SizedBox(height: 30),
+
+        // ▼▼▼ NÚT ADMIN PANEL ▼▼▼
+        if (userRole == 'admin')
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildActionButton(
+              text: 'Admin Panel',
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminPanelScreen())),
+            ),
+          ),
+
+        _buildActionButton(text: 'Contact Us 24/7', onPressed: () => _launchURL('https://zalo.me/0969156969')),
+        const SizedBox(height: 16),
+        _buildActionButton(text: 'Logout', onPressed: () => _handleLogout(context)),
+        const SizedBox(height: 40),
+        const Text('Follow Minvest', style: TextStyle(color: Colors.white70)),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _SocialIcon(iconPath: 'assets/images/facebook_logo.png', url: 'https://www.facebook.com/minvest.vn'),
+            const SizedBox(width: 20),
+            _SocialIcon(iconPath: 'assets/images/tiktok_logo.png', url: 'https://www.tiktok.com/@minvest.minh'),
+            const SizedBox(width: 20),
+            _SocialIcon(iconPath: 'assets/images/youtube_logo.png', url: 'https://www.youtube.com/@minvestvn'),
+            const SizedBox(width: 20),
+            _SocialIcon(iconPath: 'assets/images/telegram_logo.png', url: 'https://t.me/Minvestchungkhoan', size: 32),
+          ],
+        ),
+        if (isNarrow) const SizedBox(height: 20),
+      ],
+    );
+  }
 }
 
-// CÁC WIDGET CON CŨNG CẦN ĐƯỢC COPY SANG ĐỂ FILE CÓ THỂ HOẠT ĐỘNG
+// WIDGET CON CHO MOBILE
 class _UpgradeCard extends StatelessWidget {
-  // ... (Giữ nguyên code của bạn)
+  const _UpgradeCard();
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -292,10 +254,39 @@ class _UpgradeCard extends StatelessWidget {
           const SizedBox(height: 4),
           const Text('To access more resources', style: TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 16),
+          ElevatedButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen())), style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue.shade800, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12)), child: const Text('UPGRADE NOW', style: TextStyle(fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+  }
+}
+
+// ▼▼▼ WIDGET UPGRADE CARD MỚI CHO WEB, TO HƠN ▼▼▼
+class _UpgradeCardWeb extends StatelessWidget {
+  const _UpgradeCardWeb();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30), // Tăng padding
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFF157CC9), Color(0xFF2A43B9), Color(0xFFC611CE)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+      child: Column(
+        children: [
+          const Icon(Icons.workspace_premium, color: Colors.amber, size: 40), // Icon to hơn
+          const SizedBox(height: 12),
+          const Text('UPGRADE YOUR ACCOUNT', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)), // Chữ to hơn
+          const SizedBox(height: 8),
+          const Text('To unlock premium signals and full-time support', style: TextStyle(color: Colors.white70, fontSize: 16)), // Chữ to hơn
+          const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen())),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue.shade800, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12)),
-            child: const Text('UPGRADE NOW', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.blue.shade800,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 18), // Nút to hơn
+            ),
+            child: const Text('UPGRADE NOW', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), // Chữ to hơn
           ),
         ],
       ),
@@ -303,8 +294,8 @@ class _UpgradeCard extends StatelessWidget {
   }
 }
 
+
 Widget _buildActionButton({required String text, required VoidCallback onPressed}) {
-  // ... (Giữ nguyên code của bạn)
   return SizedBox(
     width: double.infinity,
     height: 50,
@@ -320,7 +311,6 @@ Widget _buildActionButton({required String text, required VoidCallback onPressed
 }
 
 class _SocialIcon extends StatelessWidget {
-  // ... (Giữ nguyên code của bạn)
   final String iconPath;
   final String url;
   final double size;

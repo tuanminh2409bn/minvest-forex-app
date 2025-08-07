@@ -1,36 +1,49 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:minvest_forex_app/app/auth_gate.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
-import 'package:minvest_forex_app/firebase_options.dart';
-import 'package:provider/provider.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
+import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
+import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
+import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
+import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
+import 'package:minvest_forex_app/firebase_options.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 
-// ▼▼▼ THÊM IMPORT NÀY ▼▼▼
-import 'package:firebase_messaging/firebase_messaging.dart';
-
-// ▼▼▼ THÊM HÀM NÀY BÊN NGOÀI main() ▼▼▼
-// Xử lý thông báo khi app đang ở trạng thái terminated (bị tắt hoàn toàn)
+// --- HÀM XỬ LÝ NỀN (GIỮ NGUYÊN) ---
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Bạn cần đảm bảo Firebase đã được khởi tạo
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print("Handling a background message: ${message.messageId}");
-  // Tại đây bạn có thể xử lý logic sâu hơn nếu cần
+  if (message.data['action'] == 'FORCE_LOGOUT') {
+    await AuthService().signOut();
+  }
 }
 
+// --- KHAI BÁO CÁC BIẾN TOÀN CỤC ---
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+FlutterLocalNotificationsPlugin();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // ▼▼▼ THÊM DÒNG NÀY ▼▼▼
-  // Đăng ký hàm xử lý thông báo nền
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await FirebaseMessaging.instance.requestPermission();
+
+  // Khởi tạo plugin thông báo local
+  const AndroidInitializationSettings initializationSettingsAndroid =
+  AndroidInitializationSettings('@mipmap/ic_launcher');
+  final InitializationSettings initializationSettings =
+  InitializationSettings(android: initializationSettingsAndroid);
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   runApp(
-    MultiProvider( // Dùng MultiProvider
+    MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
         ChangeNotifierProvider(create: (context) => UserProvider()),
@@ -40,14 +53,132 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // ▼▼▼ BƯỚC 1: THIẾT LẬP TOÀN BỘ CÁC TRÌNH LẮNG NGHE THÔNG BÁO ▼▼▼
+    _setupNotificationListeners();
+  }
+
+  void _setupNotificationListeners() {
+    // 1. Lắng nghe khi app đang mở (Foreground)
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Foreground message received: ${message.data}');
+
+      if (message.data['action'] == 'FORCE_LOGOUT') {
+        _showLogoutDialog(message.data['reason']);
+        return;
+      }
+
+      // Hiển thị thông báo local khi có tín hiệu mới hoặc cập nhật
+      final title = message.data['title'];
+      final body = message.data['body'];
+      if (title != null && body != null) {
+        _showLocalNotification(title, body, message.data);
+      }
+    });
+
+    // 2. Lắng nghe khi người dùng NHẤN vào thông báo (từ trạng thái background)
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('Message opened from background: ${message.data}');
+      _handleNotificationNavigation(message.data);
+    });
+
+    // 3. Xử lý nếu app được mở từ trạng thái terminated bằng cách nhấn vào thông báo
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        print('Message opened from terminated: ${message.data}');
+        _handleNotificationNavigation(message.data);
+      }
+    });
+  }
+
+  // ▼▼▼ BƯỚC 2: HÀM ĐIỀU HƯỚNG TỰ ĐỘNG (DEEP-LINKING) ▼▼▼
+  Future<void> _handleNotificationNavigation(Map<String, dynamic> data) async {
+    final String? signalId = data['signalId'];
+    if (signalId == null) return;
+
+    // Đợi một chút để đảm bảo widget tree đã được build xong
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    try {
+      final signal = await SignalService().getSignalById(signalId);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userTier = userProvider.userTier ?? 'free';
+
+      if (signal != null) {
+        // Sử dụng navigatorKey để điều hướng
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => SignalDetailScreen(
+              signal: signal,
+              userTier: userTier,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Lỗi khi điều hướng từ thông báo: $e');
+    }
+  }
+
+  // Hàm hiển thị thông báo local (khi app đang mở)
+  void _showLocalNotification(String title, String body, Map<String, dynamic> payload) {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    AndroidNotificationDetails('minvest_channel_id', 'Minvest Notifications',
+        channelDescription: 'Channel for signal notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: false);
+    const NotificationDetails platformChannelSpecifics =
+    NotificationDetails(android: androidPlatformChannelSpecifics);
+    flutterLocalNotificationsPlugin.show(
+        0, title, body, platformChannelSpecifics,
+        payload: payload['signalId'] // Gán signalId vào payload của thông báo local
+    );
+  }
+
+  // Sửa lại hàm này để nhận lý do
+  void _showLogoutDialog(String? reason) {
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Phiên đăng nhập hết hạn'),
+            content: Text(reason ?? 'Tài khoản của bạn đã được đăng nhập trên một thiết bị khác.'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await AuthService().signOut();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
-        // Trả về MaterialApp với locale được cập nhật từ provider
         return MaterialApp(
+          // === BƯỚC 4: GẮN NAVIGATOR KEY VÀO MATERIALAPP ===
+          navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'Minvest Forex App',
           theme: ThemeData.dark().copyWith(
@@ -58,10 +189,10 @@ class MyApp extends StatelessWidget {
               backgroundColor: Color(0xFF1F1F1F),
             ),
           ),
-          // Sử dụng locale từ provider
           locale: languageProvider.locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          // AuthGate sẽ tự động xử lý việc hiển thị màn hình phù hợp
           home: const AuthGate(),
         );
       },

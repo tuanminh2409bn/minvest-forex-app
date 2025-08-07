@@ -7,42 +7,26 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:245218403052:android:9ef58c4c7b016a17b03bc9",
+        "mobilesdk_app_id": "1:245218403052:android:8da5ef21fd9e851bb03bc9",
         "android_client_info": {
-          "package_name": "com.minvest.aisignals"
+          "package_name": "com.example.minvest_forex_app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "245218403052-4j43e7qgrldk4n8jf8shovk4ovr2sh1t.apps.googleusercontent.com",
+          "client_id": "245218403052-8n213ikrkeau678bt5crq39lopchnj3n.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.minvest.aisignals",
-            "certificate_hash": "85366012b678023dfec95b348d573530e6beab6b"
-          }
-        },
-        {
-          "client_id": "245218403052-8mjnd7tnmldlkk0fo1ku1mt7hm1lsnn5.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.minvest.aisignals",
-            "certificate_hash": "d8697372df4d5ddb9ce2a89d4c96240cc5f7dd65"
-          }
-        },
-        {
-          "client_id": "245218403052-hmjojb7uc30u5rismtnchhvg03cikreu.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.minvest.aisignals",
+            "package_name": "com.example.minvest_forex_app",
             "certificate_hash": "0de61dea689e3842b92471b8c317fcf26b4da804"
           }
         },
         {
-          "client_id": "245218403052-od4o65p52jq9aljgd7pqlcs3d3d4v5u8.apps.googleusercontent.com",
+          "client_id": "245218403052-psrt772l5dv9akrfjoitmfkoqoa9pjtp.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.minvest.aisignals",
-            "certificate_hash": "c8ccfa1ca575d74b92cf61c37cdef9e0e77b1e88"
+            "package_name": "com.example.minvest_forex_app",
+            "certificate_hash": "5f62f42c80dd58f6c7c89dddca21eca7fcfc33f5"
           }
         }
       ],
@@ -55,7 +39,87 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "245218403052-06rdfbkiogjhskv4l96jselut59pkmge.apps.googleusercontent.com",
+              "client_id": "245218403052-vv7n891gojgk69s9pgclcsdh0idkshvt.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.minvestForexApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:245218403052:android:9ef58c4c7b016a17b03bc9",
+        "android_client_info": {
+          "package_name": "com.minvest.aisignals"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "245218403052-8mjnd7tnmldlkk0fo1ku1mt7hm1lsnn5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.minvest.aisignals",
+            "certificate_hash": "d8697372df4d5ddb9ce2a89d4c96240cc5f7dd65"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvzJ4crOk5FYhjHhkLCNX8gBtw5YC9qiU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "245218403052-vv7n891gojgk69s9pgclcsdh0idkshvt.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.minvestForexApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:245218403052:android:0ebdc2f49ce92649b03bc9",
+        "android_client_info": {
+          "package_name": "com.mycompany.minvestai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "245218403052-6t0dkrmfa0fk5g2tl3okm46n5kvimb6u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mycompany.minvestai",
+            "certificate_hash": "9bbb3186b2189ef16d8f272bdab59362c395cbb4"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvzJ4crOk5FYhjHhkLCNX8gBtw5YC9qiU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "245218403052-vv7n891gojgk69s9pgclcsdh0idkshvt.apps.googleusercontent.com",
               "client_type": 3
             },
             {
