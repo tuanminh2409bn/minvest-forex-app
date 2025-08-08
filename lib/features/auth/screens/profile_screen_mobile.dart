@@ -7,6 +7,8 @@ import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -47,9 +49,8 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  // --- TÁCH HÀM XỬ LÝ ĐĂNG XUẤT ---
   Future<void> _handleLogout(BuildContext context) async {
-    // Hiển thị hộp thoại xác nhận trước khi đăng xuất
+    // Bước 1: Hiển thị hộp thoại xác nhận (giữ nguyên logic cũ của bạn)
     final bool? confirmLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -61,40 +62,23 @@ class ProfileScreen extends StatelessWidget {
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel', style: TextStyle(color: Colors.white)),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false); // User chose not to logout
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(false),
             ),
             TextButton(
               child: const Text('Logout', style: TextStyle(color: Colors.red)),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true); // User confirmed logout
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(true),
             ),
           ],
         );
       },
     );
 
-    // Nếu người dùng không xác nhận, không làm gì cả
-    if (confirmLogout != true) {
-      return;
+    // Bước 2: Nếu người dùng xác nhận, gửi sự kiện đến BLoC
+    if (confirmLogout == true && context.mounted) {
+      // ▼▼▼ THAY ĐỔI CỐT LÕI NẰM Ở ĐÂY ▼▼▼
+      // Thay vì tự xử lý logic, chúng ta chỉ cần "báo" cho AuthBloc biết ý định.
+      context.read<AuthBloc>().add(SignOutRequested());
     }
-
-    // Kiểm tra `context` có còn hợp lệ không trước khi sử dụng
-    if (!context.mounted) return;
-
-    // Tiến hành đăng xuất
-    await AuthService().signOut();
-
-    // Kiểm tra `context` một lần nữa sau khi thực hiện hành động bất đồng bộ
-    if (!context.mounted) return;
-
-    // Điều hướng về màn hình Welcome và xóa tất cả các màn hình trước đó
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-          (Route<dynamic> route) => false,
-    );
   }
 
 

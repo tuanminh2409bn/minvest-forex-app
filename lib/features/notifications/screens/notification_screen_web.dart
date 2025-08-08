@@ -1,19 +1,14 @@
+// lib/features/notifications/screens/notification_screen_web.dart
+
 import 'package:flutter/material.dart';
-
-// Model đơn giản để đại diện cho một thông báo
-class NotificationItem {
-  final String title;
-  final String body;
-  final DateTime timestamp;
-  bool isRead;
-
-  NotificationItem({
-    required this.title,
-    required this.body,
-    required this.timestamp,
-    this.isRead = false,
-  });
-}
+import 'package:intl/intl.dart';
+import 'package:minvest_forex_app/core/providers/user_provider.dart';
+import 'package:minvest_forex_app/features/notifications/models/notification_model.dart';
+import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
+import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -23,40 +18,35 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  // --- DỮ LIỆU MẪU (Đã bổ sung đa dạng cặp tiền) ---
-  final List<NotificationItem> _notifications = [
-    NotificationItem(
-      title: 'New Signal: BUY XAU/USD',
-      body: 'Entry price at 2350.50. Check the app for SL and TP levels.',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-    ),
-    NotificationItem(
-      title: 'Signal Update: EUR/USD TP1 Hit!',
-      body: 'Your trade on EUR/USD has reached Take Profit 1. Consider moving SL to entry.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-      isRead: true,
-    ),
-    NotificationItem(
-      title: 'New Signal: SELL GBP/JPY',
-      body: 'A selling opportunity has been identified for GBP/JPY.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 4)),
-    ),
-    NotificationItem(
-      title: 'Welcome to Minvest!',
-      body: 'Thank you for joining. Explore our signals and start your trading journey.',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      isRead: true,
-    ),
-    NotificationItem(
-      title: 'Signal Closed: AUD/USD',
-      body: 'The previous signal for AUD/USD has been closed.',
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      isRead: true,
-    ),
-  ];
-  // --- KẾT THÚC DỮ LIỆU MẪU ---
 
-  // --- LOGIC HIỂN THỊ CỜ (TÁI SỬ DỤNG TỪ SIGNAL_CARD) ---
+  @override
+  void initState() {
+    super.initState();
+    // ▼▼▼ LOGIC CỐT LÕI: ĐÁNH DẤU ĐÃ ĐỌC KHI MỞ MÀN HÌNH ▼▼▼
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().markAllNotificationsAsRead();
+    });
+  }
+
+  // Hàm điều hướng khi nhấn vào thông báo
+  void _onNotificationTap(NotificationModel notification) async {
+    if (notification.signalId == null) return;
+
+    final signal = await SignalService().getSignalById(notification.signalId!);
+    final userTier = context.read<UserProvider>().userTier ?? 'free';
+
+    if (signal != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SignalDetailScreen(
+            signal: signal,
+            userTier: userTier,
+          ),
+        ),
+      );
+    }
+  }
 
   // Map chứa đường dẫn cờ.
   static const Map<String, String> _currencyFlags = {
@@ -101,14 +91,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        // === THAY ĐỔI 1: SỬA MÀU APPBAR ===
         backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          'NOTIFICATIONS',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        title: const Text('NOTIFICATIONS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -122,23 +108,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        // === THAY ĐỔI 2: CO GIÃN GIAO DIỆN ===
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900), // Giới hạn chiều rộng
-            child: _notifications.isEmpty
-                ? const Center(
-              child: Text(
-                'No notifications yet.',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
-              ),
-            )
-                : ListView.builder(
-              padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
-              itemCount: _notifications.length,
-              itemBuilder: (context, index) {
-                final notification = _notifications[index];
-                return _buildNotificationTile(notification);
+            constraints: const BoxConstraints(maxWidth: 900),
+            // ▼▼▼ SỬ DỤNG CONSUMER ĐỂ LẤY DỮ LIỆU ĐỘNG ▼▼▼
+            child: Consumer<NotificationProvider>(
+              builder: (context, provider, child) {
+                if (provider.notifications.isEmpty) {
+                  return const Center(
+                    child: Text('No notifications yet.', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
+                  itemCount: provider.notifications.length,
+                  itemBuilder: (context, index) {
+                    final notification = provider.notifications[index];
+                    return _buildNotificationTile(notification);
+                  },
+                );
               },
             ),
           ),
@@ -147,8 +135,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // Widget để hiển thị một thông báo (ĐÃ CẬP NHẬT)
-  Widget _buildNotificationTile(NotificationItem notification) {
+  Widget _buildNotificationTile(NotificationModel notification) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
@@ -157,34 +144,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
         border: Border.all(color: Colors.blueGrey.withOpacity(0.3)),
       ),
       child: ListTile(
-        // Thay thế icon tĩnh bằng widget động
         leading: _buildLeadingIcon(notification),
-        title: Text(
-          notification.title,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        subtitle: Text(
-          notification.body,
-          style: const TextStyle(color: Colors.white70),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        onTap: () {
-          setState(() {
-            notification.isRead = true;
-          });
-          // TODO: Điều hướng đến màn hình chi tiết tín hiệu nếu cần
-        },
+        title: Text(notification.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        subtitle: Text(notification.body, style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+        onTap: () => _onNotificationTap(notification),
       ),
     );
   }
 
-  // Widget mới để quyết định hiển thị cờ hay icon mặc định
-  Widget _buildLeadingIcon(NotificationItem notification) {
+  Widget _buildLeadingIcon(NotificationModel notification) {
     final symbol = _extractSymbolFromTitle(notification.title);
     final flagPaths = _getFlagPathsFromSymbol(symbol);
 
-    // Nếu tìm thấy cờ, hiển thị chúng
     if (flagPaths.isNotEmpty) {
       return SizedBox(
         width: 42,
@@ -203,11 +174,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
       );
     }
-
-    // Nếu không, hiển thị icon chuông mặc định
     return CircleAvatar(
       backgroundColor: Colors.white.withOpacity(0.1),
-      child: const Icon(Icons.notifications, color: Colors.blueAccent),
+      child: _getIconForType(notification.type), // Sử dụng icon động
     );
+  }
+
+  // Thêm hàm helper này để lấy icon động
+  Icon _getIconForType(String type) {
+    switch (type) {
+      case 'new_signal':
+        return const Icon(Icons.new_releases, color: Colors.blueAccent);
+      case 'signal_matched':
+        return const Icon(Icons.check_circle, color: Colors.blueAccent);
+      case 'tp1_hit':
+      case 'tp2_hit':
+      case 'tp3_hit':
+        return const Icon(Icons.flag_circle, color: Colors.blueAccent);
+      case 'sl_hit':
+        return const Icon(Icons.cancel, color: Colors.blueAccent);
+      default:
+        return const Icon(Icons.notifications, color: Colors.blueAccent);
+    }
   }
 }

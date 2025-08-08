@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -60,7 +59,10 @@ class WelcomeScreen extends StatelessWidget {
                 const Text('Welcome to', style: TextStyle(fontSize: 24, color: Colors.white)),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
-                  child: SvgPicture.asset('assets/images/minvest_logo.svg', height: 180),
+                  child: Image.asset(
+                    'assets/images/minvest_logo.png',
+                    height: 180,
+                  ),
                 ),
                 const Text(
                   'Enhance your trading with intelligent signals.',

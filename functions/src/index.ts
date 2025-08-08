@@ -18,7 +18,7 @@ admin.initializeApp();
 const firestore = admin.firestore();
 
 // =================================================================
-// === HÀM HELPER GỬI THÔNG BÁO  ===
+// === HÀM HELPER GỬI THÔNG BÁO ===
 // =================================================================
 const sendSignalDataNotification = async (
   tokens: string[],
@@ -55,6 +55,42 @@ const sendSignalDataNotification = async (
   } catch (error) {
       functions.logger.error("Lỗi khi gửi hàng loạt thông báo:", error);
   }
+};
+
+// =================================================================
+// === HÀM HELPER: GỬI VÀ LƯU TRỮ THÔNG BÁO ===
+// =================================================================
+const sendAndStoreNotifications = async (
+  userIds: string[],
+  tokens: string[],
+  payload: {[key: string]: string},
+) => {
+    // 1. Gửi thông báo đẩy (Push Notification)
+    if (tokens.length > 0) {
+        await sendSignalDataNotification(tokens, payload);
+    } else {
+        functions.logger.warn("Không có token để gửi thông báo đẩy.");
+    }
+
+    // 2. Lưu thông báo vào subcollection "notifications" của mỗi user
+    const batch = firestore.batch();
+    const notificationData = {
+        ...payload,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        isRead: false, // Mặc định là chưa đọc
+    };
+
+    userIds.forEach(userId => {
+        const notificationRef = firestore.collection('users').doc(userId).collection('notifications').doc();
+        batch.set(notificationRef, notificationData);
+    });
+
+    try {
+        await batch.commit();
+        functions.logger.log(`Đã lưu ${userIds.length} thông báo vào Firestore.`);
+    } catch (error) {
+        functions.logger.error("Lỗi khi lưu thông báo vào Firestore:", error);
+    }
 };
 
 // =================================================================
@@ -514,42 +550,31 @@ export const sendSignalNotification = onDocumentCreated(
     const signalData = event.data?.data();
     const signalId = event.params.signalId;
 
-    if (!signalData) {
-      functions.logger.log("Không có dữ liệu tín hiệu mới, bỏ qua.");
-      return;
-    }
+    if (!signalData) return;
 
     const symbol = signalData.symbol;
     const type = signalData.type.toUpperCase();
-    functions.logger.log(`Tín hiệu mới: ${type} ${symbol}. Bắt đầu gửi thông báo.`);
+    functions.logger.log(`Tín hiệu mới: ${type} ${symbol}. Bắt đầu gửi và lưu thông báo.`);
 
     const usersSnapshot = await firestore.collection("users").get();
-    if (usersSnapshot.empty) {
-        functions.logger.log("Không tìm thấy người dùng nào.");
-        return;
-    }
+    if (usersSnapshot.empty) return;
 
+    const userIds = usersSnapshot.docs.map(doc => doc.id);
     const tokens = usersSnapshot.docs
         .map(doc => doc.data().activeSession?.fcmToken)
         .filter(token => token);
 
-    if (tokens.length === 0) {
-        functions.logger.log("Không có user nào có fcmToken hợp lệ.");
-        return;
-    }
-
-    functions.logger.log(`Chuẩn bị gửi thông báo TẠO MỚI đến ${tokens.length} thiết bị.`);
-
     const dataPayload = {
-      type: "new_signal", // Loại thông báo
-      signalId: signalId,   // ID để điều hướng
+      type: "new_signal",
+      signalId: signalId,
       title: `⚡️ Tín hiệu mới: ${type} ${symbol}`,
       body: `Entry: ${signalData.entryPrice} | SL: ${signalData.stopLoss}`,
     };
 
-    await sendSignalDataNotification(tokens, dataPayload);
+    await sendAndStoreNotifications(userIds, tokens, dataPayload);
   }
 );
+
 
 
 // =================================================================
@@ -561,16 +586,12 @@ export const sendSignalUpdateNotification = onDocumentUpdated(
     region: "asia-southeast1",
     memory: "256MiB",
   },
-
   async (event) => {
     const beforeData = event.data?.before.data();
     const afterData = event.data?.after.data();
     const signalId = event.params.signalId;
 
-    if (!beforeData || !afterData) {
-      functions.logger.log("Thiếu dữ liệu trước/sau, bỏ qua.");
-      return;
-    }
+    if (!beforeData || !afterData) return;
 
     let title = "";
     let body = "";
@@ -579,13 +600,11 @@ export const sendSignalUpdateNotification = onDocumentUpdated(
     const symbol = afterData.symbol;
     const signalType = afterData.type.toUpperCase();
 
-    // 1. KIỂM TRA THAY ĐỔI TRẠNG THÁI KHỚP LỆNH
     if (beforeData.isMatched === false && afterData.isMatched === true) {
         type = "signal_matched";
         title = `✅ ${signalType} ${symbol} Đã khớp lệnh!`;
         body = `Tín hiệu đã khớp entry tại giá ${afterData.entryPrice}.`;
     }
-    // 2. KIỂM TRA THAY ĐỔI KẾT QUẢ (TP/SL)
     else if (beforeData.result !== afterData.result) {
         switch(afterData.result) {
             case "TP1 Hit":
@@ -611,25 +630,18 @@ export const sendSignalUpdateNotification = onDocumentUpdated(
         }
     }
 
-    if (!title) {
-      return;
-    }
-
-    functions.logger.log(`Tín hiệu ${signalId} có cập nhật: ${type}. Bắt đầu gửi thông báo.`);
+    if (!title) return;
 
     const usersSnapshot = await firestore.collection("users").get();
     if (usersSnapshot.empty) return;
 
+    const userIds = usersSnapshot.docs.map(doc => doc.id);
     const tokens = usersSnapshot.docs
         .map(doc => doc.data().activeSession?.fcmToken)
         .filter(token => token);
 
-    if (tokens.length === 0) return;
-
-    functions.logger.log(`Chuẩn bị gửi thông báo CẬP NHẬT đến ${tokens.length} thiết bị.`);
-
     const dataPayload = { type, signalId, title, body };
-    await sendSignalDataNotification(tokens, dataPayload);
+    await sendAndStoreNotifications(userIds, tokens, dataPayload);
   }
 );
 

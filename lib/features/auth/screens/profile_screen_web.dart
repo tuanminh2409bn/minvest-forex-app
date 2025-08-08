@@ -7,6 +7,8 @@ import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.d
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:minvest_forex_app/features/admin/screens/admin_panel_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -52,19 +54,18 @@ class ProfileScreen extends StatelessWidget {
         );
       },
     );
-    if (confirmLogout != true || !context.mounted) return;
-    await AuthService().signOut();
-    if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-          (Route<dynamic> route) => false,
-    );
+
+    // Bước 2: Nếu người dùng xác nhận, gửi sự kiện đến BLoC
+    if (confirmLogout == true && context.mounted) {
+      // ▼▼▼ THAY ĐỔI CỐT LÕI NẰM Ở ĐÂY ▼▼▼
+      // Thay vì tự xử lý logic, chúng ta chỉ cần "báo" cho AuthBloc biết ý định.
+      context.read<AuthBloc>().add(SignOutRequested());
+    }
   }
 
   // --- BUILD WIDGET CHÍNH ---
   @override
   Widget build(BuildContext context) {
-    // ▼▼▼ SỬ DỤNG CONSUMER ĐỂ LẤY DỮ LIỆU USER ▼▼▼
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
         final currentUser = FirebaseAuth.instance.currentUser;

@@ -9,9 +9,12 @@ import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
 import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
+import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:minvest_forex_app/firebase_options.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 
 // --- HÀM XỬ LÝ NỀN (GIỮ NGUYÊN) ---
 @pragma('vm:entry-point')
@@ -45,8 +48,16 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        // Các provider cũ của bạn
+        Provider<AuthService>(create: (_) => AuthService()),
+        BlocProvider<AuthBloc>(
+          create: (context) => AuthBloc(
+            authService: context.read<AuthService>(),
+          ),
+        ),
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
         ChangeNotifierProvider(create: (context) => UserProvider()),
+        ChangeNotifierProvider(create: (context) => NotificationProvider()),
       ],
       child: const MyApp(),
     ),

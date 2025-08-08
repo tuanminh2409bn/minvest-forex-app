@@ -197,19 +197,23 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceRow(String title, String value, String? status) {
-    // ...
-    Color valueColor = Colors.white;
+  Widget _buildPriceRow(String title, String value, String? result) {
     Icon? statusIcon;
-    String titleNormalized = title.replaceAll(' ', '').toLowerCase();
+    final String lowerResult = result?.toLowerCase() ?? '';
+    final String lowerTitle = title.replaceAll(' ', '').toLowerCase();
 
-    if (status != null && status.isNotEmpty) {
-      if (status.toLowerCase().contains(titleNormalized + 'hit')) {
-        valueColor = const Color(0xFF238636);
-        statusIcon = const Icon(Icons.check_circle, color: Color(0xFF238636), size: 18);
-      } else if (status.toLowerCase() == 'slhit' && titleNormalized == 'stoploss') {
-        valueColor = const Color(0xFFDA3633);
+    if (signal.status == 'closed') {
+      if (lowerTitle == 'stoploss' && lowerResult == 'slhit') {
         statusIcon = const Icon(Icons.cancel, color: Color(0xFFDA3633), size: 18);
+      }
+      if (lowerTitle.startsWith('takeprofit')) {
+        final tpNumber = int.tryParse(lowerTitle.replaceAll('takeprofit', ''));
+        if (tpNumber != null && lowerResult.startsWith('tp') && lowerResult.endsWith('hit')) {
+          final hitTpNumber = int.tryParse(lowerResult.replaceAll('hit', '').replaceAll('tp', ''));
+          if (hitTpNumber != null && tpNumber <= hitTpNumber) {
+            statusIcon = const Icon(Icons.check_circle, color: Color(0xFF238636), size: 18);
+          }
+        }
       }
     }
 
@@ -221,7 +225,7 @@ class SignalDetailScreen extends StatelessWidget {
           Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
           Row(
             children: [
-              Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: valueColor)),
+              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
               if (statusIcon != null) ...[
                 const SizedBox(width: 8),
                 statusIcon,

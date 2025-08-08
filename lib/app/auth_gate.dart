@@ -1,24 +1,23 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// lib/app/auth_gate.dart
 import 'package:flutter/material.dart';
-import 'package:minvest_forex_app/features/auth/screens/welcome/welcome_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/app/main_screen.dart';
+import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
+import 'package:minvest_forex_app/features/auth/screens/welcome/welcome_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        if (snapshot.hasData) {
+    return BlocSelector<AuthBloc, AuthState, AuthStatus>(
+      selector: (state) => state.status,
+      builder: (context, status) {
+        if (status == AuthStatus.authenticated) {
           return const MainScreen();
+        } else {
+          return const WelcomeScreen();
         }
-        return const WelcomeScreen();
       },
     );
   }

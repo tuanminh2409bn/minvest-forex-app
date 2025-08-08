@@ -6,26 +6,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class UserProvider with ChangeNotifier {
-  // Các thuộc tính cũ
   String? _userTier;
   String? _verificationStatus;
   String? _verificationError;
-
-  // ▼▼▼ THÊM CÁC THUỘC TÍNH MỚI ▼▼▼
   String? _role;
   bool _isSuspended = false;
   String? _suspensionReason;
 
-  // Getters cho các thuộc tính cũ
   String? get userTier => _userTier;
   String? get verificationStatus => _verificationStatus;
   String? get verificationError => _verificationError;
-
-  // ▼▼▼ THÊM GETTERS CHO CÁC THUỘC TÍNH MỚI ▼▼▼
   String? get role => _role;
   bool get isSuspended => _isSuspended;
   String? get suspensionReason => _suspensionReason;
-
 
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<DocumentSnapshot>? _userSubscription;
@@ -35,52 +28,52 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
+    // ▼▼▼ LOGIC ĐÃ ĐƯỢC LÀM AN TOÀN HƠN ▼▼▼
+
+    // 1. Luôn hủy listener cũ ngay từ đầu để tránh rò rỉ.
+    await _userSubscription?.cancel();
+
     if (firebaseUser == null) {
+      // 2. Nếu người dùng đã đăng xuất, reset trạng thái ngay lập tức và thoát.
       _resetState();
-      _userSubscription?.cancel();
-    } else {
-      _userSubscription = FirebaseFirestore.instance
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .snapshots()
-          .listen((snapshot) {
-        if (snapshot.exists) {
-          final data = snapshot.data() as Map<String, dynamic>;
-          // Lấy dữ liệu cũ
-          _userTier = data['subscriptionTier'];
-          _verificationStatus = data['verificationStatus'];
-          _verificationError = data['verificationError'];
-
-          // ▼▼▼ LẤY DỮ LIỆU CHO CÁC TRƯỜNG MỚI ▼▼▼
-          _role = data['role'] ?? 'user'; // Mặc định là 'user' nếu chưa có
-          _isSuspended = data['isSuspended'] ?? false; // Mặc định là 'false' nếu chưa có
-          _suspensionReason = data['suspensionReason']; // Có thể null
-
-        } else {
-          _resetState();
-        }
-        notifyListeners();
-      });
+      notifyListeners();
+      return;
     }
-    notifyListeners();
+
+    // 3. Chỉ tạo listener mới khi chắc chắn có người dùng đã đăng nhập.
+    _userSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        _userTier = data['subscriptionTier'];
+        _verificationStatus = data['verificationStatus'];
+        _verificationError = data['verificationError'];
+        _role = data['role'] ?? 'user';
+        _isSuspended = data['isSuspended'] ?? false;
+        _suspensionReason = data['suspensionReason'];
+      } else {
+        _resetState();
+      }
+      notifyListeners();
+    });
   }
 
   void _resetState() {
     _userTier = null;
     _verificationStatus = null;
     _verificationError = null;
-    // ▼▼▼ RESET CÁC TRẠNG THÁI MỚI KHI LOGOUT ▼▼▼
     _role = null;
     _isSuspended = false;
     _suspensionReason = null;
   }
 
-  // Hàm này của bạn giữ nguyên
   void clearVerificationStatus() {
     if (_verificationStatus == 'failed') {
       _verificationStatus = null;
       _verificationError = null;
-      // Không cần notifyListeners() ở đây trừ khi bạn muốn cập nhật UI ngay lập tức
     }
   }
 

@@ -169,14 +169,13 @@ class AuthService {
       for (final provider in user.providerData) {
         switch (provider.providerId) {
           case 'google.com':
-          // Disconnect để lần sau vẫn hiện popup chọn tài khoản
-            await GoogleSignIn().disconnect();
+            await GoogleSignIn().signOut();
+            print("Disconnected and Signed out from Google");
             break;
           case 'facebook.com':
             await FacebookAuth.instance.logOut();
             break;
           case 'apple.com':
-          // Apple không có phương thức disconnect riêng
             break;
         }
       }

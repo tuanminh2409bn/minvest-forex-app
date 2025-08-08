@@ -1,19 +1,14 @@
+// lib/features/notifications/screens/notification_screen_mobile.dart
+
 import 'package:flutter/material.dart';
-
-// Model đơn giản để đại diện cho một thông báo
-class NotificationItem {
-  final String title;
-  final String body;
-  final DateTime timestamp;
-  bool isRead;
-
-  NotificationItem({
-    required this.title,
-    required this.body,
-    required this.timestamp,
-    this.isRead = false,
-  });
-}
+import 'package:intl/intl.dart';
+import 'package:minvest_forex_app/core/providers/user_provider.dart';
+import 'package:minvest_forex_app/features/notifications/models/notification_model.dart';
+import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
+import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -23,183 +18,125 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  // --- DỮ LIỆU MẪU (Đã bổ sung đa dạng cặp tiền) ---
-  final List<NotificationItem> _notifications = [
-    NotificationItem(
-      title: 'New Signal: BUY XAU/USD',
-      body: 'Entry price at 2350.50. Check the app for SL and TP levels.',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-    ),
-    NotificationItem(
-      title: 'Signal Update: EUR/USD TP1 Hit!',
-      body: 'Your trade on EUR/USD has reached Take Profit 1. Consider moving SL to entry.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-      isRead: true,
-    ),
-    NotificationItem(
-      title: 'New Signal: SELL GBP/JPY',
-      body: 'A selling opportunity has been identified for GBP/JPY.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 4)),
-    ),
-    NotificationItem(
-      title: 'Welcome to Minvest!',
-      body: 'Thank you for joining. Explore our signals and start your trading journey.',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      isRead: true,
-    ),
-    NotificationItem(
-      title: 'Signal Closed: AUD/USD',
-      body: 'The previous signal for AUD/USD has been closed.',
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      isRead: true,
-    ),
-  ];
-  // --- KẾT THÚC DỮ LIỆU MẪU ---
 
-  // --- LOGIC HIỂN THỊ CỜ (TÁI SỬ DỤNG TỪ SIGNAL_CARD) ---
-
-  // Map chứa đường dẫn cờ.
-  static const Map<String, String> _currencyFlags = {
-    'AUD': 'assets/images/aud_flag.png',
-    'CHF': 'assets/images/chf_flag.png',
-    'EUR': 'assets/images/eur_flag.png',
-    'GBP': 'assets/images/gbp_flag.png',
-    'JPY': 'assets/images/jpy_flag.png',
-    'NZD': 'assets/images/nzd_flag.png',
-    'USD': 'assets/images/us_flag.png',
-    'XAU': 'assets/images/crown_icon.png',
-  };
-
-  // Hàm trích xuất symbol từ tiêu đề thông báo
-  String? _extractSymbolFromTitle(String title) {
-    // Biểu thức chính quy tìm một chuỗi có dạng 3 chữ cái, dấu gạch chéo, 3 chữ cái
-    final RegExp regex = RegExp(r'([A-Z]{3}\/[A-Z]{3})');
-    final Match? match = regex.firstMatch(title.toUpperCase());
-    return match?.group(0); // Trả về chuỗi khớp, ví dụ "EUR/USD"
+  @override
+  void initState() {
+    super.initState();
+    // ▼▼▼ LOGIC CỐT LÕI: ĐÁNH DẤU ĐÃ ĐỌC KHI MỞ MÀN HÌNH ▼▼▼
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().markAllNotificationsAsRead();
+    });
   }
 
-  // Hàm lấy cặp cờ từ symbol
-  List<String> _getFlagPathsFromSymbol(String? symbol) {
-    if (symbol == null) return [];
+  // Hàm điều hướng khi nhấn vào thông báo
+  void _onNotificationTap(NotificationModel notification) async {
+    if (notification.signalId == null) return;
 
-    final parts = symbol.toUpperCase().split('/');
-    if (parts.length == 2) {
-      final path1 = _currencyFlags[parts[0]];
-      final path2 = _currencyFlags[parts[1]];
-      return [
-        if (path1 != null) path1,
-        if (path2 != null) path2,
-      ];
+    final signal = await SignalService().getSignalById(notification.signalId!);
+    // Lấy userTier một cách an toàn
+    final userTier = context.read<UserProvider>().userTier ?? 'free';
+
+    if (signal != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SignalDetailScreen(
+            signal: signal,
+            userTier: userTier,
+          ),
+        ),
+      );
     }
-    return [];
   }
-
-  // --- KẾT THÚC LOGIC HIỂN THỊ CỜ ---
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
-        title: const Text(
-          'NOTIFICATIONS',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.transparent,
+        title: const Text('Thông báo'),
+        backgroundColor: const Color(0xFF161B22),
         elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: _notifications.isEmpty
-            ? const Center(
-          child: Text(
-            'No notifications yet.',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-        )
-            : ListView.builder(
-          padding: const EdgeInsets.only(top: 8.0),
-          itemCount: _notifications.length,
-          itemBuilder: (context, index) {
-            final notification = _notifications[index];
-            return _buildNotificationTile(notification);
-          },
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-    );
-  }
+      body: Consumer<NotificationProvider>(
+        builder: (context, provider, child) {
+          if (provider.notifications.isEmpty) {
+            return const Center(
+              child: Text(
+                'Không có thông báo nào.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            );
+          }
 
-  // Widget để hiển thị một thông báo (ĐÃ CẬP NHẬT)
-  Widget _buildNotificationTile(NotificationItem notification) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: notification.isRead ? Colors.transparent : const Color(0xFF152A55).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueGrey.withOpacity(0.3)),
-      ),
-      child: ListTile(
-        // Thay thế icon tĩnh bằng widget động
-        leading: _buildLeadingIcon(notification),
-        title: Text(
-          notification.title,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        subtitle: Text(
-          notification.body,
-          style: const TextStyle(color: Colors.white70),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        onTap: () {
-          setState(() {
-            notification.isRead = true;
-          });
-          // TODO: Điều hướng đến màn hình chi tiết tín hiệu nếu cần
+          return ListView.builder(
+            itemCount: provider.notifications.length,
+            itemBuilder: (context, index) {
+              final notification = provider.notifications[index];
+              final timeAgo = _formatTimestamp(notification.timestamp);
+
+              return ListTile(
+                onTap: () => _onNotificationTap(notification),
+                leading: CircleAvatar(
+                  backgroundColor: notification.isRead
+                      ? Colors.blueGrey.withOpacity(0.3)
+                      : const Color(0xFF5865F2),
+                  child: _getIconForType(notification.type),
+                ),
+                title: Text(
+                  notification.title,
+                  style: TextStyle(
+                    fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                subtitle: Text(
+                  '${notification.body}\n$timeAgo',
+                  style: TextStyle(
+                    color: notification.isRead ? Colors.grey.shade500 : Colors.grey.shade300,
+                  ),
+                ),
+                isThreeLine: true,
+              );
+            },
+          );
         },
       ),
     );
   }
 
-  // Widget mới để quyết định hiển thị cờ hay icon mặc định
-  Widget _buildLeadingIcon(NotificationItem notification) {
-    final symbol = _extractSymbolFromTitle(notification.title);
-    final flagPaths = _getFlagPathsFromSymbol(symbol);
-
-    // Nếu tìm thấy cờ, hiển thị chúng
-    if (flagPaths.isNotEmpty) {
-      return SizedBox(
-        width: 42,
-        height: 28,
-        child: Stack(
-          children: List.generate(flagPaths.length, (index) {
-            return Positioned(
-              left: index * 14.0,
-              child: CircleAvatar(
-                radius: 14,
-                backgroundColor: Colors.grey.shade800,
-                backgroundImage: AssetImage(flagPaths[index]),
-              ),
-            );
-          }),
-        ),
-      );
+  Icon _getIconForType(String type) {
+    switch (type) {
+      case 'new_signal':
+        return const Icon(Icons.new_releases, color: Colors.white, size: 20);
+      case 'signal_matched':
+        return const Icon(Icons.check_circle_outline, color: Colors.white, size: 20);
+      case 'tp1_hit':
+      case 'tp2_hit':
+      case 'tp3_hit':
+        return const Icon(Icons.flag_circle_outlined, color: Colors.white, size: 20);
+      case 'sl_hit':
+        return const Icon(Icons.cancel_outlined, color: Colors.white, size: 20);
+      default:
+        return const Icon(Icons.notifications, color: Colors.white, size: 20);
     }
+  }
 
-    // Nếu không, hiển thị icon chuông mặc định
-    return CircleAvatar(
-      backgroundColor: Colors.white.withOpacity(0.1),
-      child: const Icon(Icons.notifications, color: Colors.blueAccent),
-    );
+  String _formatTimestamp(Timestamp timestamp) {
+    final DateTime date = timestamp.toDate();
+    final Duration diff = DateTime.now().difference(date);
+    if (diff.inDays > 1) {
+      return '${diff.inDays} ngày trước';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours} giờ trước';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes} phút trước';
+    } else {
+      return 'Vừa xong';
+    }
   }
 }

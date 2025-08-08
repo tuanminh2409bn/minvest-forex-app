@@ -4,9 +4,9 @@ import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
 import 'package:minvest_forex_app/features/signals/widgets/signal_card.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
-import 'package:minvest_forex_app/services/notification_service.dart';
 import 'package:minvest_forex_app/features/notifications/screens/notification_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 
 class SignalScreen extends StatefulWidget {
   const SignalScreen({super.key});
@@ -19,16 +19,8 @@ class _SignalScreenState extends State<SignalScreen> {
   bool _isLive = true;
   final SignalService _signalService = SignalService();
 
-  @override
-  void initState() {
-    super.initState();
-    // Khởi tạo dịch vụ thông báo khi màn hình được tạo
-    NotificationService().initialize();
-  }
-
-  bool _isVipWithinGoldenHours() {
-    final now = DateTime.now();
-    final nowInVietnam = now.toUtc().add(const Duration(hours: 7));
+  bool _isWithinGoldenHours() {
+    final nowInVietnam = DateTime.now().toUtc().add(const Duration(hours: 7));
     return nowInVietnam.hour >= 8 && nowInVietnam.hour < 17;
   }
 
@@ -59,14 +51,39 @@ class _SignalScreenState extends State<SignalScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildTabs(),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                    // ▼▼▼ NÂNG CẤP ICON CHUÔNG THÔNG BÁO ▼▼▼
+                    Consumer<NotificationProvider>(
+                      builder: (context, notificationProvider, child) {
+                        final bool hasUnread = notificationProvider.unreadCount > 0;
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications_none, size: 28),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                                );
+                              },
+                            ),
+                            if (hasUnread)
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: Container(
+                                  height: 9,
+                                  width: 9,
+                                  decoration: const BoxDecoration(
+                                      color: Colors.redAccent,
+                                      shape: BoxShape.circle,
+                                      border: Border.fromBorderSide(BorderSide(color: Color(0xFF0D1117), width: 1.5))
+                                  ),
+                                ),
+                              ),
+                          ],
                         );
                       },
-                      icon: const Icon(Icons.notifications_none),
                     ),
                   ],
                 ),
@@ -83,12 +100,14 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildContent(String userTier) {
-    if (_isLive && userTier == 'vip' && !_isVipWithinGoldenHours()) {
-      return _buildUpgradeViewForVip();
+    // Quy định về thời gian cho cả VIP và Demo
+    if (_isLive && (userTier == 'vip' || userTier == 'demo') && !_isWithinGoldenHours()) {
+      return _buildOutOfHoursView(userTier); // Hiển thị màn hình ngoài giờ
     }
     return _buildSignalList(userTier);
   }
 
+  // ▼▼▼ HÀM NÀY ĐƯỢC NÂNG CẤP TOÀN DIỆN ▼▼▼
   Widget _buildSignalList(String userTier) {
     return StreamBuilder<List<Signal>>(
       stream: _signalService.getSignals(isLive: _isLive, userTier: userTier),
@@ -104,21 +123,40 @@ class _SignalScreenState extends State<SignalScreen> {
         }
 
         final signals = snapshot.data!;
+
+        // --- LOGIC PHÂN QUYỀN MỚI ---
         int itemCount = signals.length;
-        if (_isLive && userTier == 'demo' && signals.length > 8) {
-          itemCount = 9;
+        bool Function(int) isLockedCallback;
+
+        switch (userTier) {
+          case 'free':
+            itemCount = signals.length > 2 ? 2 : signals.length;
+            isLockedCallback = (index) => true; // Khóa tất cả
+            break;
+          case 'demo':
+          // Hiển thị tối đa 8 tín hiệu + 1 nút upgrade
+            if (_isLive && signals.length > 8) {
+              itemCount = 9;
+            }
+            isLockedCallback = (index) => _isLive && index >= 8; // Khóa từ tín hiệu thứ 9
+            break;
+          default: // vip, elite
+            isLockedCallback = (index) => false; // Không khóa
+            break;
         }
+        // --- KẾT THÚC LOGIC PHÂN QUYỀN ---
 
         return ListView.builder(
           padding: const EdgeInsets.only(bottom: 16),
           itemCount: itemCount,
           itemBuilder: (context, index) {
-            if (_isLive && userTier == 'demo' && index == 8) {
+            // Hiển thị nút Upgrade cho Demo user ở vị trí thứ 9
+            if (userTier == 'demo' && _isLive && index == 8) {
               return _buildUpgradeButton();
             }
 
             final signal = signals[index];
-            final bool isLocked = (_isLive && userTier == 'demo' && index >= 8);
+            final bool isLocked = isLockedCallback(index);
 
             return SignalCard(
               signal: signal,
@@ -131,7 +169,8 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  Widget _buildUpgradeViewForVip() {
+  // Đổi tên hàm cho rõ nghĩa hơn
+  Widget _buildOutOfHoursView(String userTier) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -146,7 +185,10 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            "VIP signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade to Elite to get signals 24/24!",
+            // Hiển thị thông báo phù hợp với từng loại tài khoản
+            userTier == 'vip'
+                ? "VIP signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade to Elite to get signals 24/24!"
+                : "Demo signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade your account for more benefits!",
             style: TextStyle(fontSize: 16, color: Colors.grey[400]),
             textAlign: TextAlign.center,
           ),

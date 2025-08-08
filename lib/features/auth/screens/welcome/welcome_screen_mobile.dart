@@ -3,7 +3,6 @@ import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -66,8 +65,8 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: SvgPicture.asset(
-                    'assets/images/minvest_logo.svg',
+                  child: Image.asset(
+                    'assets/images/minvest_logo.png',
                     height: 150,
                   ),
                 ),
