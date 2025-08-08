@@ -38,17 +38,16 @@ class SignalDetailScreen extends StatelessWidget {
     return [];
   }
 
-  // ▼▼▼ HÀM NÀY ĐÃ ĐƯỢC NÂNG CẤP HOÀN CHỈNH ▼▼▼
   @override
   Widget build(BuildContext context) {
+    // ▼▼▼ SỬA LẠI ĐIỀU KIỆN XEM REASON ▼▼▼
     final bool canViewReason = userTier == 'elite';
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
-    // --- LOGIC MỚI ĐỂ XỬ LÝ TRẠNG THÁI HIỂN THỊ ---
     String statusText;
     Color statusColor;
 
-    if (signal.status == 'running') { // Các tín hiệu LIVE
+    if (signal.status == 'running') {
       if (signal.result == 'TP1 Hit' || signal.result == 'TP2 Hit') {
         statusText = signal.result!;
         statusColor = Colors.tealAccent.shade400;
@@ -59,7 +58,7 @@ class SignalDetailScreen extends StatelessWidget {
         statusText = 'NOT MATCHED';
         statusColor = Colors.amber.shade400;
       }
-    } else { // Các tín hiệu END
+    } else {
       statusText = signal.result?.toUpperCase() ?? 'CLOSED';
       switch (statusText) {
         case 'SL HIT':
@@ -70,12 +69,11 @@ class SignalDetailScreen extends StatelessWidget {
           statusText = 'CANCELLED';
           statusColor = Colors.grey;
           break;
-        default: // TP3 HIT, EXITED BY ADMIN, ...
+        default:
           statusColor = Colors.blueGrey.shade200;
           break;
       }
     }
-    // --- KẾT THÚC LOGIC MỚI ---
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -128,7 +126,6 @@ class SignalDetailScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            // ▼▼▼ TRUYỀN DỮ LIỆU TRẠNG THÁI MỚI VÀO WIDGET ▼▼▼
             _buildDetailCard(context, canViewReason, statusText, statusColor),
           ],
         ),
@@ -136,7 +133,6 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  // SỬA LẠI HÀM NÀY ĐỂ NHẬN THAM SỐ STATUS
   Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor) {
     final int decimalPlaces = 2;
     return Container(
@@ -150,8 +146,8 @@ class SignalDetailScreen extends StatelessWidget {
         children: [
           _buildInfoRow(
             'Status',
-            statusText, // Sử dụng status đã được xử lý
-            valueColor: statusColor, // Sử dụng màu đã được xử lý
+            statusText,
+            valueColor: statusColor,
           ),
           _buildInfoRow('Sent on', DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate())),
           const Divider(height: 30, color: Colors.blueGrey),
@@ -177,7 +173,6 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  // --- CÁC WIDGET CON BÊN DƯỚI GIỮ NGUYÊN KHÔNG ĐỔI ---
   Widget _buildInfoRow(String title, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -191,13 +186,14 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
+  // ▼▼▼ HÀM NÀY ĐÃ ĐƯỢC NÂNG CẤP HOÀN CHỈNH ▼▼▼
   Widget _buildPriceRow(String title, String value, String? result) {
     Icon? statusIcon;
     final String lowerResult = result?.toLowerCase() ?? '';
     final String lowerTitle = title.replaceAll(' ', '').toLowerCase();
 
     // Logic hiển thị Icon
-    if (signal.status == 'closed') {
+    if (signal.status == 'closed' || lowerResult.contains('hit')) {
       // Xử lý SL
       if (lowerTitle == 'stoploss' && lowerResult == 'slhit') {
         statusIcon = const Icon(Icons.cancel, color: Color(0xFFDA3633), size: 18);
@@ -208,7 +204,7 @@ class SignalDetailScreen extends StatelessWidget {
         if (tpNumber != null && lowerResult.startsWith('tp') && lowerResult.endsWith('hit')) {
           final hitTpNumber = int.tryParse(lowerResult.replaceAll('hit', '').replaceAll('tp', ''));
           if (hitTpNumber != null && tpNumber <= hitTpNumber) {
-            statusIcon = const Icon(Icons.check_circle, color: Color(0xFF238636), size: 18);
+            statusIcon = const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18);
           }
         }
       }
@@ -224,7 +220,7 @@ class SignalDetailScreen extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: TextStyle(
+                style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.white),
@@ -241,7 +237,6 @@ class SignalDetailScreen extends StatelessWidget {
   }
 
   Widget _buildUpgradeToView(BuildContext context) {
-    // ...
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [

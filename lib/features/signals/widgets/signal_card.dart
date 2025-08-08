@@ -8,12 +8,14 @@ class SignalCard extends StatelessWidget {
   final Signal signal;
   final String userTier;
   final bool isLocked;
+  final double textScaleFactor;
 
   const SignalCard({
     super.key,
     required this.signal,
     required this.userTier,
     required this.isLocked,
+    this.textScaleFactor = 1.0,
   });
 
   // --- CÁC HÀM LOGIC CỦA BẠN GIỮ NGUYÊN ---
@@ -37,54 +39,81 @@ class SignalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (isLocked) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen()));
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => SignalDetailScreen(
-                  signal: signal,
-                  userTier: userTier,
-                )),
-          );
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF151a2e),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.blueGrey.withOpacity(0.2)),
-        ),
-        child: Column(
-          children: [
-            _buildCardHeader(),
-            const Divider(height: 16, color: Colors.blueGrey),
-            isLocked ? _buildUpgradeView() : _buildSignalData(),
-          ],
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaleFactor: textScaleFactor),
+      child: GestureDetector(
+        onTap: () {
+          if (isLocked) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen()));
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => SignalDetailScreen(
+                    signal: signal,
+                    userTier: userTier,
+                  )),
+            );
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF151a2e),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.blueGrey.withOpacity(0.2)),
+          ),
+          child: Column(
+            // ▼▼▼ THÊM THUỘC TÍNH NÀY ĐỂ DÃN CÁC THÀNH PHẦN THEO CHIỀU DỌC ▼▼▼
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildCardHeader(),
+              const Divider(height: 16, color: Colors.blueGrey),
+              isLocked ? _buildUpgradeView() : _buildSignalData(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Widget _buildCardHeader giữ nguyên như file bạn đã cung cấp
+  // Widget _buildCardHeader giữ nguyên
   Widget _buildCardHeader() {
     final bool isBuy = signal.type.toLowerCase() == 'buy';
     final Color signalColor = isBuy ? const Color(0xFF238636) : const Color(0xFFDA3633);
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
     String statusText;
     Color statusColor;
+
     if (signal.status == 'running') {
-      statusText = signal.isMatched ? 'MATCHED' : 'NOT MATCHED';
-      statusColor = signal.isMatched ? Colors.greenAccent : Colors.amber;
+      if (signal.result == 'TP1 Hit' || signal.result == 'TP2 Hit') {
+        statusText = signal.result!;
+        statusColor = Colors.tealAccent.shade400;
+      } else if (signal.isMatched) {
+        statusText = 'MATCHED';
+        statusColor = Colors.greenAccent.shade400;
+      } else {
+        statusText = 'NOT MATCHED';
+        statusColor = Colors.amber.shade400;
+      }
     } else {
       statusText = signal.result?.toUpperCase() ?? 'CLOSED';
-      statusColor = Colors.grey;
+      switch (statusText) {
+        case 'SL HIT':
+          statusColor = Colors.redAccent;
+          break;
+        case 'CANCELLED (NEW SIGNAL)':
+        case 'CANCELLED':
+          statusText = 'CANCELLED';
+          statusColor = Colors.grey;
+          break;
+        default:
+          statusColor = Colors.blueGrey.shade200;
+          break;
+      }
     }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -123,44 +152,45 @@ class SignalCard extends StatelessWidget {
     return Column(
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildInfoColumn("Entry", signal.entryPrice.toStringAsFixed(decimalPlaces)),
             _buildInfoColumn(
               "SL",
               signal.stopLoss.toStringAsFixed(decimalPlaces),
-              valueColor: Colors.red,
-              // Logic hiển thị icon
+              valueColor: Colors.redAccent,
               icon: _getStatusIcon('SL', result),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildInfoColumn(
               "TP1",
               signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(decimalPlaces) : "---",
-              valueColor: Colors.green,
+              valueColor: Colors.greenAccent,
               icon: _getStatusIcon('TP1', result),
             ),
             _buildInfoColumn(
               "TP2",
               signal.takeProfits.length > 1 ? signal.takeProfits[1].toStringAsFixed(decimalPlaces) : "---",
-              valueColor: Colors.green,
+              valueColor: Colors.greenAccent,
               icon: _getStatusIcon('TP2', result),
             ),
             _buildInfoColumn(
               "TP3",
               signal.takeProfits.length > 2 ? signal.takeProfits[2].toStringAsFixed(decimalPlaces) : "---",
-              valueColor: Colors.green,
+              valueColor: Colors.greenAccent,
               icon: _getStatusIcon('TP3', result),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           children: [
-            Text(DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate()), style: const TextStyle(color: Colors.white, fontSize: 11)),
+            Text(DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate()), style: const TextStyle(color: Colors.white70, fontSize: 11)),
             const Spacer(),
             Row(
               children: const [
@@ -174,16 +204,16 @@ class SignalCard extends StatelessWidget {
     );
   }
 
-  // ▼▼▼ THÊM HÀM HELPER NÀY VÀO ▼▼▼
+  // ▼▼▼ HÀM HELPER QUAN TRỌNG NHẤT CHO LOGIC MỚI ▼▼▼
   Widget? _getStatusIcon(String title, String? result) {
-    if (result == null || result.isEmpty || signal.status != 'closed') return null;
+    if (result == null || result.isEmpty) return null;
 
     final lowerResult = result.toLowerCase();
     final lowerTitle = title.toLowerCase();
 
     // Xử lý SL Hit
     if (lowerTitle == 'sl' && lowerResult == 'sl hit') {
-      return const Icon(Icons.cancel, color: Colors.red, size: 14);
+      return const Icon(Icons.cancel, color: Colors.redAccent, size: 16);
     }
 
     // Xử lý các TP Hit
@@ -194,17 +224,20 @@ class SignalCard extends StatelessWidget {
       if (lowerResult.startsWith('tp') && lowerResult.endsWith('hit')) {
         final hitTpNumber = int.tryParse(lowerResult.replaceAll(' hit', '').replaceAll('tp', ''));
         if (hitTpNumber != null && tpNumber <= hitTpNumber) {
-          return const Icon(Icons.check_circle, color: Colors.green, size: 14);
+          return const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16);
         }
       }
     }
     return null;
   }
 
+  // --- CÁC HÀM BÊN DƯỚI GIỮ NGUYÊN ---
   Widget _buildUpgradeView() {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildUpgradeItem("Entry"),
             _buildUpgradeItem("SL"),
@@ -212,6 +245,7 @@ class SignalCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _buildUpgradeItem("TP1"),
             _buildUpgradeItem("TP2"),
@@ -222,17 +256,11 @@ class SignalCard extends StatelessWidget {
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Upgrade to see signal details...",
-                style: TextStyle(color: Colors.grey, fontSize: 11)),
+            Text("Upgrade to see signal details...", style: TextStyle(color: Colors.grey, fontSize: 11)),
             Row(
               children: [
-                Text("Upgrade Now",
-                    style: TextStyle(
-                        color: Color(0xFF5865F2),
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold)),
-                Icon(Icons.arrow_forward_ios,
-                    size: 11, color: Color(0xFF5865F2)),
+                Text("Upgrade Now", style: TextStyle(color: Color(0xFF5865F2), fontSize: 11, fontWeight: FontWeight.bold)),
+                Icon(Icons.arrow_forward_ios, size: 11, color: Color(0xFF5865F2)),
               ],
             ),
           ],
@@ -253,8 +281,7 @@ class SignalCard extends StatelessWidget {
             children: [
               Image.asset('assets/images/lock_icon.png', height: 14, width: 14),
               const SizedBox(width: 4),
-              const Text("Locked",
-                  style: TextStyle(color: Colors.white, fontSize: 13)),
+              const Text("Locked", style: TextStyle(color: Colors.white, fontSize: 13)),
             ],
           )
         ],
@@ -262,8 +289,7 @@ class SignalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoColumn(String title, String value,
-      {Color? valueColor, Widget? icon}) {
+  Widget _buildInfoColumn(String title, String value, {Color? valueColor, Widget? icon}) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -273,11 +299,7 @@ class SignalCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: valueColor ?? Colors.white)),
+              Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: valueColor ?? Colors.white)),
               if (icon != null) ...[
                 const SizedBox(width: 4),
                 icon,

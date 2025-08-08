@@ -1,3 +1,5 @@
+// lib/features/signals/screens/signal_screen_web.dart
+
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
@@ -46,16 +48,13 @@ class _SignalScreenState extends State<SignalScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
-                  // Sử dụng MainAxisAlignment.start để đẩy các mục về bên trái
-                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     _buildTabs(),
-                    const SizedBox(width: 16), // Thêm khoảng cách
+                    const SizedBox(width: 40),
                     _buildFilters(),
-                    const Spacer(), // Đẩy icon chuông vềสุดขอบ
-                    // ▼▼▼ NÂNG CẤP ICON CHUÔNG THÔNG BÁO ▼▼▼
+                    const Spacer(),
                     Consumer<NotificationProvider>(
                       builder: (context, notificationProvider, child) {
                         final bool hasUnread = notificationProvider.unreadCount > 0;
@@ -103,14 +102,13 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildContent(String userTier) {
-    // Quy định về thời gian cho cả VIP và Demo
     if (_isLive && (userTier == 'vip' || userTier == 'demo') && !_isWithinGoldenHours()) {
-      return _buildOutOfHoursView(userTier); // Hiển thị màn hình ngoài giờ
+      return _buildOutOfHoursView(userTier);
     }
     return _buildSignalList(userTier);
   }
 
-  // ▼▼▼ HÀM NÀY ĐƯỢC NÂNG CẤP TOÀN DIỆN ▼▼▼
+  // ▼▼▼ HÀM NÀY ĐƯỢC NÂNG CẤP ĐỂ DÙNG LAYOUT BLOG FEED ▼▼▼
   Widget _buildSignalList(String userTier) {
     return StreamBuilder<List<Signal>>(
       stream: _signalService.getSignals(isLive: _isLive, userTier: userTier),
@@ -126,53 +124,67 @@ class _SignalScreenState extends State<SignalScreen> {
         }
 
         final signals = snapshot.data!;
-
-        // --- LOGIC PHÂN QUYỀN MỚI ---
         int itemCount = signals.length;
         bool Function(int) isLockedCallback;
 
         switch (userTier) {
           case 'free':
             itemCount = signals.length > 2 ? 2 : signals.length;
-            isLockedCallback = (index) => true; // Khóa tất cả
+            isLockedCallback = (index) => true;
             break;
           case 'demo':
-          // Hiển thị tối đa 8 tín hiệu + 1 nút upgrade
             if (_isLive && signals.length > 8) {
               itemCount = 9;
             }
-            isLockedCallback = (index) => _isLive && index >= 8; // Khóa từ tín hiệu thứ 9
+            isLockedCallback = (index) => _isLive && index >= 8;
             break;
-          default: // vip, elite
-            isLockedCallback = (index) => false; // Không khóa
+          default:
+            isLockedCallback = (index) => false;
             break;
         }
-        // --- KẾT THÚC LOGIC PHÂN QUYỀN ---
 
-        return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 16),
-          itemCount: itemCount,
-          itemBuilder: (context, index) {
-            // Hiển thị nút Upgrade cho Demo user ở vị trí thứ 9
-            if (userTier == 'demo' && _isLive && index == 8) {
-              return _buildUpgradeButton();
-            }
+        // SỬ DỤNG ListView bọc trong Center và ConstrainedBox
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700), // Chiều rộng của feed
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              itemCount: itemCount,
+              itemBuilder: (context, index) {
+                if (userTier == 'demo' && _isLive && index == 8) {
+                  return _buildUpgradeButton();
+                }
 
-            final signal = signals[index];
-            final bool isLocked = isLockedCallback(index);
+                final signal = signals[index];
+                final bool isLocked = isLockedCallback(index);
 
-            return SignalCard(
-              signal: signal,
-              userTier: userTier,
-              isLocked: isLocked,
-            );
-          },
+                return SignalCard(
+                  signal: signal,
+                  userTier: userTier,
+                  isLocked: isLocked,
+                  textScaleFactor: 1.1, // Tăng 10% kích thước chữ trên web
+                );
+              },
+            ),
+          ),
         );
       },
     );
   }
 
-  // Đổi tên hàm cho rõ nghĩa hơn
+  // ▼▼▼ HÀM NÀY ĐƯỢC SỬA LẠI CHO GỌN GÀNG ▼▼▼
+  Widget _buildFilters() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _GradientFilterButton(text: "SYMBOL", onPressed: () {}),
+        const SizedBox(width: 20), // Tạo khoảng cách cố định
+        _GradientFilterButton(text: "AI SIGNAL", onPressed: () {}),
+      ],
+    );
+  }
+
+  // --- CÁC HÀM VÀ WIDGET CON KHÁC GIỮ NGUYÊN ---
   Widget _buildOutOfHoursView(String userTier) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -188,7 +200,6 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            // Hiển thị thông báo phù hợp với từng loại tài khoản
             userTier == 'vip'
                 ? "VIP signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade to Elite to get signals 24/24!"
                 : "Demo signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade your account for more benefits!",
@@ -203,7 +214,6 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildUpgradeButton() {
-    // ... (Giữ nguyên code của bạn)
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: SizedBox(
@@ -234,7 +244,6 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildTabs() {
-    // ... (Giữ nguyên code của bạn)
     return Container(
       decoration: BoxDecoration(color: const Color(0xFF161B22), borderRadius: BorderRadius.circular(8)),
       child: Row(
@@ -248,7 +257,6 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildTabItem(String text, bool isSelected, VoidCallback onTap) {
-    // ... (Giữ nguyên code của bạn)
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -260,24 +268,9 @@ class _SignalScreenState extends State<SignalScreen> {
       ),
     );
   }
-
-  Widget _buildFilters() {
-    // ... (Giữ nguyên code của bạn)
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _GradientFilterButton(text: "SYMBOL", onPressed: () {}),
-          _GradientFilterButton(text: "AI SIGNAL", onPressed: () {}),
-        ],
-      ),
-    );
-  }
 }
 
 class _GradientFilterButton extends StatelessWidget {
-  // ... (Giữ nguyên code của bạn)
   final String text;
   final VoidCallback onPressed;
   const _GradientFilterButton({required this.text, required this.onPressed});

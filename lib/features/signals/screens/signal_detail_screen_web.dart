@@ -15,14 +15,10 @@ class SignalDetailScreen extends StatelessWidget {
 
   // --- CÁC HÀM LOGIC CỦA BẠN GIỮ NGUYÊN ---
   static const Map<String, String> _currencyFlags = {
-    'AUD': 'assets/images/aud_flag.png',
-    'CHF': 'assets/images/chf_flag.png',
-    'EUR': 'assets/images/eur_flag.png',
-    'GBP': 'assets/images/gbp_flag.png',
-    'JPY': 'assets/images/jpy_flag.png',
-    'NZD': 'assets/images/nzd_flag.png',
-    'USD': 'assets/images/us_flag.png',
-    'XAU': 'assets/images/crown_icon.png',
+    'AUD': 'assets/images/aud_flag.png', 'CHF': 'assets/images/chf_flag.png',
+    'EUR': 'assets/images/eur_flag.png', 'GBP': 'assets/images/gbp_flag.png',
+    'JPY': 'assets/images/jpy_flag.png', 'NZD': 'assets/images/nzd_flag.png',
+    'USD': 'assets/images/us_flag.png', 'XAU': 'assets/images/crown_icon.png',
   };
 
   List<String> _getFlagPathsFromSymbol(String symbol) {
@@ -38,17 +34,16 @@ class SignalDetailScreen extends StatelessWidget {
     return [];
   }
 
-  // ▼▼▼ HÀM NÀY ĐÃ ĐƯỢC NÂNG CẤP HOÀN CHỈNH ▼▼▼
   @override
   Widget build(BuildContext context) {
+    // ▼▼▼ SỬA LẠI ĐIỀU KIỆN XEM REASON ▼▼▼
     final bool canViewReason = userTier == 'elite';
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
-    // --- LOGIC MỚI ĐỂ XỬ LÝ TRẠNG THÁI HIỂN THỊ ---
     String statusText;
     Color statusColor;
 
-    if (signal.status == 'running') { // Các tín hiệu LIVE
+    if (signal.status == 'running') {
       if (signal.result == 'TP1 Hit' || signal.result == 'TP2 Hit') {
         statusText = signal.result!;
         statusColor = Colors.tealAccent.shade400;
@@ -59,7 +54,7 @@ class SignalDetailScreen extends StatelessWidget {
         statusText = 'NOT MATCHED';
         statusColor = Colors.amber.shade400;
       }
-    } else { // Các tín hiệu END
+    } else {
       statusText = signal.result?.toUpperCase() ?? 'CLOSED';
       switch (statusText) {
         case 'SL HIT':
@@ -70,12 +65,11 @@ class SignalDetailScreen extends StatelessWidget {
           statusText = 'CANCELLED';
           statusColor = Colors.grey;
           break;
-        default: // TP3 HIT, EXITED BY ADMIN, ...
+        default:
           statusColor = Colors.blueGrey.shade200;
           break;
       }
     }
-    // --- KẾT THÚC LOGIC MỚI ---
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
@@ -132,7 +126,6 @@ class SignalDetailScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                // ▼▼▼ TRUYỀN DỮ LIỆU TRẠNG THÁI MỚI VÀO WIDGET ▼▼▼
                 _buildDetailCard(context, canViewReason, statusText, statusColor),
               ],
             ),
@@ -142,7 +135,6 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  // SỬA LẠI HÀM NÀY ĐỂ NHẬN THAM SỐ STATUS
   Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor) {
     final int decimalPlaces = 2;
     return Container(
@@ -202,7 +194,7 @@ class SignalDetailScreen extends StatelessWidget {
     final String lowerResult = result?.toLowerCase() ?? '';
     final String lowerTitle = title.replaceAll(' ', '').toLowerCase();
 
-    if (signal.status == 'closed') {
+    if (signal.status == 'closed' || lowerResult.contains('hit')) {
       if (lowerTitle == 'stoploss' && lowerResult == 'slhit') {
         statusIcon = const Icon(Icons.cancel, color: Color(0xFFDA3633), size: 18);
       }
@@ -211,7 +203,7 @@ class SignalDetailScreen extends StatelessWidget {
         if (tpNumber != null && lowerResult.startsWith('tp') && lowerResult.endsWith('hit')) {
           final hitTpNumber = int.tryParse(lowerResult.replaceAll('hit', '').replaceAll('tp', ''));
           if (hitTpNumber != null && tpNumber <= hitTpNumber) {
-            statusIcon = const Icon(Icons.check_circle, color: Color(0xFF238636), size: 18);
+            statusIcon = const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18);
           }
         }
       }
@@ -225,7 +217,10 @@ class SignalDetailScreen extends StatelessWidget {
           Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
           Row(
             children: [
-              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
               if (statusIcon != null) ...[
                 const SizedBox(width: 8),
                 statusIcon,
