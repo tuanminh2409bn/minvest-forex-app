@@ -7,6 +7,7 @@ import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.d
 import 'package:minvest_forex_app/features/notifications/screens/notification_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignalScreen extends StatefulWidget {
   const SignalScreen({super.key});
@@ -27,7 +28,7 @@ class _SignalScreenState extends State<SignalScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final userTier = userProvider.userTier ?? 'demo';
+    final userTier = userProvider.userTier ?? 'free';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -43,52 +44,59 @@ class _SignalScreenState extends State<SignalScreen> {
               stops: [0.0, 0.5, 1.0],
             ),
           ),
-          child: Column(
+          child: Column( // Dùng Column làm widget cha
             children: [
+              // ▼▼▼ HEADER MỚI ĐÃ ĐƯỢC TÁI CẤU TRÚC ▼▼▼
+              // Dòng 1: Tabs và Chuông
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildTabs(),
-                    // ▼▼▼ NÂNG CẤP ICON CHUÔNG THÔNG BÁO ▼▼▼
-                    Consumer<NotificationProvider>(
-                      builder: (context, notificationProvider, child) {
-                        final bool hasUnread = notificationProvider.unreadCount > 0;
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.notifications_none, size: 28),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const NotificationScreen()),
-                                );
-                              },
-                            ),
-                            if (hasUnread)
-                              Positioned(
-                                top: 10,
-                                right: 10,
-                                child: Container(
-                                  height: 9,
-                                  width: 9,
-                                  decoration: const BoxDecoration(
-                                      color: Colors.redAccent,
-                                      shape: BoxShape.circle,
-                                      border: Border.fromBorderSide(BorderSide(color: Color(0xFF0D1117), width: 1.5))
+                    if (userTier != 'free')
+                      Consumer<NotificationProvider>(
+                        builder: (context, notificationProvider, child) {
+                          final bool hasUnread = notificationProvider.unreadCount > 0;
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.notifications_none, size: 28),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                                  );
+                                },
+                              ),
+                              if (hasUnread)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: Container(
+                                    height: 9,
+                                    width: 9,
+                                    decoration: const BoxDecoration(
+                                        color: Colors.redAccent,
+                                        shape: BoxShape.circle,
+                                        border: Border.fromBorderSide(BorderSide(color: Color(0xFF0D1117), width: 1.5))
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                            ],
+                          );
+                        },
+                      ),
                   ],
                 ),
               ),
-              _buildFilters(),
+              // Dòng 2: Nút Lọc
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: _buildFilters(),
+              ),
+              // ▲▲▲ KẾT THÚC HEADER MỚI ▲▲▲
               Expanded(
                 child: _buildContent(userTier),
               ),
@@ -100,15 +108,43 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildContent(String userTier) {
-    // Quy định về thời gian cho cả VIP và Demo
+    // Ưu tiên hiển thị giao diện 'free' trước
+    if (userTier == 'free') {
+      return _buildFreeUserView();
+    }
+
     if (_isLive && (userTier == 'vip' || userTier == 'demo') && !_isWithinGoldenHours()) {
-      return _buildOutOfHoursView(userTier); // Hiển thị màn hình ngoài giờ
+      return _buildOutOfHoursView(userTier);
     }
     return _buildSignalList(userTier);
   }
 
-  // ▼▼▼ HÀM NÀY ĐƯỢC NÂNG CẤP TOÀN DIỆN ▼▼▼
+  Widget _buildFreeUserView() {
+    // Tạo 2 tín hiệu mồi (dummy signals)
+    final dummySignal1 = Signal(
+      id: 'dummy1', symbol: 'XAU/USD', type: 'Buy', status: 'running',
+      createdAt: Timestamp.now(), entryPrice: 0, stopLoss: 0, takeProfits: [], isMatched: false, matchStatus: 'NOT MATCHED',
+    );
+    final dummySignal2 = Signal(
+      id: 'dummy2', symbol: 'EUR/USD', type: 'Sell', status: 'running',
+      createdAt: Timestamp.now(), entryPrice: 0, stopLoss: 0, takeProfits: [], isMatched: false, matchStatus: 'NOT MATCHED',
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Column(
+        children: [
+          SignalCard(signal: dummySignal1, userTier: 'free', isLocked: true),
+          SignalCard(signal: dummySignal2, userTier: 'free', isLocked: true),
+          const SizedBox(height: 20),
+          _buildUpgradeButton(), // Nút mời nâng cấp chính
+        ],
+      ),
+    );
+  }
+
   Widget _buildSignalList(String userTier) {
+    // Bỏ trường hợp 'free' ra khỏi đây vì đã xử lý riêng
     return StreamBuilder<List<Signal>>(
       stream: _signalService.getSignals(isLive: _isLive, userTier: userTier),
       builder: (context, snapshot) {
@@ -123,47 +159,44 @@ class _SignalScreenState extends State<SignalScreen> {
         }
 
         final signals = snapshot.data!;
-
-        // --- LOGIC PHÂN QUYỀN MỚI ---
         int itemCount = signals.length;
         bool Function(int) isLockedCallback;
 
+        // Logic cũ cho 'demo' và các tier khác
         switch (userTier) {
-          case 'free':
-            itemCount = signals.length > 2 ? 2 : signals.length;
-            isLockedCallback = (index) => true; // Khóa tất cả
-            break;
           case 'demo':
-          // Hiển thị tối đa 8 tín hiệu + 1 nút upgrade
             if (_isLive && signals.length > 8) {
-              itemCount = 9;
+              itemCount = 9; // 8 tín hiệu + 1 nút upgrade
             }
-            isLockedCallback = (index) => _isLive && index >= 8; // Khóa từ tín hiệu thứ 9
+            isLockedCallback = (index) => _isLive && index >= 8;
             break;
           default: // vip, elite
-            isLockedCallback = (index) => false; // Không khóa
+            isLockedCallback = (index) => false;
             break;
         }
-        // --- KẾT THÚC LOGIC PHÂN QUYỀN ---
 
-        return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 16),
-          itemCount: itemCount,
-          itemBuilder: (context, index) {
-            // Hiển thị nút Upgrade cho Demo user ở vị trí thứ 9
-            if (userTier == 'demo' && _isLive && index == 8) {
-              return _buildUpgradeButton();
-            }
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              itemCount: itemCount,
+              itemBuilder: (context, index) {
+                if (userTier == 'demo' && _isLive && index == 8) {
+                  return _buildUpgradeButton();
+                }
 
-            final signal = signals[index];
-            final bool isLocked = isLockedCallback(index);
+                final signal = signals[index];
+                final bool isLocked = isLockedCallback(index);
 
-            return SignalCard(
-              signal: signal,
-              userTier: userTier,
-              isLocked: isLocked,
-            );
-          },
+                return SignalCard(
+                  signal: signal,
+                  userTier: userTier,
+                  isLocked: isLocked,
+                );
+              },
+            ),
+          ),
         );
       },
     );

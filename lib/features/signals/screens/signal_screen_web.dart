@@ -9,6 +9,8 @@ import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.d
 import 'package:minvest_forex_app/features/notifications/screens/notification_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class SignalScreen extends StatefulWidget {
   const SignalScreen({super.key});
@@ -29,7 +31,7 @@ class _SignalScreenState extends State<SignalScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final userTier = userProvider.userTier ?? 'demo';
+    final userTier = userProvider.userTier ?? 'free';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -47,6 +49,7 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           child: Column(
             children: [
+              // === PHẦN HEADER ĐÃ ĐƯỢC CẬP NHẬT ===
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
@@ -55,43 +58,46 @@ class _SignalScreenState extends State<SignalScreen> {
                     const SizedBox(width: 40),
                     _buildFilters(),
                     const Spacer(),
-                    Consumer<NotificationProvider>(
-                      builder: (context, notificationProvider, child) {
-                        final bool hasUnread = notificationProvider.unreadCount > 0;
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.notifications_none, size: 28),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const NotificationScreen()),
-                                );
-                              },
-                            ),
-                            if (hasUnread)
-                              Positioned(
-                                top: 10,
-                                right: 10,
-                                child: Container(
-                                  height: 9,
-                                  width: 9,
-                                  decoration: const BoxDecoration(
-                                      color: Colors.redAccent,
-                                      shape: BoxShape.circle,
-                                      border: Border.fromBorderSide(BorderSide(color: Color(0xFF0D1117), width: 1.5))
+                    // Ẩn icon chuông thông báo cho tài khoản 'free'
+                    if (userTier != 'free')
+                      Consumer<NotificationProvider>(
+                        builder: (context, notificationProvider, child) {
+                          final bool hasUnread = notificationProvider.unreadCount > 0;
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.notifications_none, size: 28),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                                  );
+                                },
+                              ),
+                              if (hasUnread)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: Container(
+                                    height: 9,
+                                    width: 9,
+                                    decoration: const BoxDecoration(
+                                        color: Colors.redAccent,
+                                        shape: BoxShape.circle,
+                                        border: Border.fromBorderSide(BorderSide(color: Color(0xFF0D1117), width: 1.5))
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
+                            ],
+                          );
+                        },
+                      ),
                   ],
                 ),
               ),
               Expanded(
+                // === LOGIC HIỂN THỊ ĐÃ ĐƯỢC CẬP NHẬT ===
                 child: _buildContent(userTier),
               ),
             ],
@@ -102,14 +108,43 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 
   Widget _buildContent(String userTier) {
+    if (userTier == 'free') {
+      return _buildFreeUserView();
+    }
+
+    // Logic cũ cho các tài khoản khác
     if (_isLive && (userTier == 'vip' || userTier == 'demo') && !_isWithinGoldenHours()) {
       return _buildOutOfHoursView(userTier);
     }
     return _buildSignalList(userTier);
   }
 
-  // ▼▼▼ HÀM NÀY ĐƯỢC NÂNG CẤP ĐỂ DÙNG LAYOUT BLOG FEED ▼▼▼
+  Widget _buildFreeUserView() {
+    // Tạo 2 tín hiệu mồi (dummy signals)
+    final dummySignal1 = Signal(
+      id: 'dummy1', symbol: 'XAU/USD', type: 'Buy', status: 'running',
+      createdAt: Timestamp.now(), entryPrice: 0, stopLoss: 0, takeProfits: [], isMatched: false, matchStatus: 'NOT MATCHED',
+    );
+    final dummySignal2 = Signal(
+      id: 'dummy2', symbol: 'EUR/USD', type: 'Sell', status: 'running',
+      createdAt: Timestamp.now(), entryPrice: 0, stopLoss: 0, takeProfits: [], isMatched: false, matchStatus: 'NOT MATCHED',
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Column(
+        children: [
+          SignalCard(signal: dummySignal1, userTier: 'free', isLocked: true),
+          SignalCard(signal: dummySignal2, userTier: 'free', isLocked: true),
+          const SizedBox(height: 20),
+          _buildUpgradeButton(), // Nút mời nâng cấp chính
+        ],
+      ),
+    );
+  }
+
   Widget _buildSignalList(String userTier) {
+    // Bỏ trường hợp 'free' ra khỏi đây vì đã xử lý riêng
     return StreamBuilder<List<Signal>>(
       stream: _signalService.getSignals(isLive: _isLive, userTier: userTier),
       builder: (context, snapshot) {
@@ -127,26 +162,22 @@ class _SignalScreenState extends State<SignalScreen> {
         int itemCount = signals.length;
         bool Function(int) isLockedCallback;
 
+        // Logic cũ cho 'demo' và các tier khác
         switch (userTier) {
-          case 'free':
-            itemCount = signals.length > 2 ? 2 : signals.length;
-            isLockedCallback = (index) => true;
-            break;
           case 'demo':
             if (_isLive && signals.length > 8) {
-              itemCount = 9;
+              itemCount = 9; // 8 tín hiệu + 1 nút upgrade
             }
             isLockedCallback = (index) => _isLive && index >= 8;
             break;
-          default:
+          default: // vip, elite
             isLockedCallback = (index) => false;
             break;
         }
 
-        // SỬ DỤNG ListView bọc trong Center và ConstrainedBox
         return Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700), // Chiều rộng của feed
+            constraints: const BoxConstraints(maxWidth: 700),
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               itemCount: itemCount,
@@ -162,7 +193,6 @@ class _SignalScreenState extends State<SignalScreen> {
                   signal: signal,
                   userTier: userTier,
                   isLocked: isLocked,
-                  textScaleFactor: 1.1, // Tăng 10% kích thước chữ trên web
                 );
               },
             ),

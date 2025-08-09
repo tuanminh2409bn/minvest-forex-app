@@ -26,17 +26,13 @@ class SignalDetailScreen extends StatelessWidget {
     if (parts.length == 2) {
       final path1 = _currencyFlags[parts[0]];
       final path2 = _currencyFlags[parts[1]];
-      return [
-        if (path1 != null) path1,
-        if (path2 != null) path2,
-      ];
+      return [ if (path1 != null) path1, if (path2 != null) path2 ];
     }
     return [];
   }
 
   @override
   Widget build(BuildContext context) {
-    // ▼▼▼ SỬA LẠI ĐIỀU KIỆN XEM REASON ▼▼▼
     final bool canViewReason = userTier == 'elite';
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
@@ -44,8 +40,8 @@ class SignalDetailScreen extends StatelessWidget {
     Color statusColor;
 
     if (signal.status == 'running') {
-      if (signal.result == 'TP1 Hit' || signal.result == 'TP2 Hit') {
-        statusText = signal.result!;
+      statusText = signal.result ?? 'RUNNING';
+      if (statusText.contains("Hit")) {
         statusColor = Colors.tealAccent.shade400;
       } else if (signal.isMatched) {
         statusText = 'MATCHED';
@@ -136,7 +132,7 @@ class SignalDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor) {
-    final int decimalPlaces = 2;
+    const int decimalPlaces = 2;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -146,11 +142,7 @@ class SignalDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow(
-            'Status',
-            statusText,
-            valueColor: statusColor,
-          ),
+          _buildInfoRow('Status', statusText, valueColor: statusColor),
           _buildInfoRow('Sent on', DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate())),
           const Divider(height: 30, color: Colors.blueGrey),
           _buildPriceRow('Entry price', signal.entryPrice.toStringAsFixed(decimalPlaces), signal.result),
@@ -169,13 +161,12 @@ class SignalDetailScreen extends StatelessWidget {
             signal.reason ?? 'No reason provided for this signal.',
             style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
           )
-              : _buildUpgradeToView(context),
+              : _buildUpgradeToView(context, signal.reason),
         ],
       ),
     );
   }
 
-  // --- CÁC WIDGET CON BÊN DƯỚI GIỮ NGUYÊN KHÔNG ĐỔI ---
   Widget _buildInfoRow(String title, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -191,21 +182,16 @@ class SignalDetailScreen extends StatelessWidget {
 
   Widget _buildPriceRow(String title, String value, String? result) {
     Icon? statusIcon;
-    final String lowerResult = result?.toLowerCase() ?? '';
-    final String lowerTitle = title.replaceAll(' ', '').toLowerCase();
+    final String lowerTitle = title.toLowerCase().replaceAll(' ', '');
 
-    if (signal.status == 'closed' || lowerResult.contains('hit')) {
-      if (lowerTitle == 'stoploss' && lowerResult == 'slhit') {
-        statusIcon = const Icon(Icons.cancel, color: Color(0xFFDA3633), size: 18);
-      }
-      if (lowerTitle.startsWith('takeprofit')) {
-        final tpNumber = int.tryParse(lowerTitle.replaceAll('takeprofit', ''));
-        if (tpNumber != null && lowerResult.startsWith('tp') && lowerResult.endsWith('hit')) {
-          final hitTpNumber = int.tryParse(lowerResult.replaceAll('hit', '').replaceAll('tp', ''));
-          if (hitTpNumber != null && tpNumber <= hitTpNumber) {
-            statusIcon = const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18);
-          }
-        }
+    if (lowerTitle == 'stoploss' && result?.toLowerCase() == 'sl hit') {
+      statusIcon = const Icon(Icons.cancel, color: Color(0xFFDA3633), size: 18);
+    }
+
+    if (lowerTitle.startsWith('takeprofit')) {
+      final tpNumber = int.tryParse(lowerTitle.replaceAll('takeprofit', ''));
+      if (tpNumber != null && signal.hitTps.contains(tpNumber)) {
+        statusIcon = const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18);
       }
     }
 
@@ -217,10 +203,7 @@ class SignalDetailScreen extends StatelessWidget {
           Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
           Row(
             children: [
-              Text(
-                value,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
+              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
               if (statusIcon != null) ...[
                 const SizedBox(width: 8),
                 statusIcon,
@@ -232,55 +215,68 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpgradeToView(BuildContext context) {
-    // ...
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Text(
-          'Upgrade your account to Elite to view the analysis and reasons for entering the order.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, height: 1.5, fontSize: 14),
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 50,
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const UpgradeScreen()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-            ),
-            child: Ink(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF172AFE),
-                    Color(0xFF3C4BFE),
-                    Color(0xFF5E69FD),
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+  Widget _buildUpgradeToView(BuildContext context, String? reason) {
+    if (reason == null || reason.isEmpty) {
+      return Column(
+        children: [
+          const Text('Upgrade your account to Elite to view the analysis.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 14)),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 50,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen())),
+              style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+              child: Ink(
+                decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)], begin: Alignment.centerLeft, end: Alignment.centerRight), borderRadius: BorderRadius.circular(12)),
+                child: Container(
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset('assets/images/crown_icon.png', height: 24, width: 24),
+                      const SizedBox(width: 8),
+                      const Text("Upgrade Account", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(12),
               ),
-              child: Container(
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/images/crown_icon.png', height: 30, width: 30),
-                    const SizedBox(width: 8),
-                    const Text("Upgrade to see more", style: TextStyle(color: Colors.white)),
-                  ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        ShaderMask(
+          shaderCallback: (rect) {
+            return const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.white, Colors.transparent], stops: [0.6, 1.0]).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
+          },
+          blendMode: BlendMode.dstIn,
+          child: Text(reason, maxLines: 5, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14)),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 40.0),
+          child: SizedBox(
+            height: 50,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen())),
+              style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
+              child: Ink(
+                decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)], begin: Alignment.centerLeft, end: Alignment.centerRight), borderRadius: BorderRadius.circular(12)),
+                child: Container(
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset('assets/images/crown_icon.png', height: 24, width: 24),
+                      const SizedBox(width: 8),
+                      const Text("Upgrade to View Full Analysis", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
               ),
             ),
