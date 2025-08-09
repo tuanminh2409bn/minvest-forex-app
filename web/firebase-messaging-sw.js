@@ -1,35 +1,23 @@
-// Import and initialize the Firebase SDK
-importScripts("https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js");
+// Import các SDK cần thiết của Firebase (khuyến khích dùng phiên bản ổn định gần đây)
+importScripts("https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js");
 
-// Your web app's Firebase configuration
-// IMPORTANT: Replace this with your own project's configuration
+// Cấu hình Firebase của bạn (đã sửa lại storageBucket)
 const firebaseConfig = {
   apiKey: "AIzaSyC4z9Q-lasHcw_gbsYvNod5N8pGkqs3BfE",
   authDomain: "minvestforexapp-33dff.firebaseapp.com",
   projectId: "minvestforexapp-33dff",
-  storageBucket: "minvestforexapp-33dff.firebasestorage.app",
+  storageBucket: "minvestforexapp-33dff.appspot.com", // SỬA LẠI THEO ĐỊNH DẠNG CHUẨN
   messagingSenderId: "245218403052",
   appId: "1:245218403052:web:30b6a6e919f731eeb03bc9",
   measurementId: "G-CRJG2SPE28"
 };
 
+// Khởi tạo Firebase
 firebase.initializeApp(firebaseConfig);
 
+// Lấy đối tượng Messaging. Chỉ cần có dòng này là đủ để
+// service worker có thể nhận thông báo đẩy khi ứng dụng chạy nền.
 const messaging = firebase.messaging();
 
-// Optional: Background message handler
-messaging.onBackgroundMessage((payload) => {
-  console.log(
-    "[firebase-messaging-sw.js] Received background message ",
-    payload
-  );
-  // Customize notification here
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/favicon.png' // You can change this to your logo
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+console.log("Firebase Messaging Service Worker initialized.");

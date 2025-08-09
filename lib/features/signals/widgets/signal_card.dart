@@ -279,9 +279,9 @@ class SignalCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/lock_icon.png', height: 14, width: 14),
+              Image.asset('assets/images/crown_icon.png', height: 30, width: 30),
               const SizedBox(width: 4),
-              const Text("Locked", style: TextStyle(color: Colors.white, fontSize: 13)),
+              const Text("Upgrade", style: TextStyle(color: Colors.white, fontSize: 17)),
             ],
           )
         ],

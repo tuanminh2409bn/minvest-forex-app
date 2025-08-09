@@ -15,6 +15,7 @@ import 'package:minvest_forex_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
+import 'package:flutter/foundation.dart';
 
 // --- HÀM XỬ LÝ NỀN (GIỮ NGUYÊN) ---
 @pragma('vm:entry-point')
@@ -37,6 +38,13 @@ Future<void> main() async {
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await FirebaseMessaging.instance.requestPermission();
+
+  if (kIsWeb) {
+    final fcmToken = await FirebaseMessaging.instance.getToken(
+      vapidKey: "BF1kL9v7A-1bOSz642aCWoZEKvFpjKvkMQuTPd_GXBLxNakYt6apNf9Aa25hGk1QJP0VFrCVRx4B9mO8h5gBUA8",
+    );
+    print("FCM Token for Web: $fcmToken");
+  }
 
   // Khởi tạo plugin thông báo local
   const AndroidInitializationSettings initializationSettingsAndroid =
