@@ -1,25 +1,29 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "minvest-forex-app",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "minvest-forex-app (profile mode)",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "minvest-forex-app (release mode)",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter: Chrome (Localhost:63208)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--web-port=63208",
+        "--dart-define=BASE_URL=http://localhost:63208"
+      ]
+    },
+    {
+      "name": "Flutter: Web Server (Localhost:63208)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "deviceId": "web-server",
+      "flutterMode": "debug",
+      "toolArgs": [
+        "--web-port=63208",
+        "--dart-define=BASE_URL=http://localhost:63208"
+      ]
+    }
+  ]
 }

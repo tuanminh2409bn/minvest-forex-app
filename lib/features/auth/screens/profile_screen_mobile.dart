@@ -50,7 +50,6 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    // Bước 1: Hiển thị hộp thoại xác nhận (giữ nguyên logic cũ của bạn)
     final bool? confirmLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -73,10 +72,7 @@ class ProfileScreen extends StatelessWidget {
       },
     );
 
-    // Bước 2: Nếu người dùng xác nhận, gửi sự kiện đến BLoC
     if (confirmLogout == true && context.mounted) {
-      // ▼▼▼ THAY ĐỔI CỐT LÕI NẰM Ở ĐÂY ▼▼▼
-      // Thay vì tự xử lý logic, chúng ta chỉ cần "báo" cho AuthBloc biết ý định.
       context.read<AuthBloc>().add(SignOutRequested());
     }
   }
@@ -138,7 +134,7 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    currentUser?.email ?? 'your.email@example.com',
+                    currentUser?.email ?? 'your.email@gmail.com',
                     style: const TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                   const SizedBox(height: 30),
@@ -311,7 +307,6 @@ class _SocialIcon extends StatelessWidget {
   Future<void> _launchURL() async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // Could not launch
     }
   }
 

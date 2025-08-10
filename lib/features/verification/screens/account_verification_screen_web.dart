@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Enum để quản lý các trạng thái của giao diện
 enum VerificationState { initial, imageSelected, loading, success, failure }
@@ -21,6 +22,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   VerificationState _currentState = VerificationState.initial;
   String _errorMessage = '';
   String _successTier = '';
+  final String _exnessSignUpUrl = 'https://my.exmarkets.guide/accounts/sign-up/303589?utm_source=partners&ex_ol=1';
 
   // Hàm chọn ảnh từ thư viện
   Future<void> _pickImage() async {
@@ -48,11 +50,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     try {
       final storageRef = FirebaseStorage.instance.ref();
       final imageRef = storageRef.child('verification_images/$userId.jpg');
-
       await imageRef.putFile(_selectedImage!);
-      // Sau khi upload xong, lắng nghe sự thay đổi từ provider
-      _listenForVerificationResult();
-
     } catch (e) {
       setState(() {
         _currentState = VerificationState.failure;
@@ -62,22 +60,13 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   }
 
   // Hàm lắng nghe kết quả từ UserProvider
-  void _listenForVerificationResult() {
-    // Sử dụng Provider.of với listen: true trong một hàm riêng
-    // để nó có thể rebuild khi provider thay đổi.
-    // Tuy nhiên, cách tiếp cận tốt hơn là dùng Consumer hoặc Selector.
-    // Ở đây, chúng ta sẽ đơn giản hóa bằng cách kiểm tra trong didChangeDependencies.
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Lắng nghe sự thay đổi của UserProvider
     final userProvider = Provider.of<UserProvider>(context);
 
     if (_currentState == VerificationState.loading) {
       if (userProvider.verificationStatus == 'success') {
-        // Cập nhật trạng thái khi xác thực thành công
         if (mounted) {
           setState(() {
             _currentState = VerificationState.success;
@@ -85,7 +74,6 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           });
         }
       } else if (userProvider.verificationStatus == 'failed') {
-        // Cập nhật trạng thái khi xác thực thất bại
         if (mounted) {
           setState(() {
             _currentState = VerificationState.failure;
@@ -96,13 +84,23 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
+  // Hàm mở URL
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch $url')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        // === THAY ĐỔI 1: SỬA MÀU APPBAR ===
         backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -123,10 +121,9 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        // === THAY ĐỔI 2: CO GIÃN GIAO DIỆN ===
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700), // Giới hạn chiều rộng
+            constraints: const BoxConstraints(maxWidth: 700),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: _buildContent(),
@@ -206,17 +203,16 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  // --- WIDGET SUCCESS VIEW ĐÃ ĐƯỢC SỬA LẠI ---
   Widget _buildSuccessView() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center, // Đảm bảo căn giữa theo chiều ngang
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Icon(Icons.check_circle, color: Colors.green, size: 80),
         const SizedBox(height: 20),
         const Text(
           'ACCOUNT VERIFIED SUCCESSFULLY',
-          textAlign: TextAlign.center, // Đảm bảo text nhiều dòng được căn giữa
+          textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
@@ -225,10 +221,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           style: const TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 30),
-
-        // Thêm widget hiển thị quyền lợi
         _buildTierBenefitsCard(_successTier),
-
         const SizedBox(height: 40),
         TextButton(
           onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
@@ -241,10 +234,81 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  // --- WIDGET MỚI: HIỂN THỊ QUYỀN LỢI CỦA TÀI KHOẢN ---
+  Widget _buildFailureView() {
+    final bool isAffiliateError = _errorMessage.toLowerCase().contains("not under minvest's affiliate link");
+
+    if (isAffiliateError) {
+      return _buildAffiliateErrorView();
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Icon(Icons.error, color: Colors.red, size: 80),
+        const SizedBox(height: 20),
+        const Text('Verification Failed!', style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        Text(
+            _errorMessage,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70)
+        ),
+        const SizedBox(height: 40),
+        _buildActionButton(
+          text: 'Re-upload Image',
+          onPressed: () {
+            setState(() {
+              _selectedImage = null;
+              _currentState = VerificationState.initial;
+            });
+          },
+          isPrimary: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAffiliateErrorView() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Image.asset('assets/images/minvest_logo.png', height: 60),
+        const SizedBox(height: 24),
+        const Text(
+          'Account Not Linked to Minvest',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'To get exclusive signals, your Exness account must be registered through the Minvest partner link. Please create a new account using the link below.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
+        ),
+        const SizedBox(height: 32),
+        _buildActionButton(
+          text: 'Register Exness via Minvest',
+          onPressed: () => _launchURL(_exnessSignUpUrl),
+          isPrimary: true,
+        ),
+        const SizedBox(height: 16),
+        _buildActionButton(
+          text: 'I have registered, re-upload',
+          onPressed: () {
+            setState(() {
+              _selectedImage = null;
+              _currentState = VerificationState.initial;
+            });
+          },
+          isPrimary: false,
+        ),
+      ],
+    );
+  }
+
   Widget _buildTierBenefitsCard(String tier) {
     final Map<String, String> tierInfo = _getTierInfo(tier);
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -262,7 +326,6 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  // Widget con để hiển thị một dòng quyền lợi
   Widget _buildBenefitRow(String title, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -276,64 +339,13 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  // Hàm lấy thông tin quyền lợi (tái sử dụng)
   Map<String, String> _getTierInfo(String tier) {
     switch (tier.toLowerCase()) {
-      case 'demo':
-        return {
-          'signal_time': '8h-17h',
-          'lot_week': '0.05',
-          'signal_qty': '7-8 per day',
-        };
-      case 'vip':
-        return {
-          'signal_time': '8h-17h',
-          'lot_week': '0.3',
-          'signal_qty': 'full',
-        };
-      case 'elite':
-        return {
-          'signal_time': 'fulltime',
-          'lot_week': '0.5',
-          'signal_qty': 'full',
-        };
-      default:
-        return {
-          'signal_time': 'N/A',
-          'lot_week': 'N/A',
-          'signal_qty': 'N/A',
-        };
+      case 'demo': return {'signal_time': '8h-17h', 'lot_week': '0.05', 'signal_qty': '7-8 per day'};
+      case 'vip': return {'signal_time': '8h-17h', 'lot_week': '0.3', 'signal_qty': 'full'};
+      case 'elite': return {'signal_time': 'fulltime', 'lot_week': '0.5', 'signal_qty': 'full'};
+      default: return {'signal_time': 'N/A', 'lot_week': 'N/A', 'signal_qty': 'N/A'};
     }
-  }
-
-
-  Widget _buildFailureView() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center, // Đảm bảo căn giữa
-      children: [
-        const Icon(Icons.error, color: Colors.red, size: 80),
-        const SizedBox(height: 20),
-        const Text('Upgrade failed!', style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        Text(
-            _errorMessage,
-            textAlign: TextAlign.center, // Đảm bảo căn giữa
-            style: const TextStyle(color: Colors.white70)
-        ),
-        const SizedBox(height: 40),
-        _buildActionButton(
-          text: 'Re-upload the image',
-          onPressed: () {
-            setState(() {
-              _selectedImage = null;
-              _currentState = VerificationState.initial;
-            });
-          },
-          isPrimary: true,
-        ),
-      ],
-    );
   }
 
   Widget _buildActionButton({required String text, required VoidCallback? onPressed, required bool isPrimary}) {
@@ -350,13 +362,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
         ),
         child: Ink(
           decoration: BoxDecoration(
-            gradient: isEnabled && isPrimary
-                ? const LinearGradient(
-              colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            )
-                : null,
+            gradient: isEnabled && isPrimary ? const LinearGradient(colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)], begin: Alignment.centerLeft, end: Alignment.centerRight) : null,
             color: isEnabled && !isPrimary ? const Color(0xFF151a2e) : null,
             borderRadius: BorderRadius.circular(12),
             border: isEnabled && !isPrimary ? Border.all(color: Colors.blueAccent) : null,
@@ -365,11 +371,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
             alignment: Alignment.center,
             child: Text(
               text,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: isEnabled ? Colors.white : Colors.grey,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isEnabled ? Colors.white : Colors.grey),
             ),
           ),
         ),

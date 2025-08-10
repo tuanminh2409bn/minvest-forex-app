@@ -1,7 +1,7 @@
-// lib/features/admin/screens/admin_panel_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/features/admin/services/admin_service.dart';
 
 class AdminPanelScreen extends StatefulWidget {
@@ -13,20 +13,14 @@ class AdminPanelScreen extends StatefulWidget {
 
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final AdminService _adminService = AdminService();
-  // Dùng Set để lưu các userId được chọn, giúp tránh trùng lặp
   final Set<String> _selectedUserIds = {};
   final TextEditingController _reasonController = TextEditingController();
 
-  // Hàm xử lý khi nhấn nút Khóa
   void _handleSuspendUsers() {
     if (_selectedUserIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')));
       return;
     }
-
-    // Hiển thị dialog để Admin nhập lý do
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -37,21 +31,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           autofocus: true,
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Hủy'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Hủy')),
           FilledButton(
             onPressed: () async {
               final reason = _reasonController.text.trim();
               if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Lý do không được để trống.')),
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lý do không được để trống.')));
                 return;
               }
-
-              Navigator.of(context).pop(); // Đóng dialog
+              Navigator.of(context).pop();
               _executeAction(status: 'suspended', reason: reason);
             },
             child: const Text('Xác nhận khóa'),
@@ -61,29 +49,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  // Hàm xử lý khi nhấn nút Mở khóa
   void _handleActivateUsers() {
     if (_selectedUserIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')));
       return;
     }
     _executeAction(status: 'active');
   }
 
-  // Hàm chung để gọi Cloud Function
   Future<void> _executeAction({required String status, String? reason}) async {
     final message = await _adminService.manageUserStatus(
       userIds: _selectedUserIds.toList(),
       newStatus: status,
       reason: reason,
     );
-
-    // Xóa các lựa chọn và hiển thị kết quả
-    setState(() {
-      _selectedUserIds.clear();
-    });
+    setState(() => _selectedUserIds.clear());
     _reasonController.clear();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -95,7 +75,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bảng quản lý Admin'),
-        // Nút để bỏ chọn tất cả
         actions: [
           if (_selectedUserIds.isNotEmpty)
             IconButton(
@@ -106,8 +85,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        // Lấy danh sách tất cả người dùng
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
+        stream: FirebaseFirestore.instance.collection('users').orderBy('displayName').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -115,26 +93,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('Không có người dùng nào.'));
           }
-
           final users = snapshot.data!.docs;
-
           return ListView.builder(
             itemCount: users.length,
             itemBuilder: (context, index) {
               final userDoc = users[index];
               final userData = userDoc.data() as Map<String, dynamic>;
               final userId = userDoc.id;
-
-              final displayName = userData['displayName'] ?? 'N/A';
-              final email = userData['email'] ?? 'N/A';
-              final role = userData['role'] ?? 'user';
-              final isSuspended = userData['isSuspended'] ?? false;
               final isSelected = _selectedUserIds.contains(userId);
 
               return Container(
-                color: isSelected ? Colors.blue.withOpacity(0.2) : null,
-                child: ListTile(
-                  // Checkbox để chọn
+                color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                child: ExpansionTile(
                   leading: Checkbox(
                     value: isSelected,
                     onChanged: (bool? value) {
@@ -147,29 +117,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       });
                     },
                   ),
-                  title: Text(
-                    displayName,
-                    style: TextStyle(
-                      color: isSuspended ? Colors.red : (role == 'admin' ? Colors.amber : null),
-                      fontWeight: role == 'admin' ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  subtitle: Text(email),
-                  // Hiển thị vai trò và trạng thái
-                  trailing: Text(
-                    role == 'admin' ? 'Admin' : (isSuspended ? 'Bị khóa' : 'Active'),
-                    style: TextStyle(
-                        color: isSuspended ? Colors.red.shade300 : Colors.green.shade300,
-                        fontStyle: FontStyle.italic
-                    ),
-                  ),
+                  title: _buildUserTitle(userData),
+                  subtitle: Text(userData['email'] ?? 'N/A'),
+                  children: [_buildUserDetails(userData)],
                 ),
               );
             },
           );
         },
       ),
-      // Thanh hành động ở dưới cùng
       bottomNavigationBar: _selectedUserIds.isNotEmpty
           ? BottomAppBar(
         child: Padding(
@@ -177,32 +133,83 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _handleActivateUsers,
-                  icon: const Icon(Icons.lock_open),
-                  label: const Text('Mở khóa'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                  ),
-                ),
-              ),
+              Expanded(child: ElevatedButton.icon(onPressed: _handleActivateUsers, icon: const Icon(Icons.lock_open), label: const Text('Mở khóa'), style: ElevatedButton.styleFrom(backgroundColor: Colors.green))),
               const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _handleSuspendUsers,
-                  icon: const Icon(Icons.lock),
-                  label: const Text('Khóa'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                  ),
-                ),
-              ),
+              Expanded(child: ElevatedButton.icon(onPressed: _handleSuspendUsers, icon: const Icon(Icons.lock), label: const Text('Khóa'), style: ElevatedButton.styleFrom(backgroundColor: Colors.red))),
             ],
           ),
         ),
       )
           : null,
+    );
+  }
+
+  Widget _buildUserTitle(Map<String, dynamic> userData) {
+    final displayName = userData['displayName'] ?? 'N/A';
+    final isSuspended = userData['isSuspended'] ?? false;
+    final role = userData['role'] ?? 'user';
+    return Text(
+      displayName,
+      style: TextStyle(
+        color: isSuspended ? Colors.red.shade300 : (role == 'admin' ? Colors.amber : null),
+        fontWeight: role == 'admin' ? FontWeight.bold : FontWeight.normal,
+        decoration: isSuspended ? TextDecoration.lineThrough : TextDecoration.none,
+      ),
+    );
+  }
+
+  Widget _buildUserDetails(Map<String, dynamic> userData) {
+    final Timestamp? createdAt = userData['createdAt'];
+    final Timestamp? expiryDate = userData['subscriptionExpiryDate'];
+    final createdDateString = createdAt != null ? DateFormat('dd/MM/yyyy HH:mm').format(createdAt.toDate()) : 'N/A';
+    final expiryDateString = expiryDate != null ? DateFormat('dd/MM/yyyy').format(expiryDate.toDate()) : 'N/A';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      color: Colors.black.withOpacity(0.1),
+      child: Column(
+        children: [
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          _buildDetailRow(Icons.badge_outlined, 'Group:', userData['subscriptionTier']?.toUpperCase() ?? 'FREE'),
+          _buildDetailRow(Icons.phone_android, 'Mobile UID:', userData['activeSession']?['deviceId'] ?? 'N/A', canCopy: true),
+          _buildDetailRow(Icons.person_pin_outlined, 'Exness Client UID:', userData['exnessClientUid'] ?? 'N/A', canCopy: true),
+          _buildDetailRow(Icons.account_balance_wallet_outlined, 'Exness Account:', userData['exnessClientAccount']?.toString() ?? 'N/A'),
+          _buildDetailRow(Icons.payment, 'Payment:', userData['totalPaidAmount']?.toString() ?? 'N/A'),
+          _buildDetailRow(Icons.date_range, 'Ngày tạo:', createdDateString),
+          _buildDetailRow(Icons.timer_off_outlined, 'Ngày hết hạn:', expiryDateString),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String title, String value, {bool canCopy = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: Colors.grey.shade400),
+          const SizedBox(width: 8),
+          Text(title, style: TextStyle(color: Colors.grey.shade400)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (canCopy && value != 'N/A')
+            InkWell(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: value));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã sao chép!'), duration: Duration(seconds: 1)));
+              },
+              child: const Icon(Icons.copy, size: 14, color: Colors.blueAccent),
+            )
+        ],
+      ),
     );
   }
 }

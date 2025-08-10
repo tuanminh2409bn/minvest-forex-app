@@ -18,6 +18,7 @@ class SignalCard extends StatelessWidget {
     this.textScaleFactor = 1.0,
   });
 
+  // --- CÁC HÀM LOGIC CỦA BẠN GIỮ NGUYÊN ---
   static const Map<String, String> _currencyFlags = {
     'AUD': 'assets/images/aud_flag.png', 'CHF': 'assets/images/chf_flag.png',
     'EUR': 'assets/images/eur_flag.png', 'GBP': 'assets/images/gbp_flag.png',
@@ -34,6 +35,7 @@ class SignalCard extends StatelessWidget {
     }
     return [];
   }
+  // --- KẾT THÚC HÀM LOGIC ---
 
   @override
   Widget build(BuildContext context) {
@@ -182,13 +184,16 @@ class SignalCard extends StatelessWidget {
     );
   }
 
+  // ▼▼▼ HÀM ĐÃ ĐƯỢC TỐI ƯU VỚI `hitTps` ĐỂ ĐẢM BẢO CHÍNH XÁC TUYỆT ĐỐI ▼▼▼
   Widget? _getStatusIcon(String title, String? result) {
     final lowerTitle = title.toLowerCase();
 
+    // Logic cho SL: Vẫn dùng result nhưng kiểm tra an toàn hơn
     if (lowerTitle == 'sl' && result?.toLowerCase() == 'sl hit') {
       return const Icon(Icons.cancel, color: Colors.redAccent, size: 16);
     }
 
+    // Logic cho TP: Dùng 'hitTps' để có độ chính xác 100%
     if (lowerTitle.startsWith('tp')) {
       final tpNumber = int.tryParse(lowerTitle.replaceAll('tp', ''));
       if (tpNumber != null && signal.hitTps.contains(tpNumber)) {
@@ -209,7 +214,7 @@ class SignalCard extends StatelessWidget {
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Upgrade to see signal details...", style: TextStyle(color: Colors.grey, fontSize: 11)),
+            Flexible(child: Text("Upgrade to see signal details...", style: TextStyle(color: Colors.grey, fontSize: 11), overflow: TextOverflow.ellipsis)),
             Row(
               children: [
                 Text("Upgrade Now", style: TextStyle(color: Color(0xFF5865F2), fontSize: 11, fontWeight: FontWeight.bold)),

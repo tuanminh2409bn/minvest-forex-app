@@ -82,18 +82,6 @@ class UpgradeScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildActionButton(
                       context,
-                      text: 'Pay in app to upgrade',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const PackageScreen(paymentMethod: PaymentMethod.inAppPurchase)),
-                        );
-                      },
-                      isPrimary: true,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildActionButton(
-                      context,
                       text: 'Bank transfer to upgrade',
                       onPressed: () {
                         Navigator.push(

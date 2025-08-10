@@ -20,7 +20,6 @@ class AdminService {
       });
       return result.data['message'] ?? 'Thao tác thành công!';
     } on FirebaseFunctionsException catch (e) {
-      // Trả về thông báo lỗi từ function để UI có thể hiển thị
       return e.message ?? 'Có lỗi xảy ra.';
     } catch (e) {
       return 'Đã có lỗi không xác định xảy ra.';

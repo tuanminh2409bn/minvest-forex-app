@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-// ▼▼▼ THÊM IMPORT NÀY ▼▼▼
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
 import 'package:minvest_forex_app/features/verification/screens/bank_transfer_screen.dart';
@@ -23,7 +22,7 @@ class _PackageScreenState extends State<PackageScreen> {
   Map<String, ProductDetails> _products = {};
   bool _isAvailable = false;
   bool _isLoading = true;
-  bool _isPurchasing = false; // Biến mới để quản lý trạng thái đang xử lý giao dịch
+  bool _isPurchasing = false;
   String _loadingError = '';
   final Set<String> _kIds = {'elite_1_month', 'elite_12_months'};
 

@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/auth/screens/profile_screen.dart';
-import 'package:minvest_forex_app/features/chart/screens/chart_screen.dart';
 import 'package:minvest_forex_app/features/signals/screens/signal_screen.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
@@ -16,23 +15,18 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // Danh sách các trang không thay đổi
   static const List<Widget> _pages = <Widget>[
     SignalScreen(),
-    ChartScreen(),
     ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    // DÙNG LAYOUTBUILDER ĐỂ QUYẾT ĐỊNH GIAO DIỆN
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Nếu màn hình đủ rộng (lớn hơn 640px), dùng giao diện web với NavigationRail
         if (constraints.maxWidth > 640) {
           return _buildWideLayout(context);
         } else {
-          // Nếu màn hình hẹp, dùng lại giao diện mobile với BottomNavigationBar
           return _buildNarrowLayout(context);
         }
       },
@@ -46,7 +40,6 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: Row(
         children: <Widget>[
-          // THANH ĐIỀU HƯỚNG BÊN TRÁI
           NavigationRail(
             selectedIndex: _selectedIndex,
             onDestinationSelected: (int index) {
@@ -54,22 +47,19 @@ class _MainScreenState extends State<MainScreen> {
                 _selectedIndex = index;
               });
             },
-            labelType: NavigationRailLabelType.all, // Hiển thị cả icon và label
-            backgroundColor: const Color(0xFF0D1117), // Màu nền đồng bộ
-            indicatorColor: const Color(0xFF161B22), // Màu của mục được chọn
+            labelType: NavigationRailLabelType.all,
+            backgroundColor: const Color(0xFF0D1117),
+            indicatorColor: const Color(0xFF161B22),
             selectedIconTheme: const IconThemeData(color: Colors.white),
             unselectedIconTheme: IconThemeData(color: Colors.grey.shade600),
             selectedLabelTextStyle: const TextStyle(color: Colors.white),
             unselectedLabelTextStyle: TextStyle(color: Colors.grey.shade600),
 
+
             destinations: <NavigationRailDestination>[
               NavigationRailDestination(
                 icon: const Icon(Icons.signal_cellular_alt),
                 label: Text(l10n.tabSignal),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.bar_chart),
-                label: Text(l10n.tabChart),
               ),
               NavigationRailDestination(
                 icon: const Icon(Icons.person_outline),
@@ -79,7 +69,6 @@ class _MainScreenState extends State<MainScreen> {
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1, color: Colors.black),
-          // NỘI DUNG TRANG CHÍNH
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
@@ -105,10 +94,6 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.signal_cellular_alt),
             label: l10n.tabSignal,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.bar_chart),
-            label: l10n.tabChart,
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person_outline),
