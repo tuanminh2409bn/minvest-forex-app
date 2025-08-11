@@ -4,7 +4,7 @@ import { Response } from "express";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { onObjectFinalized } from "firebase-functions/v2/storage";
-import { onCall } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as crypto from "crypto";
 import * as querystring from "qs";
 import axios from "axios";
@@ -22,10 +22,15 @@ const PRODUCT_PRICES: { [key: string]: number } = {
   'elite_12_months': 460,
   'elite_1_month_vnpay': 78,
   'elite_12_months_vnpay': 460,
+  'minvest.elite.1month': 78,
+  'minvest.elite.12months': 460,
 };
 
+const APPLE_VERIFY_RECEIPT_URL_PRODUCTION = "https://buy.itunes.apple.com/verifyReceipt";
+const APPLE_VERIFY_RECEIPT_URL_SANDBOX = "https://sandbox.itunes.apple.com/verifyReceipt";
+
 // =================================================================
-// === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS ===
+// === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS (Không thay đổi) ===
 // =================================================================
 export const processVerificationImage = onObjectFinalized(
   { region: "asia-southeast1", cpu: 2, memory: "1GiB" },
@@ -338,68 +343,139 @@ function parseSignalMessage(text: string): any | null {
 // =================================================================
 // === FUNCTION XÁC THỰC GIAO DỊCH IN-APP PURCHASE (ĐÃ NÂNG CẤP) ===
 // =================================================================
-export const verifyPurchase = onCall({ region: "asia-southeast1" }, async (request) => {
-    const productId = request.data.productId;
-    const purchaseToken = request.data.purchaseToken;
-    const packageName = "com.minvest.aisignals";
-    const userId = request.auth?.uid;
+export const verifyPurchase = onCall(
+    { region: "asia-southeast1", secrets: ["APPLE_SHARED_SECRET"] },
+    async (request) => {
+        const { productId, transactionData, platform } = request.data;
+        const userId = request.auth?.uid;
 
-    if (!userId) {
-        throw new functions.https.HttpsError("unauthenticated", "Người dùng chưa đăng nhập.");
-    }
-    if (!productId || !purchaseToken) {
-        throw new functions.https.HttpsError("invalid-argument", "Thiếu productId hoặc purchaseToken.");
-    }
+        if (!userId) {
+            throw new HttpsError("unauthenticated", "Người dùng chưa đăng nhập.");
+        }
+        if (!productId || !transactionData || !platform) {
+            throw new HttpsError("invalid-argument", "Thiếu productId, transactionData hoặc platform.");
+        }
 
-    try {
-        const auth = new GoogleAuth({ scopes: "https://www.googleapis.com/auth/androidpublisher" });
-        const authClient = await auth.getClient();
-        const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
-        const res = await authClient.request({ url });
+        try {
+            let isValid = false;
+            let expiryDate: Date | null = null;
+            let transactionId: string | null = null;
 
-        if (res.data && (res.data as any).purchaseState === 0) {
-            const userRef = firestore.collection("users").doc(userId);
-            const now = new Date();
-            let expiryDate = new Date();
+            if (platform === 'ios') {
+                const sharedSecret = process.env.APPLE_SHARED_SECRET;
+                if (!sharedSecret) {
+                    functions.logger.error("Không tìm thấy APPLE_SHARED_SECRET trong môi trường runtime.");
+                    throw new HttpsError("internal", "Lỗi cấu hình phía server.");
+                }
 
-            if (productId === "elite_1_month") {
-                expiryDate = new Date(now.setMonth(now.getMonth() + 1));
-            } else if (productId === "elite_12_months") {
-                expiryDate = new Date(now.setFullYear(now.getFullYear() + 1));
-            } else {
-                 throw new functions.https.HttpsError("invalid-argument", "Sản phẩm không hợp lệ.");
+                const { receiptData } = transactionData;
+                const appleResponse = await verifyAppleReceipt(receiptData, sharedSecret);
+
+                const latestReceipt = appleResponse.latest_receipt_info?.sort((a: any, b: any) =>
+                    Number(b.purchase_date_ms) - Number(a.purchase_date_ms)
+                )[0];
+
+                if (latestReceipt && latestReceipt.product_id === productId) {
+                    isValid = true;
+                    expiryDate = new Date(Number(latestReceipt.expires_date_ms));
+                    transactionId = latestReceipt.transaction_id;
+
+                    if (transactionId) {
+                        const txDoc = await firestore.collection("processedTransactions").doc(transactionId).get();
+                        if (txDoc.exists) {
+                            functions.logger.warn(`Giao dịch ${transactionId} đã được xử lý trước đó.`);
+                            isValid = false;
+                        }
+                    } else {
+                        isValid = false;
+                    }
+                }
+            } else if (platform === 'android') {
+                const { purchaseToken } = transactionData;
+                const packageName = "com.minvest.aisignals";
+
+                const auth = new GoogleAuth({ scopes: "https://www.googleapis.com/auth/androidpublisher" });
+                const authClient = await auth.getClient();
+                const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
+
+                const res = await authClient.request({ url });
+                const purchase = res.data as any;
+
+                if (purchase && purchase.purchaseState === 0) {
+                    isValid = true;
+                    expiryDate = new Date(Number(purchase.expiryTimeMillis));
+                    transactionId = purchase.orderId;
+                }
             }
 
-            const amountPaid = PRODUCT_PRICES[productId] ?? 0;
-            const transactionRef = userRef.collection("transactions").doc();
-            const batch = firestore.batch();
-
-            batch.set(userRef, {
-                subscriptionTier: "elite",
-                subscriptionExpiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-                totalPaidAmount: admin.firestore.FieldValue.increment(amountPaid),
-            }, { merge: true });
-            batch.set(transactionRef, {
-                amount: amountPaid,
-                productId: productId,
-                paymentMethod: "in_app_purchase",
-                transactionDate: admin.firestore.FieldValue.serverTimestamp(),
-                purchaseToken: purchaseToken,
-            });
-            await batch.commit();
-
-            return { success: true, message: "Tài khoản đã được nâng cấp." };
-        } else {
-            throw new functions.https.HttpsError("aborted", "Giao dịch không hợp lệ hoặc đã bị hủy.");
+            if (isValid && expiryDate && transactionId) {
+                await upgradeUserAccount(userId, productId, expiryDate, transactionId, platform);
+                return { success: true, message: "Tài khoản đã được nâng cấp thành công." };
+            } else {
+                throw new HttpsError("aborted", "Giao dịch không hợp lệ hoặc đã bị hủy.");
+            }
+        } catch (error: any) {
+            functions.logger.error("Lỗi nghiêm trọng khi xác thực giao dịch:", error);
+            if (error instanceof HttpsError) {
+                throw error;
+            }
+            throw new HttpsError("internal", "Đã xảy ra lỗi trong quá trình xác thực.", error.message);
         }
+    });
+
+async function verifyAppleReceipt(receiptData: string, sharedSecret: string): Promise<any> {
+    const body = {
+        "receipt-data": receiptData,
+        "password": sharedSecret,
+        "exclude-old-transactions": true
+    };
+    try {
+        const response = await axios.post(APPLE_VERIFY_RECEIPT_URL_PRODUCTION, body);
+        const data = response.data;
+        if (data.status === 21007) {
+            const sandboxResponse = await axios.post(APPLE_VERIFY_RECEIPT_URL_SANDBOX, body);
+            return sandboxResponse.data;
+        }
+        if (data.status !== 0) {
+            throw new Error(`Xác thực biên lai thất bại với mã trạng thái: ${data.status}`);
+        }
+        return data;
     } catch (error) {
-        functions.logger.error("Lỗi nghiêm trọng khi xác thực giao dịch:", error);
-        throw new functions.https.HttpsError("internal", "Đã xảy ra lỗi trong quá trình xác thực.");
+        functions.logger.error("Lỗi khi gọi API xác thực của Apple:", error);
+        throw new HttpsError("internal", "Không thể kết nối đến server của Apple.");
     }
-});
+}
+
+async function upgradeUserAccount(userId: string, productId: string, expiryDate: Date, transactionId: string, platform: 'ios' | 'android') {
+    const userRef = firestore.collection("users").doc(userId);
+    const amountPaid = PRODUCT_PRICES[productId] ?? 0;
+    const transactionRef = userRef.collection("transactions").doc(transactionId);
+    const batch = firestore.batch();
+
+    batch.set(userRef, {
+        subscriptionTier: "elite",
+        subscriptionExpiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
+        totalPaidAmount: admin.firestore.FieldValue.increment(amountPaid),
+    }, { merge: true });
+
+    batch.set(transactionRef, {
+        amount: amountPaid,
+        productId: productId,
+        paymentMethod: `in_app_purchase_${platform}`,
+        transactionDate: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (platform === 'ios') {
+        const processedTxRef = firestore.collection("processedTransactions").doc(transactionId);
+        batch.set(processedTxRef, { userId, processedAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+
+    await batch.commit();
+}
+
 
 // =================================================================
-// === HỆ THỐNG GỬI THÔNG BÁO ===
+// === HỆ THỐNG GỬI THÔNG BÁO (Không thay đổi) ===
 // =================================================================
 function isGoldenHour(): boolean {
   const now = new Date();
@@ -581,4 +657,3 @@ export const resetDemoNotificationCounters = onSchedule({ schedule: "1 0 * * *",
     demoUsersSnapshot.forEach(doc => batch.update(doc.ref, { notificationCount: 0 }));
     await batch.commit();
 });
-
