@@ -9,28 +9,228 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get welcomeBack => 'Welcome Back';
+  String get accountUpgradedSuccessfully => 'ACCOUNT UPGRADED SUCCESSFULLY';
 
   @override
-  String get loginToContinue => 'Login to continue';
+  String get lotPerWeek => 'Lot/week';
 
   @override
-  String get email => 'Email';
+  String get tableValueFull => 'full';
 
   @override
-  String get password => 'Password';
+  String get tableValueFulltime => 'fulltime';
 
   @override
-  String get loginButton => 'Login';
+  String get packageTitle => 'PACKAGE';
 
   @override
-  String get loginWithGoogle => 'Sign in with Google';
+  String get duration1Month => '1 month';
+
+  @override
+  String get duration12Months => '12 months';
+
+  @override
+  String get featureReceiveAllSignals => 'Receive all signals of the day';
+
+  @override
+  String get featureAnalyzeReason =>
+      'Analyze the reason for entering the order';
+
+  @override
+  String get featureHighPrecisionAI => 'High-precision AI signal';
+
+  @override
+  String get iapStoreNotAvailable =>
+      'The store is not available on this device.';
+
+  @override
+  String iapErrorLoadingProducts(Object message) {
+    return 'Error loading products: $message';
+  }
+
+  @override
+  String get iapNoProductsFound =>
+      'No products found. Please check your store configuration.';
+
+  @override
+  String iapTransactionError(Object message) {
+    return 'Transaction error: $message';
+  }
+
+  @override
+  String iapVerificationError(Object message) {
+    return 'Verification error: $message';
+  }
+
+  @override
+  String iapUnknownError(Object error) {
+    return 'An unknown error occurred: $error';
+  }
+
+  @override
+  String get iapProcessingTransaction => 'Processing transaction...';
+
+  @override
+  String get orderInfo1Month => 'Payment for Elite 1 month package';
+
+  @override
+  String get orderInfo12Months => 'Payment for Elite 12 months package';
+
+  @override
+  String get iapNotSupportedOnWeb =>
+      'In-app purchases are not supported on the web version.';
+
+  @override
+  String get vnpayPaymentTitle => 'VNPAY PAYMENT';
+
+  @override
+  String get creatingOrderWait => 'Creating order, please wait...';
+
+  @override
+  String errorWithMessage(Object message) {
+    return 'Error: $message';
+  }
+
+  @override
+  String get cannotConnectToServer =>
+      'Cannot connect to the server. Please try again.';
+
+  @override
+  String get transactionCancelledOrFailed =>
+      'Transaction has been cancelled or failed.';
+
+  @override
+  String get cannotCreatePaymentLink =>
+      'Could not create payment link.\nPlease try again.';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String serverErrorRetry(Object message) {
+    return 'Server error: $message. Please try again.';
+  }
+
+  @override
+  String get redirectingToPayment => 'Redirecting to payment page...';
+
+  @override
+  String get invalidPaymentUrl => 'Invalid payment URL received from server.';
+
+  @override
+  String get processingYourAccount => 'Processing your account...';
+
+  @override
+  String get verificationFailed => 'Verification Failed!';
+
+  @override
+  String get reuploadImage => 'Re-upload Image';
+
+  @override
+  String get accountNotLinked => 'Account Not Linked to Minvest';
+
+  @override
+  String get accountNotLinkedDesc =>
+      'To get exclusive signals, your Exness account must be registered through the Minvest partner link. Please create a new account using the link below.';
+
+  @override
+  String get registerExnessViaMinvest => 'Register Exness via Minvest';
+
+  @override
+  String get iHaveRegisteredReupload => 'I have registered, re-upload';
+
+  @override
+  String couldNotLaunch(Object url) {
+    return 'Could not launch $url';
+  }
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get sentOn => 'Sent on';
+
+  @override
+  String get entryPrice => 'Entry price';
+
+  @override
+  String get stopLossFull => 'Stop loss';
+
+  @override
+  String get takeProfitFull1 => 'Take profit 1';
+
+  @override
+  String get takeProfitFull2 => 'Take profit 2';
+
+  @override
+  String get takeProfitFull3 => 'Take profit 3';
+
+  @override
+  String get noReasonProvided => 'No reason provided for this signal.';
+
+  @override
+  String get upgradeToViewReason =>
+      'Upgrade your account to Elite to view the analysis.';
+
+  @override
+  String get upgradeToViewFullAnalysis => 'Upgrade to View Full Analysis';
+
+  @override
+  String get welcomeTo => 'Welcome to';
+
+  @override
+  String get appSlogan => 'Enhance your trading with intelligent signals.';
+
+  @override
+  String get signIn => 'Sign in';
+
+  @override
+  String get continueByGoogle => 'Continue by Google';
+
+  @override
+  String get continueByFacebook => 'Continue by Facebook';
+
+  @override
+  String get continueByApple => 'Continue by Apple';
+
+  @override
+  String get loginSuccess => 'Login successful!';
+
+  @override
+  String get live => 'LIVE';
+
+  @override
+  String get end => 'END';
+
+  @override
+  String get symbol => 'SYMBOL';
+
+  @override
+  String get aiSignal => 'AI SIGNAL';
+
+  @override
+  String get ruleSignal => 'RULE SIGNAL';
+
+  @override
+  String get all => 'ALL';
+
+  @override
+  String get upgradeToSeeMore => 'Upgrade to see more';
+
+  @override
+  String get seeDetails => 'see details';
+
+  @override
+  String get notMatched => 'NOT MATCHED';
+
+  @override
+  String get matched => 'MATCHED';
 
   @override
   String get entry => 'Entry';
 
   @override
-  String get stopLoss => 'Stop Loss';
+  String get stopLoss => 'SL';
 
   @override
   String get takeProfit1 => 'TP1';
@@ -42,35 +242,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get takeProfit3 => 'TP3';
 
   @override
-  String get signalTypeBuy => 'BUY';
+  String get upgrade => 'Upgrade';
 
   @override
-  String get signalTypeSell => 'SELL';
+  String get upgradeAccount => 'UPGRADE ACCOUNT';
 
   @override
-  String get tabRunning => 'Running';
-
-  @override
-  String get tabHistory => 'History';
-
-  @override
-  String get viewDetails => 'View Details';
-
-  @override
-  String get profile => 'Profile';
-
-  @override
-  String get upgradeAccount => 'Upgrade Account';
-
-  @override
-  String get upgradeAccountSubtitle =>
-      'Submit a new screenshot to upgrade your tier.';
-
-  @override
-  String get upgradeScreenTitle => 'Upgrade Account Tier';
-
-  @override
-  String get compareTiers => 'Compare Tiers';
+  String get compareTiers => 'COMPARE TIERS';
 
   @override
   String get feature => 'Feature';
@@ -88,7 +266,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balance => 'Balance';
 
   @override
-  String get signalTime => 'Signal Time';
+  String get signalTime => 'Signal time';
 
   @override
   String get signalQty => 'Signal Qty';
@@ -97,37 +275,75 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analysis => 'Analysis';
 
   @override
-  String get mobileWebApp => 'Mobile & Web App';
+  String get openExnessAccount => 'Open exness account!';
 
   @override
-  String get uploadPrompt =>
-      'Upload a screenshot of your Exness account with a new balance.';
+  String get accountVerificationWithExness =>
+      'Account verification with Exness';
 
   @override
-  String get statusImageSelected =>
-      'Image selected. Press \'Submit\' to verify.';
+  String get payInAppToUpgrade => 'Pay in app to upgrade';
 
   @override
-  String get statusUploading => 'Uploading, please wait...';
+  String get bankTransferToUpgrade => 'Bank transfer to upgrade';
 
   @override
-  String get statusUploadSuccess =>
-      'Upload successful! Please wait a few hours for admin review.';
+  String get accountVerification => 'ACCOUNT VERIFICATION';
 
   @override
-  String get statusUploadFailed => 'Upload failed. Please try again.';
+  String get accountVerificationPrompt =>
+      'Please upload a screenshot of your Exness account to be authorized (your account must be opened under Minvest\'s Exness link)';
 
   @override
-  String get buttonSelectScreenshot => 'Select New Screenshot';
+  String get selectPhotoFromLibrary => 'Select photo from library';
 
   @override
-  String get buttonSubmitReview => 'Submit for Review';
+  String get send => 'Send';
 
   @override
-  String get dontHaveAccount => 'Don\'t have an account?';
+  String get accountInfo => 'Account Information';
 
   @override
-  String get signUpButton => 'Sign Up';
+  String get accountVerifiedSuccessfully => 'ACCOUNT VERIFIED SUCCESSFULLY';
+
+  @override
+  String get yourAccountIs => 'Your account is';
+
+  @override
+  String get returnToHomePage => 'Return to home page';
+
+  @override
+  String get upgradeFailed => 'Upgrade failed! Please reupload the image';
+
+  @override
+  String get package => 'PACKAGE';
+
+  @override
+  String get startNow => 'START NOW';
+
+  @override
+  String get bankTransfer => 'BANK TRANSFER';
+
+  @override
+  String get transferInformation => 'TRANSFER INFORMATION';
+
+  @override
+  String get scanForFastTransfer => 'Scan for fast transfer';
+
+  @override
+  String get contactUs247 => 'Contact Us 24/7';
+
+  @override
+  String get newAnnouncement => 'NEW ANNOUNCEMENT';
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get upgradeNow => 'UPGRADE NOW';
+
+  @override
+  String get followMinvest => 'Follow MInvest';
 
   @override
   String get tabSignal => 'Signal';
@@ -137,4 +353,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tabProfile => 'Profile';
+
+  @override
+  String get reason => 'REASON';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get noSignalsAvailable => 'No signals available.';
+
+  @override
+  String get outOfGoldenHours => 'Out of Golden Hours';
+
+  @override
+  String get outOfGoldenHoursVipDesc =>
+      'VIP signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade to Elite to get signals 24/24!';
+
+  @override
+  String get outOfGoldenHoursDemoDesc =>
+      'Demo signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade your account for more benefits!';
+
+  @override
+  String get yourName => 'Your Name';
+
+  @override
+  String get yourEmail => 'your.email@example.com';
+
+  @override
+  String get adminPanel => 'Admin Panel';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get confirmLogout => 'Confirm Logout';
+
+  @override
+  String get confirmLogoutMessage => 'Are you sure you want to log out?';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get upgradeCardTitle => 'UPGRADE YOUR ACCOUNT';
+
+  @override
+  String get upgradeCardSubtitle => 'To access more resources';
+
+  @override
+  String get upgradeCardSubtitleWeb =>
+      'To unlock premium signals and full-time support';
+
+  @override
+  String get subscriptionDetails => 'Subscription Details';
 }

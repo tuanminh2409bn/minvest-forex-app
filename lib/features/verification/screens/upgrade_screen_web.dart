@@ -1,10 +1,9 @@
-// features/verification/screens/upgrade_screen_web.dart
-
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/package_screen.dart';
 import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class UpgradeScreen extends StatelessWidget {
   const UpgradeScreen({super.key});
@@ -16,16 +15,16 @@ class UpgradeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Colors.transparent, // Giữ trong suốt để thấy gradient
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        // === THAY ĐỔI 1: SỬA MÀU APPBAR ===
-        backgroundColor: const Color(0xFF0D1117), // Đặt màu nền tối
+        backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          'UPGRADE ACCOUNT',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.upgradeAccount,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -40,28 +39,27 @@ class UpgradeScreen extends StatelessWidget {
             stops: [0.0, 0.5, 1.0],
           ),
         ),
-        // === THAY ĐỔI 2: CO GIÃN GIAO DIỆN ===
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900), // Giới hạn chiều rộng
+            constraints: const BoxConstraints(maxWidth: 900),
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-                    const Center(
+                    Center(
                       child: Text(
-                        'COMPARE TIERS',
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                        l10n.compareTiers,
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _buildTiersTable(),
+                    _buildTiersTable(l10n),
                     const SizedBox(height: 30),
                     _buildActionButton(
                       context,
-                      text: 'Open exness account!',
+                      text: l10n.openExnessAccount,
                       onPressed: () {
                         _launchURL('https://my.exmarkets.guide/accounts/sign-up/303589?utm_source=partners&ex_ol=1');
                       },
@@ -70,7 +68,7 @@ class UpgradeScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildActionButton(
                       context,
-                      text: 'Account verification with Exness',
+                      text: l10n.accountVerificationWithExness,
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -82,7 +80,7 @@ class UpgradeScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildActionButton(
                       context,
-                      text: 'Bank transfer to upgrade',
+                      text: l10n.bankTransferToUpgrade,
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -102,7 +100,7 @@ class UpgradeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTiersTable() {
+  Widget _buildTiersTable(AppLocalizations l10n) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Table(
@@ -117,12 +115,12 @@ class UpgradeScreen extends StatelessWidget {
           3: FlexColumnWidth(1),
         },
         children: [
-          _buildTableRow(['Feature', 'Demo', 'Vip', 'Elite'], isHeader: true),
-          _buildTableRow(['Balance', '< \$200', '> \$200', '> \$500']),
-          _buildTableRow(['Signal time', '8h-17h', '8h-17h', 'fulltime']),
-          _buildTableRow(['Signal Qty', '7-8/day', 'full', 'full']),
-          _buildTableRow(['Analysis', 'icon:cancel', 'icon:cancel', 'icon:check']),
-          _buildTableRow(['Lot/week', '0.05', '0.3', '0.5']),
+          _buildTableRow([l10n.feature, l10n.tierDemo, l10n.tierVIP, l10n.tierElite], isHeader: true),
+          _buildTableRow([l10n.balance, '< \$200', '> \$200', '> \$500']),
+          _buildTableRow([l10n.signalTime, '8h-17h', '8h-17h', l10n.tableValueFulltime]),
+          _buildTableRow([l10n.signalQty, '7-8/day', l10n.tableValueFull, l10n.tableValueFull]),
+          _buildTableRow([l10n.analysis, 'icon:cancel', 'icon:cancel', 'icon:check']),
+          _buildTableRow([l10n.lotPerWeek, '0.05', '0.3', '0.5']),
         ],
       ),
     );
@@ -143,8 +141,7 @@ class UpgradeScreen extends StatelessWidget {
           cellWidget = Text(
             cell,
             textAlign: isFirstCell ? TextAlign.left : TextAlign.center,
-            softWrap: false,
-            overflow: TextOverflow.fade,
+            softWrap: true, // Cho phép xuống dòng
             style: TextStyle(
               fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
               color: isHeader ? Colors.white : Colors.white70,
@@ -157,8 +154,8 @@ class UpgradeScreen extends StatelessWidget {
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Container(
             decoration: (isHeader && !isFirstCell)
-                ? BoxDecoration(
-              gradient: const LinearGradient(
+                ? const BoxDecoration(
+              gradient: LinearGradient(
                 colors: [Color(0xFF172AFE), Color(0xFF3C4BFE), Color(0xFF5E69FD)],
               ),
             )
@@ -168,7 +165,7 @@ class UpgradeScreen extends StatelessWidget {
             )
                 : null,
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: isFirstCell ? 12.0 : 4.0),
+              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
               child: cellWidget,
             ),
           ),
@@ -201,6 +198,7 @@ class UpgradeScreen extends StatelessWidget {
           ),
           child: Container(
             alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Text(
               text,
               textAlign: TextAlign.center,

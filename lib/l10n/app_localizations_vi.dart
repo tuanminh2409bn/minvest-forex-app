@@ -9,22 +9,225 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
-  String get welcomeBack => 'Chào mừng trở lại';
+  String get accountUpgradedSuccessfully => 'NÂNG CẤP TÀI KHOẢN THÀNH CÔNG';
 
   @override
-  String get loginToContinue => 'Đăng nhập để tiếp tục';
+  String get lotPerWeek => 'Lot/tuần';
 
   @override
-  String get email => 'Email';
+  String get tableValueFull => 'đầy đủ';
 
   @override
-  String get password => 'Mật khẩu';
+  String get tableValueFulltime => 'toàn thời gian';
 
   @override
-  String get loginButton => 'Đăng Nhập';
+  String get packageTitle => 'GÓI DỊCH VỤ';
 
   @override
-  String get loginWithGoogle => 'Đăng nhập với Google';
+  String get duration1Month => '1 tháng';
+
+  @override
+  String get duration12Months => '12 tháng';
+
+  @override
+  String get featureReceiveAllSignals => 'Nhận tất cả tín hiệu trong ngày';
+
+  @override
+  String get featureAnalyzeReason => 'Phân tích lý do vào lệnh';
+
+  @override
+  String get featureHighPrecisionAI => 'Tín hiệu AI độ chính xác cao';
+
+  @override
+  String get iapStoreNotAvailable =>
+      'Cửa hàng không khả dụng trên thiết bị này.';
+
+  @override
+  String iapErrorLoadingProducts(Object message) {
+    return 'Lỗi tải sản phẩm: $message';
+  }
+
+  @override
+  String get iapNoProductsFound =>
+      'Không tìm thấy sản phẩm nào. Vui lòng kiểm tra lại cấu hình trên cửa hàng.';
+
+  @override
+  String iapTransactionError(Object message) {
+    return 'Lỗi giao dịch: $message';
+  }
+
+  @override
+  String iapVerificationError(Object message) {
+    return 'Lỗi xác thực: $message';
+  }
+
+  @override
+  String iapUnknownError(Object error) {
+    return 'Đã xảy ra lỗi không xác định: $error';
+  }
+
+  @override
+  String get iapProcessingTransaction => 'Đang xử lý giao dịch...';
+
+  @override
+  String get orderInfo1Month => 'Thanh toán gói Elite 1 tháng';
+
+  @override
+  String get orderInfo12Months => 'Thanh toán gói Elite 12 tháng';
+
+  @override
+  String get iapNotSupportedOnWeb =>
+      'Thanh toán trong ứng dụng không được hỗ trợ trên phiên bản web.';
+
+  @override
+  String get vnpayPaymentTitle => 'THANH TOÁN VNPAY';
+
+  @override
+  String get creatingOrderWait => 'Đang tạo đơn hàng, vui lòng chờ...';
+
+  @override
+  String errorWithMessage(Object message) {
+    return 'Lỗi: $message';
+  }
+
+  @override
+  String get cannotConnectToServer =>
+      'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
+
+  @override
+  String get transactionCancelledOrFailed =>
+      'Giao dịch đã bị hủy hoặc thất bại.';
+
+  @override
+  String get cannotCreatePaymentLink =>
+      'Không thể tạo link thanh toán.\nVui lòng thử lại.';
+
+  @override
+  String get retry => 'Thử lại';
+
+  @override
+  String serverErrorRetry(Object message) {
+    return 'Lỗi từ máy chủ: $message. Vui lòng thử lại.';
+  }
+
+  @override
+  String get redirectingToPayment =>
+      'Đang chuyển hướng đến trang thanh toán...';
+
+  @override
+  String get invalidPaymentUrl =>
+      'URL thanh toán không hợp lệ nhận từ máy chủ.';
+
+  @override
+  String get processingYourAccount => 'Đang xử lý tài khoản của bạn...';
+
+  @override
+  String get verificationFailed => 'Xác thực Thất bại!';
+
+  @override
+  String get reuploadImage => 'Tải lại ảnh';
+
+  @override
+  String get accountNotLinked => 'Tài khoản chưa liên kết với Minvest';
+
+  @override
+  String get accountNotLinkedDesc =>
+      'Để nhận tín hiệu độc quyền, tài khoản Exness của bạn phải được đăng ký qua liên kết đối tác của Minvest. Vui lòng tạo tài khoản mới bằng liên kết bên dưới.';
+
+  @override
+  String get registerExnessViaMinvest => 'Đăng ký Exness qua Minvest';
+
+  @override
+  String get iHaveRegisteredReupload => 'Tôi đã đăng ký, tải lại ảnh';
+
+  @override
+  String couldNotLaunch(Object url) {
+    return 'Không thể mở $url';
+  }
+
+  @override
+  String get status => 'Trạng thái';
+
+  @override
+  String get sentOn => 'Gửi lúc';
+
+  @override
+  String get entryPrice => 'Giá vào lệnh';
+
+  @override
+  String get stopLossFull => 'Dừng lỗ';
+
+  @override
+  String get takeProfitFull1 => 'Chốt lời 1';
+
+  @override
+  String get takeProfitFull2 => 'Chốt lời 2';
+
+  @override
+  String get takeProfitFull3 => 'Chốt lời 3';
+
+  @override
+  String get noReasonProvided =>
+      'Không có lý do nào được cung cấp cho tín hiệu này.';
+
+  @override
+  String get upgradeToViewReason =>
+      'Nâng cấp tài khoản lên Elite để xem phân tích.';
+
+  @override
+  String get upgradeToViewFullAnalysis => 'Nâng cấp để xem toàn bộ phân tích';
+
+  @override
+  String get welcomeTo => 'Chào mừng đến với';
+
+  @override
+  String get appSlogan =>
+      'Nâng cao giao dịch của bạn với các tín hiệu thông minh.';
+
+  @override
+  String get signIn => 'Đăng nhập';
+
+  @override
+  String get continueByGoogle => 'Tiếp tục với Google';
+
+  @override
+  String get continueByFacebook => 'Tiếp tục với Facebook';
+
+  @override
+  String get continueByApple => 'Tiếp tục với Apple';
+
+  @override
+  String get loginSuccess => 'Đăng nhập thành công!';
+
+  @override
+  String get live => 'TRỰC TIẾP';
+
+  @override
+  String get end => 'KẾT THÚC';
+
+  @override
+  String get symbol => 'CẶP TIỀN';
+
+  @override
+  String get aiSignal => 'TÍN HIỆU AI';
+
+  @override
+  String get ruleSignal => 'TÍN HIỆU RULE';
+
+  @override
+  String get all => 'TẤT CẢ';
+
+  @override
+  String get upgradeToSeeMore => 'Nâng cấp để xem thêm';
+
+  @override
+  String get seeDetails => 'xem chi tiết';
+
+  @override
+  String get notMatched => 'CHƯA KHỚP';
+
+  @override
+  String get matched => 'ĐÃ KHỚP';
 
   @override
   String get entry => 'Vào lệnh';
@@ -42,38 +245,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get takeProfit3 => 'TP3';
 
   @override
-  String get signalTypeBuy => 'MUA';
+  String get upgrade => 'Nâng cấp';
 
   @override
-  String get signalTypeSell => 'BÁN';
+  String get upgradeAccount => 'NÂNG CẤP TÀI KHOẢN';
 
   @override
-  String get tabRunning => 'Đang chạy';
+  String get compareTiers => 'SO SÁNH CÁC HẠNG';
 
   @override
-  String get tabHistory => 'Lịch sử';
-
-  @override
-  String get viewDetails => 'Xem Chi Tiết';
-
-  @override
-  String get profile => 'Hồ sơ';
-
-  @override
-  String get upgradeAccount => 'Nâng cấp Tài khoản';
-
-  @override
-  String get upgradeAccountSubtitle =>
-      'Gửi ảnh chụp màn hình mới để nâng cấp hạng.';
-
-  @override
-  String get upgradeScreenTitle => 'Nâng Cấp Hạng Tài Khoản';
-
-  @override
-  String get compareTiers => 'So Sánh Các Hạng';
-
-  @override
-  String get feature => 'Tính Năng';
+  String get feature => 'Tính năng';
 
   @override
   String get tierDemo => 'Demo';
@@ -85,47 +266,86 @@ class AppLocalizationsVi extends AppLocalizations {
   String get tierElite => 'Elite';
 
   @override
-  String get balance => 'Số Dư';
+  String get balance => 'Số dư';
 
   @override
-  String get signalTime => 'Thời Gian Tín Hiệu';
+  String get signalTime => 'Giờ tín hiệu';
 
   @override
-  String get signalQty => 'Số Lượng Tín Hiệu';
+  String get signalQty => 'Số lượng tín hiệu';
 
   @override
-  String get analysis => 'Phân Tích';
+  String get analysis => 'Phân tích';
 
   @override
-  String get mobileWebApp => 'App Di Động & Web';
+  String get openExnessAccount => 'Mở tài khoản Exness!';
 
   @override
-  String get uploadPrompt => 'Tải lên ảnh chụp tài khoản Exness với số dư mới.';
+  String get accountVerificationWithExness => 'Xác thực tài khoản với Exness';
 
   @override
-  String get statusImageSelected => 'Đã chọn ảnh. Nhấn \'Gửi đi\' để xác thực.';
+  String get payInAppToUpgrade => 'Thanh toán trong ứng dụng';
 
   @override
-  String get statusUploading => 'Đang tải ảnh lên, vui lòng chờ...';
+  String get bankTransferToUpgrade => 'Chuyển khoản ngân hàng';
 
   @override
-  String get statusUploadSuccess =>
-      'Tải lên thành công! Vui lòng chờ quản trị viên xét duyệt trong vài giờ.';
+  String get accountVerification => 'XÁC THỰC TÀI KHOẢN';
 
   @override
-  String get statusUploadFailed => 'Tải lên thất bại. Vui lòng thử lại.';
+  String get accountVerificationPrompt =>
+      'Vui lòng tải lên ảnh chụp màn hình tài khoản Exness của bạn để được cấp quyền (tài khoản của bạn phải được mở dưới liên kết của Minvest)';
 
   @override
-  String get buttonSelectScreenshot => 'Chọn Ảnh Chụp Mới';
+  String get selectPhotoFromLibrary => 'Chọn ảnh từ thư viện';
 
   @override
-  String get buttonSubmitReview => 'Gửi Đi Để Xét Duyệt';
+  String get send => 'Gửi';
 
   @override
-  String get dontHaveAccount => 'Chưa có tài khoản?';
+  String get accountInfo => 'Thông Tin Tài Khoản';
 
   @override
-  String get signUpButton => 'Đăng Ký';
+  String get accountVerifiedSuccessfully => 'XÁC THỰC TÀI KHOẢN THÀNH CÔNG';
+
+  @override
+  String get yourAccountIs => 'Tài khoản của bạn là';
+
+  @override
+  String get returnToHomePage => 'Quay về trang chủ';
+
+  @override
+  String get upgradeFailed => 'Nâng cấp thất bại! Vui lòng tải lại ảnh';
+
+  @override
+  String get package => 'GÓI DỊCH VỤ';
+
+  @override
+  String get startNow => 'BẮT ĐẦU NGAY';
+
+  @override
+  String get bankTransfer => 'CHUYỂN KHOẢN';
+
+  @override
+  String get transferInformation => 'THÔNG TIN CHUYỂN KHOẢN';
+
+  @override
+  String get scanForFastTransfer => 'Quét để chuyển khoản nhanh';
+
+  @override
+  String get contactUs247 => 'Liên hệ chúng tôi 24/7';
+
+  @override
+  String get newAnnouncement => 'THÔNG BÁO MỚI';
+
+  @override
+  String get profile => 'Hồ sơ';
+
+  @override
+  String get upgradeNow => 'NÂNG CẤP NGAY';
+
+  @override
+  String get followMinvest => 'Theo dõi MInvest';
 
   @override
   String get tabSignal => 'Tín hiệu';
@@ -135,4 +355,58 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get tabProfile => 'Hồ sơ';
+
+  @override
+  String get reason => 'LÝ DO';
+
+  @override
+  String get error => 'Lỗi';
+
+  @override
+  String get noSignalsAvailable => 'Không có tín hiệu nào.';
+
+  @override
+  String get outOfGoldenHours => 'Ngoài Giờ Vàng Giao Dịch';
+
+  @override
+  String get outOfGoldenHoursVipDesc =>
+      'Tín hiệu VIP chỉ có từ 8:00 - 17:00 (GMT+7).\nNâng cấp lên Elite để nhận tín hiệu 24/24!';
+
+  @override
+  String get outOfGoldenHoursDemoDesc =>
+      'Tín hiệu Demo chỉ có từ 8:00 - 17:00 (GMT+7).\nNâng cấp tài khoản để có thêm quyền lợi!';
+
+  @override
+  String get yourName => 'Tên của bạn';
+
+  @override
+  String get yourEmail => 'email.cua.ban@example.com';
+
+  @override
+  String get adminPanel => 'Bảng quản trị';
+
+  @override
+  String get logout => 'Đăng xuất';
+
+  @override
+  String get confirmLogout => 'Xác nhận Đăng xuất';
+
+  @override
+  String get confirmLogoutMessage => 'Bạn có chắc chắn muốn đăng xuất không?';
+
+  @override
+  String get cancel => 'Hủy';
+
+  @override
+  String get upgradeCardTitle => 'NÂNG CẤP TÀI KHOẢN';
+
+  @override
+  String get upgradeCardSubtitle => 'Để truy cập nhiều tài nguyên hơn';
+
+  @override
+  String get upgradeCardSubtitleWeb =>
+      'Để mở khóa tín hiệu cao cấp và hỗ trợ toàn thời gian';
+
+  @override
+  String get subscriptionDetails => 'Chi tiết Gói đăng ký';
 }

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart'; // 1. Import file localizations
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -12,6 +11,8 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = AuthService();
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    // 2. Tạo một biến để dễ dàng gọi các chuỗi dịch
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Container(
@@ -58,10 +59,11 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                const Text(
-                  'Welcome to',
+                // 3. Thay thế các chuỗi tĩnh bằng biến l10n
+                Text(
+                  l10n.welcomeTo,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18, color: Colors.white),
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -70,41 +72,38 @@ class WelcomeScreen extends StatelessWidget {
                     height: 150,
                   ),
                 ),
-                const Text(
-                  'Enhance your trading with intelligent signals.',
+                Text(
+                  l10n.appSlogan,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.white, height: 1.5),
+                  style: const TextStyle(fontSize: 16, color: Colors.white, height: 1.5),
                 ),
                 const SizedBox(height: 50),
-                const Text(
-                  'Sign in',
+                Text(
+                  l10n.signIn,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 24),
 
-                // Nút Google
                 _SocialSignInButton(
                   icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
-                  text: 'Continue by Google',
+                  text: l10n.continueByGoogle,
                   onPressed: () => authService.signInWithGoogle(),
                 ),
                 const SizedBox(height: 16),
 
-                // Nút Facebook
                 _SocialSignInButton(
                   icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
-                  text: 'Continue by Facebook',
+                  text: l10n.continueByFacebook,
                   onPressed: () => authService.signInWithFacebook(),
                 ),
-                const SizedBox(height: 16),
 
-                // Nút Apple
-                  _SocialSignInButton(
-                    icon: const Icon(Icons.apple, color: Colors.white, size: 24),
-                    text: 'Continue by Apple',
-                    onPressed: () => authService.signInWithApple(),
-                  ),
+                const SizedBox(height: 16),
+                _SocialSignInButton(
+                  icon: const Icon(Icons.apple, color: Colors.white, size: 24),
+                  text: l10n.continueByApple,
+                  onPressed: () => authService.signInWithApple(),
+                ),
                 const Spacer(flex: 2),
               ],
             ),
@@ -115,9 +114,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-// Sửa lại widget _SocialSignInButton để linh hoạt hơn
 class _SocialSignInButton extends StatelessWidget {
-  // Thay vì dùng `iconPath`, chúng ta dùng thẳng `icon` kiểu Widget
   final Widget icon;
   final String text;
   final VoidCallback onPressed;
@@ -160,7 +157,6 @@ class _SocialSignInButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Hiển thị widget icon được truyền vào
                 icon,
                 const SizedBox(width: 24),
                 Text(

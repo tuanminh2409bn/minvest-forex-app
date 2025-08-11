@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_success_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class BankTransferScreen extends StatefulWidget {
   final double amountUSD;
@@ -19,27 +20,44 @@ class BankTransferScreen extends StatefulWidget {
 
 class _BankTransferScreenState extends State<BankTransferScreen> {
   bool _isLoading = true;
-  String _loadingMessage = "Đang tạo đơn hàng, vui lòng chờ...";
+  String _loadingMessage = ""; // Sẽ được cập nhật trong initState
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _createAndLaunchVnpayOrder();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _loadingMessage = AppLocalizations.of(context)!.creatingOrderWait;
+      });
+      _createAndLaunchVnpayOrder();
+    });
   }
 
   Future<void> _createAndLaunchVnpayOrder() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      FirebaseFunctions functions = FirebaseFunctions.instanceFor(region: 'asia-southeast1'); // Thêm region cho an toàn
+      FirebaseFunctions functions = FirebaseFunctions.instanceFor(region: 'asia-southeast1');
       final HttpsCallable callable = functions.httpsCallable('createVnpayOrder');
 
+      String productId;
+      if (widget.amountUSD == 78) {
+        productId = 'elite_1_month_vnpay';
+      } else if (widget.amountUSD == 460) {
+        productId = 'elite_12_months_vnpay';
+      } else {
+        throw Exception('Invalid amount: ${widget.amountUSD}');
+      }
+
       final HttpsCallableResult result = await callable.call({
-        'amount': widget.amountUSD,
+        'productId': productId,
         'orderInfo': widget.orderInfo,
       });
 
@@ -48,35 +66,45 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
       if (paymentUrl != null) {
         final Uri uri = Uri.parse(paymentUrl);
         if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-          throw Exception('Could not launch $paymentUrl');
+          throw Exception(l10n.couldNotLaunch(paymentUrl));
         }
         if (mounted) {
-          Navigator.of(context).pop();
+          // Chuyển đến màn hình thành công sau khi mở link
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const UpgradeSuccessScreen()),
+                (route) => route.isFirst,
+          );
         }
       } else {
-        throw Exception("URL thanh toán không hợp lệ nhận từ server.");
+        throw Exception(l10n.invalidPaymentUrl);
       }
     } on FirebaseFunctionsException catch (e) {
       print("Lỗi Firebase Functions khi tạo đơn hàng VNPay: ${e.code} - ${e.message}");
-      setState(() {
-        _isLoading = false;
-        _error = "Lỗi từ server: ${e.message}. Vui lòng thử lại.";
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = l10n.serverErrorRetry(e.message ?? 'Unknown error');
+        });
+      }
     } catch (e) {
       print("Lỗi ngoại lệ khi tạo đơn hàng VNPay: $e");
-      setState(() {
-        _isLoading = false;
-        _error = "Không thể tạo link thanh toán. Vui lòng kiểm tra kết nối và thử lại.";
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = l10n.cannotCreatePaymentLink;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('VNPAY PAYMENT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(l10n.vnpayPaymentTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: const Color(0xFF151a2e),
+        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
       ),
       body: Center(
@@ -105,12 +133,12 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _createAndLaunchVnpayOrder,
-                child: const Text('Thử lại'),
+                child: Text(l10n.retry),
               )
             ],
           ),
         )
-            : const Text("Đang chuyển hướng đến trang thanh toán..."),
+            : Text(l10n.redirectingToPayment),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class SignalDetailScreen extends StatelessWidget {
   final Signal signal;
@@ -13,7 +14,6 @@ class SignalDetailScreen extends StatelessWidget {
     required this.userTier,
   });
 
-  // --- CÁC HÀM LOGIC CỦA BẠN GIỮ NGUYÊN ---
   static const Map<String, String> _currencyFlags = {
     'AUD': 'assets/images/aud_flag.png', 'CHF': 'assets/images/chf_flag.png',
     'EUR': 'assets/images/eur_flag.png', 'GBP': 'assets/images/gbp_flag.png',
@@ -33,6 +33,7 @@ class SignalDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final bool canViewReason = userTier == 'elite';
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
@@ -44,10 +45,10 @@ class SignalDetailScreen extends StatelessWidget {
       if (statusText.contains("Hit")) {
         statusColor = Colors.tealAccent.shade400;
       } else if (signal.isMatched) {
-        statusText = 'MATCHED';
+        statusText = l10n.matched;
         statusColor = Colors.greenAccent.shade400;
       } else {
-        statusText = 'NOT MATCHED';
+        statusText = l10n.notMatched;
         statusColor = Colors.amber.shade400;
       }
     } else {
@@ -122,7 +123,7 @@ class SignalDetailScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                _buildDetailCard(context, canViewReason, statusText, statusColor),
+                _buildDetailCard(context, canViewReason, statusText, statusColor, l10n),
               ],
             ),
           ),
@@ -131,7 +132,7 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor) {
+  Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor, AppLocalizations l10n) {
     const int decimalPlaces = 2;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -142,26 +143,26 @@ class SignalDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow('Status', statusText, valueColor: statusColor),
-          _buildInfoRow('Sent on', DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate())),
+          _buildInfoRow(l10n.status, statusText, valueColor: statusColor),
+          _buildInfoRow(l10n.sentOn, DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate())),
           const Divider(height: 30, color: Colors.blueGrey),
-          _buildPriceRow('Entry price', signal.entryPrice.toStringAsFixed(decimalPlaces), signal.result),
-          _buildPriceRow('Stop loss', signal.stopLoss.toStringAsFixed(decimalPlaces), signal.result),
-          _buildPriceRow('Take profit 1', signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(decimalPlaces) : '—', signal.result),
-          _buildPriceRow('Take profit 2', signal.takeProfits.length > 1 ? signal.takeProfits[1].toStringAsFixed(decimalPlaces) : '—', signal.result),
-          _buildPriceRow('Take profit 3', signal.takeProfits.length > 2 ? signal.takeProfits[2].toStringAsFixed(decimalPlaces) : '—', signal.result),
+          _buildPriceRow(l10n.entryPrice, signal.entryPrice.toStringAsFixed(decimalPlaces), signal.result),
+          _buildPriceRow(l10n.stopLossFull, signal.stopLoss.toStringAsFixed(decimalPlaces), signal.result),
+          _buildPriceRow(l10n.takeProfitFull1, signal.takeProfits.isNotEmpty ? signal.takeProfits[0].toStringAsFixed(decimalPlaces) : '—', signal.result),
+          _buildPriceRow(l10n.takeProfitFull2, signal.takeProfits.length > 1 ? signal.takeProfits[1].toStringAsFixed(decimalPlaces) : '—', signal.result),
+          _buildPriceRow(l10n.takeProfitFull3, signal.takeProfits.length > 2 ? signal.takeProfits[2].toStringAsFixed(decimalPlaces) : '—', signal.result),
           const Divider(height: 30, color: Colors.blueGrey),
-          const Text(
-            'REASON',
-            style: TextStyle(color: Color(0xFF5865F2), fontSize: 14, fontWeight: FontWeight.bold),
+          Text(
+            l10n.reason,
+            style: const TextStyle(color: Color(0xFF5865F2), fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           canViewReason
               ? Text(
-            signal.reason ?? 'No reason provided for this signal.',
+            signal.reason ?? l10n.noReasonProvided,
             style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
           )
-              : _buildUpgradeToView(context, signal.reason),
+              : _buildUpgradeToView(context, signal.reason, l10n),
         ],
       ),
     );
@@ -171,10 +172,21 @@ class SignalDetailScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
-          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: valueColor ?? Colors.white)),
+          Expanded(
+            flex: 2,
+            child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: valueColor ?? Colors.white),
+            ),
+          ),
         ],
       ),
     );
@@ -184,12 +196,12 @@ class SignalDetailScreen extends StatelessWidget {
     Icon? statusIcon;
     final String lowerTitle = title.toLowerCase().replaceAll(' ', '');
 
-    if (lowerTitle == 'stoploss' && result?.toLowerCase() == 'sl hit') {
+    if ((lowerTitle == 'stoploss' || lowerTitle == 'dừnglỗ') && result?.toLowerCase() == 'sl hit') {
       statusIcon = const Icon(Icons.cancel, color: Color(0xFFDA3633), size: 18);
     }
 
-    if (lowerTitle.startsWith('takeprofit')) {
-      final tpNumber = int.tryParse(lowerTitle.replaceAll('takeprofit', ''));
+    if (lowerTitle.contains('takeprofit') || lowerTitle.contains('chốtlời')) {
+      final tpNumber = int.tryParse(lowerTitle.replaceAll(RegExp(r'[^0-9]'), ''));
       if (tpNumber != null && signal.hitTps.contains(tpNumber)) {
         statusIcon = const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18);
       }
@@ -200,7 +212,9 @@ class SignalDetailScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          Flexible(
+              child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14))
+          ),
           Row(
             children: [
               Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -215,11 +229,11 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpgradeToView(BuildContext context, String? reason) {
+  Widget _buildUpgradeToView(BuildContext context, String? reason, AppLocalizations l10n) {
     if (reason == null || reason.isEmpty) {
       return Column(
         children: [
-          const Text('Upgrade your account to Elite to view the analysis.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 14)),
+          Text(l10n.upgradeToViewReason, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14)),
           const SizedBox(height: 20),
           SizedBox(
             height: 50,
@@ -236,7 +250,7 @@ class SignalDetailScreen extends StatelessWidget {
                     children: [
                       Image.asset('assets/images/crown_icon.png', height: 24, width: 24),
                       const SizedBox(width: 8),
-                      const Text("Upgrade Account", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(l10n.upgradeAccount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -274,7 +288,13 @@ class SignalDetailScreen extends StatelessWidget {
                     children: [
                       Image.asset('assets/images/crown_icon.png', height: 24, width: 24),
                       const SizedBox(width: 8),
-                      const Text("Upgrade to View Full Analysis", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Flexible(
+                        child: Text(
+                            l10n.upgradeToViewFullAnalysis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                        ),
+                      ),
                     ],
                   ),
                 ),

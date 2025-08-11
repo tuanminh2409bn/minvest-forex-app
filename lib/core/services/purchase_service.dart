@@ -6,7 +6,6 @@ class PurchaseService extends ChangeNotifier {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
-  // Set chứa ID các sản phẩm bạn đã tạo trên Store
   final Set<String> _kIds = {'elite_1_month', 'elite_12_months'};
 
   List<ProductDetails> _products = [];
@@ -67,17 +66,10 @@ class PurchaseService extends ChangeNotifier {
     }
   }
 
-  // Xử lý khi giao dịch thành công
+
   Future<void> _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) async {
     // TODO: BƯỚC QUAN TRỌNG
-    // 1. Lấy "biên lai" (receipt) từ `purchaseDetails`.
-    // 2. Gửi biên lai này lên một Firebase Function mới (ví dụ: `verifyPurchase`).
-    // 3. Backend sẽ xác thực biên lai với Google/Apple.
-    // 4. Nếu hợp lệ, backend sẽ nâng cấp tài khoản cho user trên Firestore.
-    // 5. App sẽ tự động cập nhật qua UserProvider.
-
     print('Giao dịch thành công cho sản phẩm: ${purchaseDetails.productID}');
-    // Sau khi backend xác nhận, điều hướng tới màn hình thành công
   }
 
   @override

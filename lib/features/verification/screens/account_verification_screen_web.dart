@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -6,8 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
-// Enum để quản lý các trạng thái của giao diện
 enum VerificationState { initial, imageSelected, loading, success, failure }
 
 class AccountVerificationScreen extends StatefulWidget {
@@ -18,28 +17,26 @@ class AccountVerificationScreen extends StatefulWidget {
 }
 
 class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
-  File? _selectedImage;
+  XFile? _selectedImageWeb;
   VerificationState _currentState = VerificationState.initial;
   String _errorMessage = '';
   String _successTier = '';
   final String _exnessSignUpUrl = 'https://my.exmarkets.guide/accounts/sign-up/303589?utm_source=partners&ex_ol=1';
 
-  // Hàm chọn ảnh từ thư viện
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _selectedImageWeb = pickedFile;
         _currentState = VerificationState.imageSelected;
       });
     }
   }
 
-  // Hàm tải ảnh lên Firebase Storage
   Future<void> _uploadImage() async {
-    if (_selectedImage == null) return;
+    if (_selectedImageWeb == null) return;
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
@@ -50,7 +47,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     try {
       final storageRef = FirebaseStorage.instance.ref();
       final imageRef = storageRef.child('verification_images/$userId.jpg');
-      await imageRef.putFile(_selectedImage!);
+      await imageRef.putData(await _selectedImageWeb!.readAsBytes());
     } catch (e) {
       setState(() {
         _currentState = VerificationState.failure;
@@ -59,7 +56,6 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
-  // Hàm lắng nghe kết quả từ UserProvider
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -84,13 +80,14 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
-  // Hàm mở URL
   Future<void> _launchURL(String url) async {
+    final l10n = AppLocalizations.of(context)!;
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $url')),
+          // SỬA LỖI: Gọi l10n.couldNotLaunch như một hàm
+          SnackBar(content: Text(l10n.couldNotLaunch(url))),
         );
       }
     }
@@ -98,15 +95,16 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          'ACCOUNT VERIFICATION',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+        title: Text(
+          l10n.accountVerification,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -126,7 +124,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
             constraints: const BoxConstraints(maxWidth: 700),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: _buildContent(),
+              child: _buildContent(l10n),
             ),
           ),
         ),
@@ -134,31 +132,31 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations l10n) {
     switch (_currentState) {
       case VerificationState.loading:
-        return const Center(
+        return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 20),
-              Text('Processing your account...', style: TextStyle(color: Colors.white, fontSize: 16)),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              Text(l10n.processingYourAccount, style: const TextStyle(color: Colors.white, fontSize: 16)),
             ],
           ),
         );
       case VerificationState.success:
-        return _buildSuccessView();
+        return _buildSuccessView(l10n);
       case VerificationState.failure:
-        return _buildFailureView();
+        return _buildFailureView(l10n);
       case VerificationState.initial:
       case VerificationState.imageSelected:
       default:
-        return _buildInitialView();
+        return _buildInitialView(l10n);
     }
   }
 
-  Widget _buildInitialView() {
+  Widget _buildInitialView(AppLocalizations l10n) {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20.0),
@@ -172,29 +170,29 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                 color: Colors.black.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: _selectedImage == null
+              child: _selectedImageWeb == null
                   ? Image.asset('assets/images/exness_example.png', fit: BoxFit.contain)
                   : ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(_selectedImage!, fit: BoxFit.contain),
+                child: Image.network(_selectedImageWeb!.path, fit: BoxFit.contain),
               ),
             ),
             const SizedBox(height: 30),
-            const Text(
-              'Please upload a screenshot of your Exness account to be authorized (your account must be opened under Minvest\'s Exness link)',
+            Text(
+              l10n.accountVerificationPrompt,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, height: 1.5, fontSize: 14),
+              style: const TextStyle(color: Colors.white, height: 1.5, fontSize: 14),
             ),
             const SizedBox(height: 30),
             _buildActionButton(
-              text: 'Select photo from library',
+              text: l10n.selectPhotoFromLibrary,
               onPressed: _pickImage,
               isPrimary: false,
             ),
             const SizedBox(height: 16),
             _buildActionButton(
-              text: 'Send',
-              onPressed: _selectedImage != null ? _uploadImage : null,
+              text: l10n.send,
+              onPressed: _selectedImageWeb != null ? _uploadImage : null,
               isPrimary: true,
             ),
           ],
@@ -203,42 +201,42 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  Widget _buildSuccessView() {
+  Widget _buildSuccessView(AppLocalizations l10n) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Icon(Icons.check_circle, color: Colors.green, size: 80),
         const SizedBox(height: 20),
-        const Text(
-          'ACCOUNT VERIFIED SUCCESSFULLY',
+        Text(
+          l10n.accountVerifiedSuccessfully,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
         Text(
-          'Your account is ${_successTier.toUpperCase()}',
+          '${l10n.yourAccountIs} ${_successTier.toUpperCase()}',
           style: const TextStyle(color: Colors.amber, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 30),
-        _buildTierBenefitsCard(_successTier),
+        _buildTierBenefitsCard(_successTier, l10n),
         const SizedBox(height: 40),
         TextButton(
           onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-          child: const Text(
-            'Return to home page >',
-            style: TextStyle(color: Colors.blueAccent, fontSize: 16),
+          child: Text(
+            '${l10n.returnToHomePage} >',
+            style: const TextStyle(color: Colors.blueAccent, fontSize: 16),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFailureView() {
+  Widget _buildFailureView(AppLocalizations l10n) {
     final bool isAffiliateError = _errorMessage.toLowerCase().contains("not under minvest's affiliate link");
 
     if (isAffiliateError) {
-      return _buildAffiliateErrorView();
+      return _buildAffiliateErrorView(l10n);
     }
 
     return Column(
@@ -247,7 +245,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
       children: [
         const Icon(Icons.error, color: Colors.red, size: 80),
         const SizedBox(height: 20),
-        const Text('Verification Failed!', style: TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(l10n.verificationFailed, style: const TextStyle(color: Colors.red, fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Text(
             _errorMessage,
@@ -256,10 +254,10 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
         ),
         const SizedBox(height: 40),
         _buildActionButton(
-          text: 'Re-upload Image',
+          text: l10n.reuploadImage,
           onPressed: () {
             setState(() {
-              _selectedImage = null;
+              _selectedImageWeb = null;
               _currentState = VerificationState.initial;
             });
           },
@@ -269,35 +267,35 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  Widget _buildAffiliateErrorView() {
+  Widget _buildAffiliateErrorView(AppLocalizations l10n) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset('assets/images/minvest_logo.png', height: 60),
         const SizedBox(height: 24),
-        const Text(
-          'Account Not Linked to Minvest',
+        Text(
+          l10n.accountNotLinked,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'To get exclusive signals, your Exness account must be registered through the Minvest partner link. Please create a new account using the link below.',
+        Text(
+          l10n.accountNotLinkedDesc,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
+          style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
         ),
         const SizedBox(height: 32),
         _buildActionButton(
-          text: 'Register Exness via Minvest',
+          text: l10n.registerExnessViaMinvest,
           onPressed: () => _launchURL(_exnessSignUpUrl),
           isPrimary: true,
         ),
         const SizedBox(height: 16),
         _buildActionButton(
-          text: 'I have registered, re-upload',
+          text: l10n.iHaveRegisteredReupload,
           onPressed: () {
             setState(() {
-              _selectedImage = null;
+              _selectedImageWeb = null;
               _currentState = VerificationState.initial;
             });
           },
@@ -307,8 +305,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  Widget _buildTierBenefitsCard(String tier) {
-    final Map<String, String> tierInfo = _getTierInfo(tier);
+  Widget _buildTierBenefitsCard(String tier, AppLocalizations l10n) {
+    final Map<String, String> tierInfo = _getTierInfo(tier, l10n);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -317,11 +315,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
         border: Border.all(color: Colors.blueGrey.withOpacity(0.2)),
       ),
       child: Column(
-        children: [
-          _buildBenefitRow('Signal time:', tierInfo['signal_time']!),
-          _buildBenefitRow('Lot/week:', tierInfo['lot_week']!),
-          _buildBenefitRow('Signal Quantity:', tierInfo['signal_qty']!),
-        ],
+        children: tierInfo.entries.map((entry) => _buildBenefitRow(entry.key, entry.value)).toList(),
       ),
     );
   }
@@ -330,21 +324,21 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          Expanded(child: Text(title, style: const TextStyle(color: Colors.grey, fontSize: 14))),
+          const SizedBox(width: 16),
           Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Map<String, String> _getTierInfo(String tier) {
+  Map<String, String> _getTierInfo(String tier, AppLocalizations l10n) {
     switch (tier.toLowerCase()) {
-      case 'demo': return {'signal_time': '8h-17h', 'lot_week': '0.05', 'signal_qty': '7-8 per day'};
-      case 'vip': return {'signal_time': '8h-17h', 'lot_week': '0.3', 'signal_qty': 'full'};
-      case 'elite': return {'signal_time': 'fulltime', 'lot_week': '0.5', 'signal_qty': 'full'};
-      default: return {'signal_time': 'N/A', 'lot_week': 'N/A', 'signal_qty': 'N/A'};
+      case 'demo': return {l10n.signalTime: '8h-17h', l10n.lotPerWeek: '0.05', l10n.signalQty: '7-8 per day'};
+      case 'vip': return {l10n.signalTime: '8h-17h', l10n.lotPerWeek: '0.3', l10n.signalQty: 'full'};
+      case 'elite': return {l10n.signalTime: 'fulltime', l10n.lotPerWeek: '0.5', l10n.signalQty: 'full'};
+      default: return {l10n.signalTime: 'N/A', l10n.lotPerWeek: 'N/A', l10n.signalQty: 'N/A'};
     }
   }
 
@@ -369,8 +363,10 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           ),
           child: Container(
             alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               text,
+              textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isEnabled ? Colors.white : Colors.grey),
             ),
           ),

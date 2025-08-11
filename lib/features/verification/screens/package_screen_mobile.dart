@@ -1,13 +1,11 @@
-// lib/features/verification/screens/package_screen.dart
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
 import 'package:minvest_forex_app/features/verification/screens/bank_transfer_screen.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class PackageScreen extends StatefulWidget {
   final PaymentMethod paymentMethod;
@@ -40,17 +38,21 @@ class _PackageScreenState extends State<PackageScreen> {
         if(mounted) setState(() => _isPurchasing = false);
       });
       _initStoreInfo();
+    } else {
+      // For VNPay, no async init is needed
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _initStoreInfo() async {
+    final l10n = AppLocalizations.of(context)!;
     final bool isAvailable = await _inAppPurchase.isAvailable();
     if (!isAvailable) {
       if (mounted) {
         setState(() {
           _isAvailable = false;
           _isLoading = false;
-          _loadingError = 'Cửa hàng không khả dụng trên thiết bị này.';
+          _loadingError = l10n.iapStoreNotAvailable;
         });
       }
       return;
@@ -67,10 +69,9 @@ class _PackageScreenState extends State<PackageScreen> {
         _isLoading = false;
         if (productDetailResponse.error != null) {
           _loadingError =
-          'Lỗi tải sản phẩm: ${productDetailResponse.error!.message}';
+              l10n.iapErrorLoadingProducts(productDetailResponse.error!.message);
         } else if (_products.isEmpty) {
-          _loadingError =
-          'Không tìm thấy sản phẩm nào. Vui lòng kiểm tra lại cấu hình trên cửa hàng.';
+          _loadingError = l10n.iapNoProductsFound;
         }
       });
     }
@@ -85,6 +86,7 @@ class _PackageScreenState extends State<PackageScreen> {
   }
 
   void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+    final l10n = AppLocalizations.of(context)!;
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
         if(mounted) setState(() => _isPurchasing = true);
@@ -92,7 +94,7 @@ class _PackageScreenState extends State<PackageScreen> {
         if (purchaseDetails.status == PurchaseStatus.error) {
           if(mounted) setState(() => _isPurchasing = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Lỗi giao dịch: ${purchaseDetails.error?.message ?? 'Unknown error'}')),
+            SnackBar(content: Text(l10n.iapTransactionError(purchaseDetails.error?.message ?? 'Unknown error'))),
           );
         } else if (purchaseDetails.status == PurchaseStatus.purchased ||
             purchaseDetails.status == PurchaseStatus.restored) {
@@ -105,8 +107,8 @@ class _PackageScreenState extends State<PackageScreen> {
     }
   }
 
-  // ▼▼▼ HÀM ĐÃ ĐƯỢC NÂNG CẤP ĐỂ GỌI BACKEND ▼▼▼
   Future<void> _verifyPurchase(PurchaseDetails purchaseDetails) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final HttpsCallable callable = FirebaseFunctions.instanceFor(region: 'asia-southeast1').httpsCallable('verifyPurchase');
 
@@ -118,9 +120,8 @@ class _PackageScreenState extends State<PackageScreen> {
       if(mounted) {
         setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.data['message'] ?? 'Giao dịch thành công!'), backgroundColor: Colors.green),
+          SnackBar(content: Text(result.data['message'] ?? l10n.loginSuccess), backgroundColor: Colors.green),
         );
-        // Có thể điều hướng người dùng về màn hình chính hoặc hồ sơ
         Navigator.of(context).pop();
       }
 
@@ -128,14 +129,14 @@ class _PackageScreenState extends State<PackageScreen> {
       if(mounted) {
         setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi xác thực: ${e.message}'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.iapVerificationError(e.message ?? '')), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if(mounted) {
         setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã xảy ra lỗi không xác định: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.iapUnknownError(e.toString())), backgroundColor: Colors.red),
         );
       }
     }
@@ -149,11 +150,12 @@ class _PackageScreenState extends State<PackageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('PACKAGE',
-            style: TextStyle(
+        title: Text(l10n.packageTitle,
+            style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
@@ -178,20 +180,19 @@ class _PackageScreenState extends State<PackageScreen> {
               ),
             ),
             child: widget.paymentMethod == PaymentMethod.inAppPurchase
-                ? _buildIapContent()
-                : _buildVnPayContent(),
+                ? _buildIapContent(l10n)
+                : _buildVnPayContent(l10n),
           ),
-          // Thêm lớp phủ loading khi đang xử lý giao dịch
           if (_isPurchasing)
             Container(
               color: Colors.black.withOpacity(0.7),
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Đang xử lý giao dịch...', style: TextStyle(color: Colors.white)),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(l10n.iapProcessingTransaction, style: const TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
@@ -201,27 +202,28 @@ class _PackageScreenState extends State<PackageScreen> {
     );
   }
 
-  Widget _buildVnPayContent() {
+  Widget _buildVnPayContent(AppLocalizations l10n) {
+    final features = [
+      l10n.featureReceiveAllSignals,
+      l10n.featureAnalyzeReason,
+      l10n.featureHighPrecisionAI,
+    ];
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
       child: Column(
         children: [
           _PackageCard(
-            tier: 'ELITE',
-            duration: '1 month',
+            tier: l10n.tierElite,
+            duration: l10n.duration1Month,
             price: '\$78',
-            features: const [
-              'Receive all signals of the day',
-              'Analyze the reason for entering the order',
-              'High-precision AI signal',
-            ],
+            features: features,
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const BankTransferScreen(
+                  builder: (context) => BankTransferScreen(
                     amountUSD: 78,
-                    orderInfo: 'Thanh toan goi Elite 1 thang',
+                    orderInfo: l10n.orderInfo1Month,
                   ),
                 ),
               );
@@ -229,21 +231,17 @@ class _PackageScreenState extends State<PackageScreen> {
           ),
           const SizedBox(height: 24),
           _PackageCard(
-            tier: 'ELITE',
-            duration: '12 month',
+            tier: l10n.tierElite,
+            duration: l10n.duration12Months,
             price: '\$460',
-            features: const [
-              'Receive all signals of the day',
-              'Analyze the reason for entering the order',
-              'High-precision AI signal',
-            ],
+            features: features,
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const BankTransferScreen(
+                  builder: (context) => BankTransferScreen(
                     amountUSD: 460,
-                    orderInfo: 'Thanh toan goi Elite 12 thang',
+                    orderInfo: l10n.orderInfo12Months,
                   ),
                 ),
               );
@@ -254,7 +252,7 @@ class _PackageScreenState extends State<PackageScreen> {
     );
   }
 
-  Widget _buildIapContent() {
+  Widget _buildIapContent(AppLocalizations l10n) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -270,33 +268,30 @@ class _PackageScreenState extends State<PackageScreen> {
     }
     final product1Month = _products['elite_1_month'];
     final product12Months = _products['elite_12_months'];
+    final features = [
+      l10n.featureReceiveAllSignals,
+      l10n.featureAnalyzeReason,
+      l10n.featureHighPrecisionAI,
+    ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
       child: Column(
         children: [
           _PackageCard(
-            tier: 'ELITE',
-            duration: '1 month',
-            price: '\$78',
-            features: const [
-              'Receive all signals of the day',
-              'Analyze the reason for entering the order',
-              'High-precision AI signal',
-            ],
+            tier: l10n.tierElite,
+            duration: l10n.duration1Month,
+            price: product1Month?.price ?? '\$78',
+            features: features,
             onPressed:
             product1Month != null ? () => _handlePurchase(product1Month) : null,
           ),
           const SizedBox(height: 24),
           _PackageCard(
-            tier: 'ELITE',
-            duration: '12 month',
-            price: '\$460',
-            features: const [
-              'Receive all signals of the day',
-              'Analyze the reason for entering the order',
-              'High-precision AI signal',
-            ],
+            tier: l10n.tierElite,
+            duration: l10n.duration12Months,
+            price: product12Months?.price ?? '\$460',
+            features: features,
             onPressed: product12Months != null
                 ? () => _handlePurchase(product12Months)
                 : null,
@@ -307,9 +302,7 @@ class _PackageScreenState extends State<PackageScreen> {
   }
 }
 
-// ... (_PackageCard và _buildActionButton giữ nguyên)
 class _PackageCard extends StatelessWidget {
-  //... (Nội dung không đổi)
   final String tier;
   final String duration;
   final String price;
@@ -326,6 +319,7 @@ class _PackageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -416,7 +410,7 @@ class _PackageCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   _buildActionButton(
-                    text: 'START NOW',
+                    text: l10n.startNow,
                     onPressed: onPressed,
                     isPrimary: true,
                   ),
@@ -462,8 +456,10 @@ Widget _buildActionButton(
         ),
         child: Container(
           alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             text,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,

@@ -1,5 +1,3 @@
-// lib/features/signals/screens/signal_screen_web.dart
-
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
@@ -10,7 +8,7 @@ import 'package:minvest_forex_app/features/notifications/screens/notification_sc
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:minvest_forex_app/l10n/app_localizations.dart'; // Import localization
 
 class SignalScreen extends StatefulWidget {
   const SignalScreen({super.key});
@@ -32,6 +30,7 @@ class _SignalScreenState extends State<SignalScreen> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final userTier = userProvider.userTier ?? 'free';
+    final l10n = AppLocalizations.of(context)!; // Khai báo biến dịch
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -49,16 +48,14 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           child: Column(
             children: [
-              // === PHẦN HEADER ĐÃ ĐƯỢC CẬP NHẬT ===
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
                   children: [
-                    _buildTabs(),
+                    _buildTabs(l10n),
                     const SizedBox(width: 40),
-                    _buildFilters(),
+                    _buildFilters(l10n),
                     const Spacer(),
-                    // Ẩn icon chuông thông báo cho tài khoản 'free'
                     if (userTier != 'free')
                       Consumer<NotificationProvider>(
                         builder: (context, notificationProvider, child) {
@@ -97,8 +94,7 @@ class _SignalScreenState extends State<SignalScreen> {
                 ),
               ),
               Expanded(
-                // === LOGIC HIỂN THỊ ĐÃ ĐƯỢC CẬP NHẬT ===
-                child: _buildContent(userTier),
+                child: _buildContent(userTier, l10n),
               ),
             ],
           ),
@@ -107,20 +103,17 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  Widget _buildContent(String userTier) {
+  Widget _buildContent(String userTier, AppLocalizations l10n) {
     if (userTier == 'free') {
-      return _buildFreeUserView();
+      return _buildFreeUserView(l10n);
     }
-
-    // Logic cũ cho các tài khoản khác
     if (_isLive && (userTier == 'vip' || userTier == 'demo') && !_isWithinGoldenHours()) {
-      return _buildOutOfHoursView(userTier);
+      return _buildOutOfHoursView(userTier, l10n);
     }
-    return _buildSignalList(userTier);
+    return _buildSignalList(userTier, l10n);
   }
 
-  Widget _buildFreeUserView() {
-    // Tạo 2 tín hiệu mồi (dummy signals)
+  Widget _buildFreeUserView(AppLocalizations l10n) {
     final dummySignal1 = Signal(
       id: 'dummy1', symbol: 'XAU/USD', type: 'Buy', status: 'running',
       createdAt: Timestamp.now(), entryPrice: 0, stopLoss: 0, takeProfits: [], isMatched: false, matchStatus: 'NOT MATCHED',
@@ -137,14 +130,13 @@ class _SignalScreenState extends State<SignalScreen> {
           SignalCard(signal: dummySignal1, userTier: 'free', isLocked: true),
           SignalCard(signal: dummySignal2, userTier: 'free', isLocked: true),
           const SizedBox(height: 20),
-          _buildUpgradeButton(), // Nút mời nâng cấp chính
+          _buildUpgradeButton(l10n),
         ],
       ),
     );
   }
 
-  Widget _buildSignalList(String userTier) {
-    // Bỏ trường hợp 'free' ra khỏi đây vì đã xử lý riêng
+  Widget _buildSignalList(String userTier, AppLocalizations l10n) {
     return StreamBuilder<List<Signal>>(
       stream: _signalService.getSignals(isLive: _isLive, userTier: userTier),
       builder: (context, snapshot) {
@@ -152,25 +144,24 @@ class _SignalScreenState extends State<SignalScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(child: Text('${l10n.error}: ${snapshot.error}'));
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No signals available.'));
+          return Center(child: Text(l10n.noSignalsAvailable));
         }
 
         final signals = snapshot.data!;
         int itemCount = signals.length;
         bool Function(int) isLockedCallback;
 
-        // Logic cũ cho 'demo' và các tier khác
         switch (userTier) {
           case 'demo':
             if (_isLive && signals.length > 8) {
-              itemCount = 9; // 8 tín hiệu + 1 nút upgrade
+              itemCount = 9;
             }
             isLockedCallback = (index) => _isLive && index >= 8;
             break;
-          default: // vip, elite
+          default:
             isLockedCallback = (index) => false;
             break;
         }
@@ -183,12 +174,10 @@ class _SignalScreenState extends State<SignalScreen> {
               itemCount: itemCount,
               itemBuilder: (context, index) {
                 if (userTier == 'demo' && _isLive && index == 8) {
-                  return _buildUpgradeButton();
+                  return _buildUpgradeButton(l10n);
                 }
-
                 final signal = signals[index];
                 final bool isLocked = isLockedCallback(index);
-
                 return SignalCard(
                   signal: signal,
                   userTier: userTier,
@@ -202,20 +191,18 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  // ▼▼▼ HÀM NÀY ĐƯỢC SỬA LẠI CHO GỌN GÀNG ▼▼▼
-  Widget _buildFilters() {
+  Widget _buildFilters(AppLocalizations l10n) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _GradientFilterButton(text: "SYMBOL", onPressed: () {}),
-        const SizedBox(width: 20), // Tạo khoảng cách cố định
-        _GradientFilterButton(text: "AI SIGNAL", onPressed: () {}),
+        _GradientFilterButton(text: l10n.symbol, onPressed: () {}),
+        const SizedBox(width: 20),
+        _GradientFilterButton(text: l10n.aiSignal, onPressed: () {}),
       ],
     );
   }
 
-  // --- CÁC HÀM VÀ WIDGET CON KHÁC GIỮ NGUYÊN ---
-  Widget _buildOutOfHoursView(String userTier) {
+  Widget _buildOutOfHoursView(String userTier, AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -223,27 +210,25 @@ class _SignalScreenState extends State<SignalScreen> {
         children: [
           const Icon(Icons.timer_off_outlined, size: 80, color: Colors.blueAccent),
           const SizedBox(height: 20),
-          const Text(
-            "Out of Golden Hours",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          Text(
+            l10n.outOfGoldenHours,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
           Text(
-            userTier == 'vip'
-                ? "VIP signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade to Elite to get signals 24/24!"
-                : "Demo signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade your account for more benefits!",
+            userTier == 'vip' ? l10n.outOfGoldenHoursVipDesc : l10n.outOfGoldenHoursDemoDesc,
             style: TextStyle(fontSize: 16, color: Colors.grey[400]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 30),
-          _buildUpgradeButton(),
+          _buildUpgradeButton(l10n),
         ],
       ),
     );
   }
 
-  Widget _buildUpgradeButton() {
+  Widget _buildUpgradeButton(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: SizedBox(
@@ -263,7 +248,7 @@ class _SignalScreenState extends State<SignalScreen> {
                 children: [
                   Image.asset('assets/images/crown_icon.png', height: 24, width: 24),
                   const SizedBox(width: 8),
-                  const Text("Upgrade Account", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(l10n.upgradeAccount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 ],
               ),
             ),
@@ -273,14 +258,14 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  Widget _buildTabs() {
+  Widget _buildTabs(AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(color: const Color(0xFF161B22), borderRadius: BorderRadius.circular(8)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(width: 60, height: 32, child: _buildTabItem("LIVE", _isLive, () => setState(() => _isLive = true))),
-          SizedBox(width: 60, height: 32, child: _buildTabItem("END", !_isLive, () => setState(() => _isLive = false))),
+          SizedBox(width: 80, height: 32, child: _buildTabItem(l10n.live, _isLive, () => setState(() => _isLive = true))),
+          SizedBox(width: 80, height: 32, child: _buildTabItem(l10n.end, !_isLive, () => setState(() => _isLive = false))),
         ],
       ),
     );

@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
 import 'package:minvest_forex_app/features/verification/screens/bank_transfer_screen.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class PackageScreen extends StatefulWidget {
   final PaymentMethod paymentMethod;
@@ -14,92 +12,61 @@ class PackageScreen extends StatefulWidget {
 }
 
 class _PackageScreenState extends State<PackageScreen> {
-  final InAppPurchase _inAppPurchase = InAppPurchase.instance;
-  late StreamSubscription<List<PurchaseDetails>> _subscription;
-  Map<String, ProductDetails> _products = {};
-  bool _isAvailable = false;
   bool _isLoading = true;
-  bool _isPurchasing = false;
   String _loadingError = '';
-  final Set<String> _kIds = {'elite_1_month', 'elite_12_months'};
 
   @override
   void initState() {
     super.initState();
-    // Web chỉ hỗ trợ VNPay, nên không cần init IAP store
-    if (widget.paymentMethod == PaymentMethod.vnPay) {
-      setState(() => _isLoading = false);
-    } else {
-      // Xử lý trường hợp không mong muốn
-      setState(() {
-        _isLoading = false;
-        _loadingError = "In-app purchases are not supported on the web version.";
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final l10n = AppLocalizations.of(context)!;
+      if (widget.paymentMethod == PaymentMethod.vnPay) {
+        setState(() => _isLoading = false);
+      } else {
+        setState(() {
+          _isLoading = false;
+          _loadingError = l10n.iapNotSupportedOnWeb;
+        });
+      }
+    });
   }
-
-  @override
-  void dispose() {
-    // Không cần cancel subscription vì không khởi tạo
-    super.dispose();
-  }
-
-  // Các hàm IAP vẫn giữ lại để tránh lỗi biên dịch nếu có chia sẻ code
-  void _listenToPurchaseUpdated(List<PurchaseDetails> list) {}
-  Future<void> _verifyPurchase(PurchaseDetails d) async {}
-  void _handlePurchase(ProductDetails d) {}
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text('PACKAGE', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text(l10n.packageTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
       ),
-      body: Stack(
-        children: [
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              ),
-            ),
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 960),
-                child: _buildVnPayContent(),
-              ),
-            ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
           ),
-          if (_isPurchasing)
-            Container(
-              color: Colors.black.withOpacity(0.7),
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Đang xử lý giao dịch...', style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-              ),
-            ),
-        ],
+        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _loadingError.isNotEmpty
+            ? Center(child: Text(_loadingError, style: const TextStyle(color: Colors.red)))
+            : Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: _buildVnPayContent(l10n),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildVnPayContent() {
+  Widget _buildVnPayContent(AppLocalizations l10n) {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth > 720) {
@@ -109,9 +76,9 @@ class _PackageScreenState extends State<PackageScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _buildVnPayCard1Month()),
+                Expanded(child: _buildVnPayCard1Month(l10n)),
                 const SizedBox(width: 32),
-                Expanded(child: _buildVnPayCard12Months()),
+                Expanded(child: _buildVnPayCard12Months(l10n)),
               ],
             ),
           );
@@ -120,9 +87,9 @@ class _PackageScreenState extends State<PackageScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             children: [
-              _buildVnPayCard1Month(),
+              _buildVnPayCard1Month(l10n),
               const SizedBox(height: 24),
-              _buildVnPayCard12Months(),
+              _buildVnPayCard12Months(l10n),
             ],
           ),
         );
@@ -130,24 +97,23 @@ class _PackageScreenState extends State<PackageScreen> {
     );
   }
 
-  Widget _buildVnPayCard1Month() {
+  Widget _buildVnPayCard1Month(AppLocalizations l10n) {
     return _PackageCard(
-      tier: 'ELITE', duration: '1 month', price: '\$78',
-      features: const ['Receive all signals of the day', 'Analyze the reason for entering the order', 'High-precision AI signal'],
-      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BankTransferScreen(amountUSD: 78, orderInfo: 'Thanh toan goi Elite 1 thang'))),
+      tier: l10n.tierElite, duration: l10n.duration1Month, price: '\$78',
+      features: [l10n.featureReceiveAllSignals, l10n.featureAnalyzeReason, l10n.featureHighPrecisionAI],
+      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BankTransferScreen(amountUSD: 78, orderInfo: l10n.orderInfo1Month))),
     );
   }
 
-  Widget _buildVnPayCard12Months() {
+  Widget _buildVnPayCard12Months(AppLocalizations l10n) {
     return _PackageCard(
-      tier: 'ELITE', duration: '12 months', price: '\$460',
-      features: const ['Receive all signals of the day', 'Analyze the reason for entering the order', 'High-precision AI signal'],
-      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BankTransferScreen(amountUSD: 460, orderInfo: 'Thanh toan goi Elite 12 thang'))),
+      tier: l10n.tierElite, duration: l10n.duration12Months, price: '\$460',
+      features: [l10n.featureReceiveAllSignals, l10n.featureAnalyzeReason, l10n.featureHighPrecisionAI],
+      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BankTransferScreen(amountUSD: 460, orderInfo: l10n.orderInfo12Months))),
     );
   }
 }
 
-// ▼▼▼ WIDGET _PackageCard ĐÃ ĐƯỢC THIẾT KẾ LẠI HOÀN TOÀN ▼▼▼
 class _PackageCard extends StatelessWidget {
   final String tier;
   final String duration;
@@ -165,6 +131,7 @@ class _PackageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -189,7 +156,7 @@ class _PackageCard extends StatelessWidget {
               color: Colors.black.withOpacity(0.1),
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min, // QUAN TRỌNG: Ngăn thẻ bị kéo dài
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -223,7 +190,7 @@ class _PackageCard extends StatelessWidget {
                   children: [
                     Text(price, style: const TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: Colors.amber)),
                     const Spacer(),
-                    _buildActionButton(text: 'START NOW', onPressed: onPressed, isPrimary: true),
+                    _buildActionButton(text: l10n.startNow, onPressed: onPressed, isPrimary: true),
                   ],
                 ),
               ],
@@ -256,7 +223,8 @@ Widget _buildActionButton({required String text, required VoidCallback? onPresse
         ),
         child: Container(
           alignment: Alignment.center,
-          child: Text(text, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isEnabled ? Colors.white : Colors.grey)),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(text, textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isEnabled ? Colors.white : Colors.grey)),
         ),
       ),
     ),

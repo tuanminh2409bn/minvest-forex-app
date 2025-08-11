@@ -1,43 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:minvest_forex_app/features/auth/screens/welcome/welcome_screen_mobile.dart';
 import 'package:minvest_forex_app/features/admin/screens/admin_panel_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
-import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  Map<String, String> _getTierInfo(String tier) {
+  Map<String, String> _getTierInfo(String tier, AppLocalizations l10n) {
     switch (tier.toLowerCase()) {
       case 'demo':
         return {
-          'Signal time': '8h-17h',
-          'Lot/week': '0.05',
-          'Signal quantity': '7-8 signals per day',
+          l10n.signalTime: '8h-17h',
+          l10n.lotPerWeek: '0.05',
+          l10n.signalQty: '7-8 signals per day',
         };
       case 'vip':
         return {
-          'Signal time': '8h-17h',
-          'Lot/week': '0.3',
-          'Signal quantity': 'full',
+          l10n.signalTime: '8h-17h',
+          l10n.lotPerWeek: '0.3',
+          l10n.signalQty: 'full',
         };
       case 'elite':
         return {
-          'Signal time': 'fulltime',
-          'Lot/week': '0.5',
-          'Signal quantity': 'full',
+          l10n.signalTime: 'fulltime',
+          l10n.lotPerWeek: '0.5',
+          l10n.signalQty: 'full',
         };
       default: // Free tier
         return {
-          'Signal time': 'N/A',
-          'Lot/week': 'N/A',
-          'Signal quantity': 'N/A',
+          l10n.signalTime: 'N/A',
+          l10n.lotPerWeek: 'N/A',
+          l10n.signalQty: 'N/A',
         };
     }
   }
@@ -50,21 +49,22 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final bool? confirmLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF161B22),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Confirm Logout', style: TextStyle(color: Colors.white)),
-          content: const Text('Are you sure you want to log out?', style: TextStyle(color: Colors.white70)),
+          title: Text(l10n.confirmLogout, style: const TextStyle(color: Colors.white)),
+          content: Text(l10n.confirmLogoutMessage, style: const TextStyle(color: Colors.white70)),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+              child: Text(l10n.cancel, style: const TextStyle(color: Colors.white)),
               onPressed: () => Navigator.of(dialogContext).pop(false),
             ),
             TextButton(
-              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+              child: Text(l10n.logout, style: const TextStyle(color: Colors.red)),
               onPressed: () => Navigator.of(dialogContext).pop(true),
             ),
           ],
@@ -77,14 +77,14 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final currentUser = FirebaseAuth.instance.currentUser;
     final userTier = userProvider.userTier ?? 'free';
     final userRole = userProvider.role ?? 'user';
-    final tierInfo = _getTierInfo(userTier);
+    final l10n = AppLocalizations.of(context)!;
+    final tierInfo = _getTierInfo(userTier, l10n);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -115,9 +115,13 @@ class ProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        currentUser?.displayName ?? 'Your Name',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      // TỐI ƯU OVERFLOW: Bọc tên trong Flexible
+                      Flexible(
+                        child: Text(
+                          currentUser?.displayName ?? l10n.yourName,
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Container(
@@ -134,16 +138,20 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    currentUser?.email ?? 'your.email@gmail.com',
+                    currentUser?.email ?? l10n.yourEmail,
                     style: const TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                   const SizedBox(height: 30),
 
                   ...tierInfo.entries.map((entry) => Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      '${entry.key}: ${entry.value}',
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    // TỐI ƯU OVERFLOW: Dùng Row và Flexible
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('${entry.key}: ', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                        Flexible(child: Text(entry.value, style: const TextStyle(color: Colors.white, fontSize: 16))),
+                      ],
                     ),
                   )),
                   const SizedBox(height: 30),
@@ -155,7 +163,7 @@ class ProfileScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: _buildActionButton(
-                        text: 'Admin Panel',
+                        text: l10n.adminPanel,
                         onPressed: () {
                           Navigator.push(
                             context,
@@ -168,22 +176,19 @@ class ProfileScreen extends StatelessWidget {
                     ),
 
                   _buildActionButton(
-                    text: 'Contact Us 24/7',
+                    text: l10n.contactUs247,
                     onPressed: () {
                       _launchURL('https://zalo.me/0969156969');
                     },
                   ),
                   const SizedBox(height: 16),
                   _buildActionButton(
-                    text: 'Logout',
-                    onPressed: () {
-                      // Gọi hàm xử lý đã tách
-                      _handleLogout(context);
-                    },
+                    text: l10n.logout,
+                    onPressed: () => _handleLogout(context),
                   ),
                   const SizedBox(height: 40),
 
-                  const Text('Follow Minvest', style: TextStyle(color: Colors.white70)),
+                  Text(l10n.followMinvest, style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -211,6 +216,7 @@ class ProfileScreen extends StatelessWidget {
 class _UpgradeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -229,14 +235,14 @@ class _UpgradeCard extends StatelessWidget {
         children: [
           const Icon(Icons.workspace_premium, color: Colors.amber, size: 32),
           const SizedBox(height: 8),
-          const Text(
-            'UPGRADE YOUR ACCOUNT',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          Text(
+            l10n.upgradeCardTitle,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'To access more resources',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+          Text(
+            l10n.upgradeCardSubtitle,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -252,7 +258,7 @@ class _UpgradeCard extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
             ),
-            child: const Text('UPGRADE NOW', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(l10n.upgradeNow, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -306,8 +312,7 @@ class _SocialIcon extends StatelessWidget {
 
   Future<void> _launchURL() async {
     final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-    }
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {}
   }
 
   @override

@@ -98,41 +98,395 @@ abstract class AppLocalizations {
     Locale('vi')
   ];
 
-  /// No description provided for @welcomeBack.
+  /// No description provided for @accountUpgradedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Welcome Back'**
-  String get welcomeBack;
+  /// **'ACCOUNT UPGRADED SUCCESSFULLY'**
+  String get accountUpgradedSuccessfully;
 
-  /// No description provided for @loginToContinue.
+  /// No description provided for @lotPerWeek.
   ///
   /// In en, this message translates to:
-  /// **'Login to continue'**
-  String get loginToContinue;
+  /// **'Lot/week'**
+  String get lotPerWeek;
 
-  /// No description provided for @email.
+  /// No description provided for @tableValueFull.
   ///
   /// In en, this message translates to:
-  /// **'Email'**
-  String get email;
+  /// **'full'**
+  String get tableValueFull;
 
-  /// No description provided for @password.
+  /// No description provided for @tableValueFulltime.
   ///
   /// In en, this message translates to:
-  /// **'Password'**
-  String get password;
+  /// **'fulltime'**
+  String get tableValueFulltime;
 
-  /// No description provided for @loginButton.
+  /// No description provided for @packageTitle.
   ///
   /// In en, this message translates to:
-  /// **'Login'**
-  String get loginButton;
+  /// **'PACKAGE'**
+  String get packageTitle;
 
-  /// No description provided for @loginWithGoogle.
+  /// No description provided for @duration1Month.
   ///
   /// In en, this message translates to:
-  /// **'Sign in with Google'**
-  String get loginWithGoogle;
+  /// **'1 month'**
+  String get duration1Month;
+
+  /// No description provided for @duration12Months.
+  ///
+  /// In en, this message translates to:
+  /// **'12 months'**
+  String get duration12Months;
+
+  /// No description provided for @featureReceiveAllSignals.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive all signals of the day'**
+  String get featureReceiveAllSignals;
+
+  /// No description provided for @featureAnalyzeReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze the reason for entering the order'**
+  String get featureAnalyzeReason;
+
+  /// No description provided for @featureHighPrecisionAI.
+  ///
+  /// In en, this message translates to:
+  /// **'High-precision AI signal'**
+  String get featureHighPrecisionAI;
+
+  /// No description provided for @iapStoreNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The store is not available on this device.'**
+  String get iapStoreNotAvailable;
+
+  /// No description provided for @iapErrorLoadingProducts.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading products: {message}'**
+  String iapErrorLoadingProducts(Object message);
+
+  /// No description provided for @iapNoProductsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No products found. Please check your store configuration.'**
+  String get iapNoProductsFound;
+
+  /// No description provided for @iapTransactionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction error: {message}'**
+  String iapTransactionError(Object message);
+
+  /// No description provided for @iapVerificationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification error: {message}'**
+  String iapVerificationError(Object message);
+
+  /// No description provided for @iapUnknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'An unknown error occurred: {error}'**
+  String iapUnknownError(Object error);
+
+  /// No description provided for @iapProcessingTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing transaction...'**
+  String get iapProcessingTransaction;
+
+  /// No description provided for @orderInfo1Month.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment for Elite 1 month package'**
+  String get orderInfo1Month;
+
+  /// No description provided for @orderInfo12Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment for Elite 12 months package'**
+  String get orderInfo12Months;
+
+  /// No description provided for @iapNotSupportedOnWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app purchases are not supported on the web version.'**
+  String get iapNotSupportedOnWeb;
+
+  /// No description provided for @vnpayPaymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'VNPAY PAYMENT'**
+  String get vnpayPaymentTitle;
+
+  /// No description provided for @creatingOrderWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating order, please wait...'**
+  String get creatingOrderWait;
+
+  /// No description provided for @errorWithMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {message}'**
+  String errorWithMessage(Object message);
+
+  /// No description provided for @cannotConnectToServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot connect to the server. Please try again.'**
+  String get cannotConnectToServer;
+
+  /// No description provided for @transactionCancelledOrFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction has been cancelled or failed.'**
+  String get transactionCancelledOrFailed;
+
+  /// No description provided for @cannotCreatePaymentLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not create payment link.\nPlease try again.'**
+  String get cannotCreatePaymentLink;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @serverErrorRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Server error: {message}. Please try again.'**
+  String serverErrorRetry(Object message);
+
+  /// No description provided for @redirectingToPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Redirecting to payment page...'**
+  String get redirectingToPayment;
+
+  /// No description provided for @invalidPaymentUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid payment URL received from server.'**
+  String get invalidPaymentUrl;
+
+  /// No description provided for @processingYourAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing your account...'**
+  String get processingYourAccount;
+
+  /// No description provided for @verificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Failed!'**
+  String get verificationFailed;
+
+  /// No description provided for @reuploadImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-upload Image'**
+  String get reuploadImage;
+
+  /// No description provided for @accountNotLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Not Linked to Minvest'**
+  String get accountNotLinked;
+
+  /// No description provided for @accountNotLinkedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'To get exclusive signals, your Exness account must be registered through the Minvest partner link. Please create a new account using the link below.'**
+  String get accountNotLinkedDesc;
+
+  /// No description provided for @registerExnessViaMinvest.
+  ///
+  /// In en, this message translates to:
+  /// **'Register Exness via Minvest'**
+  String get registerExnessViaMinvest;
+
+  /// No description provided for @iHaveRegisteredReupload.
+  ///
+  /// In en, this message translates to:
+  /// **'I have registered, re-upload'**
+  String get iHaveRegisteredReupload;
+
+  /// No description provided for @couldNotLaunch.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not launch {url}'**
+  String couldNotLaunch(Object url);
+
+  /// No description provided for @status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get status;
+
+  /// No description provided for @sentOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent on'**
+  String get sentOn;
+
+  /// No description provided for @entryPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry price'**
+  String get entryPrice;
+
+  /// No description provided for @stopLossFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop loss'**
+  String get stopLossFull;
+
+  /// No description provided for @takeProfitFull1.
+  ///
+  /// In en, this message translates to:
+  /// **'Take profit 1'**
+  String get takeProfitFull1;
+
+  /// No description provided for @takeProfitFull2.
+  ///
+  /// In en, this message translates to:
+  /// **'Take profit 2'**
+  String get takeProfitFull2;
+
+  /// No description provided for @takeProfitFull3.
+  ///
+  /// In en, this message translates to:
+  /// **'Take profit 3'**
+  String get takeProfitFull3;
+
+  /// No description provided for @noReasonProvided.
+  ///
+  /// In en, this message translates to:
+  /// **'No reason provided for this signal.'**
+  String get noReasonProvided;
+
+  /// No description provided for @upgradeToViewReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade your account to Elite to view the analysis.'**
+  String get upgradeToViewReason;
+
+  /// No description provided for @upgradeToViewFullAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to View Full Analysis'**
+  String get upgradeToViewFullAnalysis;
+
+  /// No description provided for @welcomeTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to'**
+  String get welcomeTo;
+
+  /// No description provided for @appSlogan.
+  ///
+  /// In en, this message translates to:
+  /// **'Enhance your trading with intelligent signals.'**
+  String get appSlogan;
+
+  /// No description provided for @signIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get signIn;
+
+  /// No description provided for @continueByGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue by Google'**
+  String get continueByGoogle;
+
+  /// No description provided for @continueByFacebook.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue by Facebook'**
+  String get continueByFacebook;
+
+  /// No description provided for @continueByApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue by Apple'**
+  String get continueByApple;
+
+  /// No description provided for @loginSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Login successful!'**
+  String get loginSuccess;
+
+  /// No description provided for @live.
+  ///
+  /// In en, this message translates to:
+  /// **'LIVE'**
+  String get live;
+
+  /// No description provided for @end.
+  ///
+  /// In en, this message translates to:
+  /// **'END'**
+  String get end;
+
+  /// No description provided for @symbol.
+  ///
+  /// In en, this message translates to:
+  /// **'SYMBOL'**
+  String get symbol;
+
+  /// No description provided for @aiSignal.
+  ///
+  /// In en, this message translates to:
+  /// **'AI SIGNAL'**
+  String get aiSignal;
+
+  /// No description provided for @ruleSignal.
+  ///
+  /// In en, this message translates to:
+  /// **'RULE SIGNAL'**
+  String get ruleSignal;
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'ALL'**
+  String get all;
+
+  /// No description provided for @upgradeToSeeMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to see more'**
+  String get upgradeToSeeMore;
+
+  /// No description provided for @seeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'see details'**
+  String get seeDetails;
+
+  /// No description provided for @notMatched.
+  ///
+  /// In en, this message translates to:
+  /// **'NOT MATCHED'**
+  String get notMatched;
+
+  /// No description provided for @matched.
+  ///
+  /// In en, this message translates to:
+  /// **'MATCHED'**
+  String get matched;
 
   /// No description provided for @entry.
   ///
@@ -143,7 +497,7 @@ abstract class AppLocalizations {
   /// No description provided for @stopLoss.
   ///
   /// In en, this message translates to:
-  /// **'Stop Loss'**
+  /// **'SL'**
   String get stopLoss;
 
   /// No description provided for @takeProfit1.
@@ -164,64 +518,22 @@ abstract class AppLocalizations {
   /// **'TP3'**
   String get takeProfit3;
 
-  /// No description provided for @signalTypeBuy.
+  /// No description provided for @upgrade.
   ///
   /// In en, this message translates to:
-  /// **'BUY'**
-  String get signalTypeBuy;
-
-  /// No description provided for @signalTypeSell.
-  ///
-  /// In en, this message translates to:
-  /// **'SELL'**
-  String get signalTypeSell;
-
-  /// No description provided for @tabRunning.
-  ///
-  /// In en, this message translates to:
-  /// **'Running'**
-  String get tabRunning;
-
-  /// No description provided for @tabHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'History'**
-  String get tabHistory;
-
-  /// No description provided for @viewDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'View Details'**
-  String get viewDetails;
-
-  /// No description provided for @profile.
-  ///
-  /// In en, this message translates to:
-  /// **'Profile'**
-  String get profile;
+  /// **'Upgrade'**
+  String get upgrade;
 
   /// No description provided for @upgradeAccount.
   ///
   /// In en, this message translates to:
-  /// **'Upgrade Account'**
+  /// **'UPGRADE ACCOUNT'**
   String get upgradeAccount;
-
-  /// No description provided for @upgradeAccountSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Submit a new screenshot to upgrade your tier.'**
-  String get upgradeAccountSubtitle;
-
-  /// No description provided for @upgradeScreenTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Upgrade Account Tier'**
-  String get upgradeScreenTitle;
 
   /// No description provided for @compareTiers.
   ///
   /// In en, this message translates to:
-  /// **'Compare Tiers'**
+  /// **'COMPARE TIERS'**
   String get compareTiers;
 
   /// No description provided for @feature.
@@ -257,7 +569,7 @@ abstract class AppLocalizations {
   /// No description provided for @signalTime.
   ///
   /// In en, this message translates to:
-  /// **'Signal Time'**
+  /// **'Signal time'**
   String get signalTime;
 
   /// No description provided for @signalQty.
@@ -272,65 +584,143 @@ abstract class AppLocalizations {
   /// **'Analysis'**
   String get analysis;
 
-  /// No description provided for @mobileWebApp.
+  /// No description provided for @openExnessAccount.
   ///
   /// In en, this message translates to:
-  /// **'Mobile & Web App'**
-  String get mobileWebApp;
+  /// **'Open exness account!'**
+  String get openExnessAccount;
 
-  /// No description provided for @uploadPrompt.
+  /// No description provided for @accountVerificationWithExness.
   ///
   /// In en, this message translates to:
-  /// **'Upload a screenshot of your Exness account with a new balance.'**
-  String get uploadPrompt;
+  /// **'Account verification with Exness'**
+  String get accountVerificationWithExness;
 
-  /// No description provided for @statusImageSelected.
+  /// No description provided for @payInAppToUpgrade.
   ///
   /// In en, this message translates to:
-  /// **'Image selected. Press \'Submit\' to verify.'**
-  String get statusImageSelected;
+  /// **'Pay in app to upgrade'**
+  String get payInAppToUpgrade;
 
-  /// No description provided for @statusUploading.
+  /// No description provided for @bankTransferToUpgrade.
   ///
   /// In en, this message translates to:
-  /// **'Uploading, please wait...'**
-  String get statusUploading;
+  /// **'Bank transfer to upgrade'**
+  String get bankTransferToUpgrade;
 
-  /// No description provided for @statusUploadSuccess.
+  /// No description provided for @accountVerification.
   ///
   /// In en, this message translates to:
-  /// **'Upload successful! Please wait a few hours for admin review.'**
-  String get statusUploadSuccess;
+  /// **'ACCOUNT VERIFICATION'**
+  String get accountVerification;
 
-  /// No description provided for @statusUploadFailed.
+  /// No description provided for @accountVerificationPrompt.
   ///
   /// In en, this message translates to:
-  /// **'Upload failed. Please try again.'**
-  String get statusUploadFailed;
+  /// **'Please upload a screenshot of your Exness account to be authorized (your account must be opened under Minvest\'s Exness link)'**
+  String get accountVerificationPrompt;
 
-  /// No description provided for @buttonSelectScreenshot.
+  /// No description provided for @selectPhotoFromLibrary.
   ///
   /// In en, this message translates to:
-  /// **'Select New Screenshot'**
-  String get buttonSelectScreenshot;
+  /// **'Select photo from library'**
+  String get selectPhotoFromLibrary;
 
-  /// No description provided for @buttonSubmitReview.
+  /// No description provided for @send.
   ///
   /// In en, this message translates to:
-  /// **'Submit for Review'**
-  String get buttonSubmitReview;
+  /// **'Send'**
+  String get send;
 
-  /// No description provided for @dontHaveAccount.
+  /// No description provided for @accountInfo.
   ///
   /// In en, this message translates to:
-  /// **'Don\'t have an account?'**
-  String get dontHaveAccount;
+  /// **'Account Information'**
+  String get accountInfo;
 
-  /// No description provided for @signUpButton.
+  /// No description provided for @accountVerifiedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Sign Up'**
-  String get signUpButton;
+  /// **'ACCOUNT VERIFIED SUCCESSFULLY'**
+  String get accountVerifiedSuccessfully;
+
+  /// No description provided for @yourAccountIs.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is'**
+  String get yourAccountIs;
+
+  /// No description provided for @returnToHomePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to home page'**
+  String get returnToHomePage;
+
+  /// No description provided for @upgradeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade failed! Please reupload the image'**
+  String get upgradeFailed;
+
+  /// No description provided for @package.
+  ///
+  /// In en, this message translates to:
+  /// **'PACKAGE'**
+  String get package;
+
+  /// No description provided for @startNow.
+  ///
+  /// In en, this message translates to:
+  /// **'START NOW'**
+  String get startNow;
+
+  /// No description provided for @bankTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'BANK TRANSFER'**
+  String get bankTransfer;
+
+  /// No description provided for @transferInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'TRANSFER INFORMATION'**
+  String get transferInformation;
+
+  /// No description provided for @scanForFastTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan for fast transfer'**
+  String get scanForFastTransfer;
+
+  /// No description provided for @contactUs247.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us 24/7'**
+  String get contactUs247;
+
+  /// No description provided for @newAnnouncement.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW ANNOUNCEMENT'**
+  String get newAnnouncement;
+
+  /// No description provided for @profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profile;
+
+  /// No description provided for @upgradeNow.
+  ///
+  /// In en, this message translates to:
+  /// **'UPGRADE NOW'**
+  String get upgradeNow;
+
+  /// No description provided for @followMinvest.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow MInvest'**
+  String get followMinvest;
 
   /// No description provided for @tabSignal.
   ///
@@ -349,6 +739,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile'**
   String get tabProfile;
+
+  /// No description provided for @reason.
+  ///
+  /// In en, this message translates to:
+  /// **'REASON'**
+  String get reason;
+
+  /// No description provided for @error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// No description provided for @noSignalsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No signals available.'**
+  String get noSignalsAvailable;
+
+  /// No description provided for @outOfGoldenHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Out of Golden Hours'**
+  String get outOfGoldenHours;
+
+  /// No description provided for @outOfGoldenHoursVipDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade to Elite to get signals 24/24!'**
+  String get outOfGoldenHoursVipDesc;
+
+  /// No description provided for @outOfGoldenHoursDemoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo signals are available from 8:00 AM to 5:00 PM (GMT+7).\nUpgrade your account for more benefits!'**
+  String get outOfGoldenHoursDemoDesc;
+
+  /// No description provided for @yourName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Name'**
+  String get yourName;
+
+  /// No description provided for @yourEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'your.email@example.com'**
+  String get yourEmail;
+
+  /// No description provided for @adminPanel.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Panel'**
+  String get adminPanel;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get logout;
+
+  /// No description provided for @confirmLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Logout'**
+  String get confirmLogout;
+
+  /// No description provided for @confirmLogoutMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get confirmLogoutMessage;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @upgradeCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'UPGRADE YOUR ACCOUNT'**
+  String get upgradeCardTitle;
+
+  /// No description provided for @upgradeCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'To access more resources'**
+  String get upgradeCardSubtitle;
+
+  /// No description provided for @upgradeCardSubtitleWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'To unlock premium signals and full-time support'**
+  String get upgradeCardSubtitleWeb;
+
+  /// No description provided for @subscriptionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription Details'**
+  String get subscriptionDetails;
 }
 
 class _AppLocalizationsDelegate

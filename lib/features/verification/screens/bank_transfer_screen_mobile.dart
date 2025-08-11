@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:minvest_forex_app/features/verification/screens/upgrade_success_screen.dart'; // Đảm bảo bạn đã có màn hình này
+import 'package:minvest_forex_app/features/verification/screens/upgrade_success_screen.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class BankTransferScreen extends StatefulWidget {
   final double amountUSD;
@@ -18,36 +19,44 @@ class BankTransferScreen extends StatefulWidget {
 }
 
 class _BankTransferScreenState extends State<BankTransferScreen> {
-  /// Khởi tạo HttpsCallable một lần để tái sử dụng.
-  /// Đây là điểm sửa lỗi quan trọng nhất, chỉ định đúng region 'asia-southeast1'.
   final HttpsCallable _createVnpayOrderCallable = FirebaseFunctions.instanceFor(region: 'asia-southeast1')
       .httpsCallable('createVnpayOrder');
 
   late final WebViewController _controller;
   String? _vnpayUrl;
   bool _isLoading = true;
-  String _loadingMessage = "Đang tạo đơn hàng, vui lòng chờ...";
+  String _loadingMessage = ""; // Sẽ được cập nhật trong initState
 
   @override
   void initState() {
     super.initState();
-    // Bắt đầu quá trình tạo đơn hàng ngay khi màn hình được khởi tạo.
-    _executeVnpayOrderCreation();
+    // initState không thể truy cập context, nên chúng ta đợi frame đầu tiên build xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setState(() {
+        _loadingMessage = AppLocalizations.of(context)!.creatingOrderWait;
+      });
+      _executeVnpayOrderCreation();
+    });
   }
 
-  /// Hàm thực thi việc gọi Cloud Function để tạo link thanh toán.
   Future<void> _executeVnpayOrderCreation() async {
-    // Đảm bảo widget vẫn còn trên cây giao diện trước khi cập nhật state.
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() { _isLoading = true; });
 
     try {
-      // Gọi Cloud Function với các tham số cần thiết.
+      String productId;
+      if (widget.amountUSD == 78) {
+        productId = 'elite_1_month_vnpay';
+      } else if (widget.amountUSD == 460) {
+        productId = 'elite_12_months_vnpay';
+      } else {
+        throw Exception('Invalid amount: ${widget.amountUSD}');
+      }
+
       final result = await _createVnpayOrderCallable.call<Map<String, dynamic>>({
-        'amount': widget.amountUSD,
+        'productId': productId,
         'orderInfo': widget.orderInfo,
       });
 
@@ -56,69 +65,58 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
       if (paymentUrl != null && mounted) {
         setState(() {
           _vnpayUrl = paymentUrl;
-          _initializeWebView(); // Chỉ khởi tạo WebView sau khi đã có URL.
+          _initializeWebView();
           _isLoading = false;
         });
       } else {
-        // Ném lỗi nếu server trả về kết quả nhưng không có URL.
-        throw Exception("Server không trả về URL thanh toán hợp lệ.");
+        throw Exception(l10n.invalidPaymentUrl);
       }
     } on FirebaseFunctionsException catch (e) {
-      // Ghi log lỗi cụ thể từ Firebase để dễ dàng gỡ lỗi.
       debugPrint("Lỗi Firebase Functions: [${e.code}] ${e.message}");
       if (mounted) {
         setState(() {
-          _loadingMessage = "Lỗi: ${e.message}";
+          _loadingMessage = l10n.errorWithMessage(e.message ?? 'Unknown error');
           _isLoading = false;
         });
       }
     } catch (e) {
-      // Bắt các lỗi khác (ví dụ: lỗi mạng, lỗi phân tích dữ liệu).
       debugPrint("Lỗi khi tạo đơn hàng VNPay: $e");
       if (mounted) {
         setState(() {
-          _loadingMessage = "Không thể kết nối đến máy chủ. Vui lòng thử lại.";
+          _loadingMessage = l10n.cannotConnectToServer;
           _isLoading = false;
         });
       }
     }
   }
 
-  /// Khởi tạo và cấu hình WebView sau khi đã nhận được URL thanh toán.
   void _initializeWebView() {
+    final l10n = AppLocalizations.of(context)!;
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-    // Giả lập User-Agent của một thiết bị di động để đảm bảo tương thích.
       ..setUserAgent("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36")
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (NavigationRequest request) {
-            // URL trả về của VNPAY sau khi người dùng hoàn tất thanh toán.
             const String returnUrl = 'https://sandbox.vnpayment.vn/tryitnow/Home/VnPayReturn';
 
-            // Kiểm tra nếu URL hiện tại là URL trả về.
             if (request.url.startsWith(returnUrl)) {
               final uri = Uri.parse(request.url);
               final responseCode = uri.queryParameters['vnp_ResponseCode'];
 
-              // Giao dịch thành công.
               if (responseCode == '00') {
-                // Chuyển đến màn hình thành công và xóa tất cả các màn hình trước đó.
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const UpgradeSuccessScreen()),
                       (route) => route.isFirst,
                 );
               } else {
-                // Giao dịch thất bại hoặc bị hủy.
-                Navigator.of(context).pop(); // Quay lại màn hình trước đó.
+                Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Giao dịch đã bị hủy hoặc thất bại.')),
+                  SnackBar(content: Text(l10n.transactionCancelledOrFailed)),
                 );
               }
-              // Ngăn WebView điều hướng đến trang trả về.
               return NavigationDecision.prevent;
             }
-            // Cho phép WebView điều hướng đến các trang khác (trang thanh toán VNPAY).
             return NavigationDecision.navigate;
           },
         ),
@@ -128,9 +126,10 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('THANH TOÁN VNPAY', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text(l10n.vnpayPaymentTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: const Color(0xFF151a2e),
         iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
@@ -155,14 +154,14 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                _loadingMessage, // Hiển thị thông báo lỗi chi tiết hơn
+                _loadingMessage.isNotEmpty ? _loadingMessage : l10n.cannotCreatePaymentLink,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.red),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _executeVnpayOrderCreation,
-                child: const Text('Thử lại'),
+                child: Text(l10n.retry),
               )
             ],
           ),

@@ -149,7 +149,6 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  // Hàm hiển thị thông báo local (khi app đang mở)
   void _showLocalNotification(String title, String body, Map<String, dynamic> payload) {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
     AndroidNotificationDetails('minvest_channel_id', 'Minvest Notifications',
@@ -161,11 +160,10 @@ class _MyAppState extends State<MyApp> {
     NotificationDetails(android: androidPlatformChannelSpecifics);
     flutterLocalNotificationsPlugin.show(
         0, title, body, platformChannelSpecifics,
-        payload: payload['signalId'] // Gán signalId vào payload của thông báo local
+        payload: payload['signalId']
     );
   }
 
-  // Sửa lại hàm này để nhận lý do
   void _showLogoutDialog(String? reason) {
     final context = navigatorKey.currentContext;
     if (context != null) {
@@ -196,7 +194,6 @@ class _MyAppState extends State<MyApp> {
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
         return MaterialApp(
-          // === BƯỚC 4: GẮN NAVIGATOR KEY VÀO MATERIALAPP ===
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'Minvest Forex App',
@@ -211,7 +208,6 @@ class _MyAppState extends State<MyApp> {
           locale: languageProvider.locale,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          // AuthGate sẽ tự động xử lý việc hiển thị màn hình phù hợp
           home: const AuthGate(),
         );
       },
