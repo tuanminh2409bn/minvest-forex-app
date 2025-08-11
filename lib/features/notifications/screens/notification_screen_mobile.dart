@@ -22,18 +22,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    // ▼▼▼ LOGIC CỐT LÕI: ĐÁNH DẤU ĐÃ ĐỌC KHI MỞ MÀN HÌNH ▼▼▼
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().markAllNotificationsAsRead();
     });
   }
 
-  // Hàm điều hướng khi nhấn vào thông báo
   void _onNotificationTap(NotificationModel notification) async {
     if (notification.signalId == null) return;
 
     final signal = await SignalService().getSignalById(notification.signalId!);
-    // Lấy userTier một cách an toàn
     final userTier = context.read<UserProvider>().userTier ?? 'free';
 
     if (signal != null && mounted) {
@@ -112,17 +109,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Icon _getIconForType(String type) {
     switch (type) {
       case 'new_signal':
-        return const Icon(Icons.new_releases, color: Colors.white, size: 20);
+        return const Icon(Icons.new_releases, color: Colors.blueAccent, size: 20);
       case 'signal_matched':
-        return const Icon(Icons.check_circle_outline, color: Colors.white, size: 20);
+        return const Icon(Icons.check_circle_outline, color: Colors.blueAccent, size: 20);
       case 'tp1_hit':
       case 'tp2_hit':
       case 'tp3_hit':
-        return const Icon(Icons.flag_circle_outlined, color: Colors.white, size: 20);
+        return const Icon(Icons.flag_circle_outlined, color: Colors.blueAccent, size: 20);
       case 'sl_hit':
-        return const Icon(Icons.cancel_outlined, color: Colors.white, size: 20);
+        return const Icon(Icons.cancel_outlined, color: Colors.blueAccent, size: 20);
       default:
-        return const Icon(Icons.notifications, color: Colors.white, size: 20);
+        return const Icon(Icons.notifications, color: Colors.blueAccent, size: 20);
     }
   }
 

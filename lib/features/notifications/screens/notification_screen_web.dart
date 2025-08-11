@@ -60,12 +60,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
     'XAU': 'assets/images/crown_icon.png',
   };
 
-  // Hàm trích xuất symbol từ tiêu đề thông báo
+
   String? _extractSymbolFromTitle(String title) {
-    // Biểu thức chính quy tìm một chuỗi có dạng 3 chữ cái, dấu gạch chéo, 3 chữ cái
     final RegExp regex = RegExp(r'([A-Z]{3}\/[A-Z]{3})');
     final Match? match = regex.firstMatch(title.toUpperCase());
-    return match?.group(0); // Trả về chuỗi khớp, ví dụ "EUR/USD"
+    return match?.group(0);
   }
 
   // Hàm lấy cặp cờ từ symbol
@@ -84,7 +83,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return [];
   }
 
-  // --- KẾT THÚC LOGIC HIỂN THỊ CỜ ---
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +109,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
-            // ▼▼▼ SỬ DỤNG CONSUMER ĐỂ LẤY DỮ LIỆU ĐỘNG ▼▼▼
             child: Consumer<NotificationProvider>(
               builder: (context, provider, child) {
                 if (provider.notifications.isEmpty) {
@@ -124,6 +121,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   itemCount: provider.notifications.length,
                   itemBuilder: (context, index) {
                     final notification = provider.notifications[index];
+                    final timeAgo = _formatTimestamp(notification.timestamp);
                     return _buildNotificationTile(notification);
                   },
                 );
@@ -176,11 +174,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
     return CircleAvatar(
       backgroundColor: Colors.white.withOpacity(0.1),
-      child: _getIconForType(notification.type), // Sử dụng icon động
+      child: _getIconForType(notification.type),
     );
   }
 
-  // Thêm hàm helper này để lấy icon động
   Icon _getIconForType(String type) {
     switch (type) {
       case 'new_signal':
@@ -197,4 +194,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return const Icon(Icons.notifications, color: Colors.blueAccent);
     }
   }
+
+  String _formatTimestamp(Timestamp timestamp) {
+    final DateTime date = timestamp.toDate();
+    final Duration diff = DateTime.now().difference(date);
+    if (diff.inDays > 1) {
+      return '${diff.inDays} ngày trước';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours} giờ trước';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes} phút trước';
+    } else {
+      return 'Vừa xong';
+    }
+  }
 }
+

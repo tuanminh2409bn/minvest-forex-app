@@ -16,7 +16,6 @@ class _ChartScreenState extends State<ChartScreen> {
   void initState() {
     super.initState();
 
-    // --- Kích hoạt lại toàn bộ code khởi tạo WebView ---
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF0D1117))
@@ -27,7 +26,6 @@ class _ChartScreenState extends State<ChartScreen> {
               _isLoading = false;
             });
           },
-          // Thêm xử lý lỗi để ứng dụng không bị treo
           onWebResourceError: (WebResourceError error) {
             debugPrint('''
 Page resource error:
@@ -37,7 +35,7 @@ Page resource error:
   isForMainFrame: ${error.isForMainFrame}
           ''');
             setState(() {
-              _isLoading = false; // Cũng nên dừng loading khi có lỗi
+              _isLoading = false;
             });
           },
         ),
@@ -59,11 +57,9 @@ Page resource error:
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
-      // ▼▼▼ SỬ DỤNG LẠI WIDGET WEBVIEW ▼▼▼
       body: Stack(
         children: [
           WebViewWidget(controller: _controller),
-          // Hiển thị vòng xoay loading khi trang đang tải
           if (_isLoading)
             Container(
               color: const Color(0xFF0D1117),
