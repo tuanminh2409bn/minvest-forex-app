@@ -380,7 +380,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get yourName => 'Tên của bạn';
 
   @override
-  String get yourEmail => 'email.cua.ban@example.com';
+  String get yourEmail => 'your.email@example.com';
 
   @override
   String get adminPanel => 'Bảng quản trị';

@@ -25,17 +25,19 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
   late final WebViewController _controller;
   String? _vnpayUrl;
   bool _isLoading = true;
-  String _loadingMessage = ""; // Sẽ được cập nhật trong initState
+  String _loadingMessage = "";
 
   @override
   void initState() {
     super.initState();
-    // initState không thể truy cập context, nên chúng ta đợi frame đầu tiên build xong
+    // Sử dụng addPostFrameCallback để đảm bảo context có sẵn cho l10n
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _loadingMessage = AppLocalizations.of(context)!.creatingOrderWait;
-      });
-      _executeVnpayOrderCreation();
+      if (mounted) {
+        setState(() {
+          _loadingMessage = AppLocalizations.of(context)!.creatingOrderWait;
+        });
+        _executeVnpayOrderCreation();
+      }
     });
   }
 
@@ -46,17 +48,9 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
     setState(() { _isLoading = true; });
 
     try {
-      String productId;
-      if (widget.amountUSD == 78) {
-        productId = 'elite_1_month_vnpay';
-      } else if (widget.amountUSD == 460) {
-        productId = 'elite_12_months_vnpay';
-      } else {
-        throw Exception('Invalid amount: ${widget.amountUSD}');
-      }
-
+      // === FIX: Gửi lại đúng tham số 'amount' như code cũ ===
       final result = await _createVnpayOrderCallable.call<Map<String, dynamic>>({
-        'productId': productId,
+        'amount': widget.amountUSD,
         'orderInfo': widget.orderInfo,
       });
 

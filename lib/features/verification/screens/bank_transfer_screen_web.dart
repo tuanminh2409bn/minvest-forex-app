@@ -20,17 +20,19 @@ class BankTransferScreen extends StatefulWidget {
 
 class _BankTransferScreenState extends State<BankTransferScreen> {
   bool _isLoading = true;
-  String _loadingMessage = ""; // Sẽ được cập nhật trong initState
+  String _loadingMessage = "";
   String? _error;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _loadingMessage = AppLocalizations.of(context)!.creatingOrderWait;
-      });
-      _createAndLaunchVnpayOrder();
+      if (mounted) {
+        setState(() {
+          _loadingMessage = AppLocalizations.of(context)!.creatingOrderWait;
+        });
+        _createAndLaunchVnpayOrder();
+      }
     });
   }
 
@@ -47,17 +49,9 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
       FirebaseFunctions functions = FirebaseFunctions.instanceFor(region: 'asia-southeast1');
       final HttpsCallable callable = functions.httpsCallable('createVnpayOrder');
 
-      String productId;
-      if (widget.amountUSD == 78) {
-        productId = 'elite_1_month_vnpay';
-      } else if (widget.amountUSD == 460) {
-        productId = 'elite_12_months_vnpay';
-      } else {
-        throw Exception('Invalid amount: ${widget.amountUSD}');
-      }
-
+      // === FIX: Gửi lại đúng tham số 'amount' như code cũ ===
       final HttpsCallableResult result = await callable.call({
-        'productId': productId,
+        'amount': widget.amountUSD,
         'orderInfo': widget.orderInfo,
       });
 
@@ -69,11 +63,8 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
           throw Exception(l10n.couldNotLaunch(paymentUrl));
         }
         if (mounted) {
-          // Chuyển đến màn hình thành công sau khi mở link
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const UpgradeSuccessScreen()),
-                (route) => route.isFirst,
-          );
+          // Thoát khỏi màn hình loading sau khi đã mở link thành công
+          Navigator.of(context).pop();
         }
       } else {
         throw Exception(l10n.invalidPaymentUrl);

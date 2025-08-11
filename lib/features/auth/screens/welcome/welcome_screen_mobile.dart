@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart'; // 1. Import file localizations
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -11,7 +11,6 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = AuthService();
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
-    // 2. Tạo một biến để dễ dàng gọi các chuỗi dịch
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(

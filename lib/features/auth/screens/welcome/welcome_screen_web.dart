@@ -35,20 +35,20 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
+  // === WIDGET ĐÃ ĐƯỢC SỬA LỖI BỐ CỤC ===
   Widget _buildWebLayout(BuildContext context, AuthService authService, LanguageProvider languageProvider) {
-    // 2. Tạo biến l10n
     final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 64.0, vertical: 32.0),
       child: Row(
         children: [
+          // --- CỘT BÊN TRÁI (GIỮ NGUYÊN) ---
           Expanded(
             flex: 2,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 3. Thay thế các chuỗi tĩnh
                 Text(l10n.welcomeTo, style: const TextStyle(fontSize: 24, color: Colors.white)),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -67,30 +67,59 @@ class WelcomeScreen extends StatelessWidget {
           const SizedBox(width: 64),
           const VerticalDivider(color: Colors.white24, thickness: 1),
           const SizedBox(width: 64),
+
+          // --- CỘT BÊN PHẢI (ĐÃ SỬA LẠI BỐ CỤC) ---
           Expanded(
             flex: 1,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            // 1. Sử dụng Stack để đặt nút ngôn ngữ ở góc mà không ảnh hưởng bố cục chính
+            child: Stack(
               children: [
-                Text(l10n.signIn, textAlign: TextAlign.center, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 32),
-                _SocialSignInButton(
-                  icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
-                  text: l10n.continueByGoogle,
-                  onPressed: () => authService.signInWithGoogle(),
+                // Nút chọn ngôn ngữ
+                Align(
+                  alignment: Alignment.topRight,
+                  child: PopupMenuButton<Locale>(
+                    onSelected: (Locale locale) => languageProvider.setLocale(locale),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: Locale('en'), child: Text('English')),
+                      const PopupMenuItem(value: Locale('vi'), child: Text('Tiếng Việt')),
+                    ],
+                    child: Consumer<LanguageProvider>(
+                      builder: (context, provider, child) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(4.0),
+                          child: Image.asset(
+                            provider.locale?.languageCode == 'vi'
+                                ? 'assets/images/vn_flag.png'
+                                : 'assets/images/us_flag.png',
+                            height: 24,
+                            width: 36,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                _SocialSignInButton(
-                  icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
-                  text: l10n.continueByFacebook,
-                  onPressed: () => authService.signInWithFacebook(),
-                ),
-                const SizedBox(height: 16),
-                _SocialSignInButton(
-                  icon: const Icon(Icons.apple, color: Colors.white, size: 24),
-                  text: l10n.continueByApple,
-                  onPressed: () => authService.signInWithApple(),
+
+                // 2. Toàn bộ nội dung đăng nhập được giữ trong một Column căn giữa
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(l10n.signIn, textAlign: TextAlign.center, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 32),
+                    _SocialSignInButton(
+                      icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
+                      text: l10n.continueByGoogle,
+                      onPressed: () => authService.signInWithGoogle(),
+                    ),
+                    const SizedBox(height: 16),
+                    _SocialSignInButton(
+                      icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
+                      text: l10n.continueByFacebook,
+                      onPressed: () => authService.signInWithFacebook(),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -156,12 +185,6 @@ class WelcomeScreen extends StatelessWidget {
               icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
               text: l10n.continueByFacebook,
               onPressed: () => authService.signInWithFacebook(),
-            ),
-            const SizedBox(height: 16),
-            _SocialSignInButton(
-              icon: const Icon(Icons.apple, color: Colors.white, size: 24),
-              text: l10n.continueByApple,
-              onPressed: () => authService.signInWithApple(),
             ),
             const Spacer(flex: 2),
           ],
