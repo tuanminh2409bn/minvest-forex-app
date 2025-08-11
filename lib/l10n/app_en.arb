@@ -124,5 +124,32 @@
     "upgradeCardTitle": "UPGRADE YOUR ACCOUNT",
     "upgradeCardSubtitle": "To access more resources",
     "upgradeCardSubtitleWeb": "To unlock premium signals and full-time support",
-    "subscriptionDetails": "Subscription Details"
+    "subscriptionDetails": "Subscription Details",
+    "notifications": "Notifications",
+        "noNotificationsYet": "No notifications yet.",
+        "daysAgo": "{count} days ago",
+        "@daysAgo": {
+            "placeholders": {
+                "count": {
+                    "type": "int"
+                }
+            }
+        },
+        "hoursAgo": "{count} hours ago",
+        "@hoursAgo": {
+            "placeholders": {
+                "count": {
+                    "type": "int"
+                }
+            }
+        },
+        "minutesAgo": "{count} minutes ago",
+        "@minutesAgo": {
+            "placeholders": {
+                "count": {
+                    "type": "int"
+                }
+            }
+        },
+        "justNow": "Just now"
 }

@@ -175,7 +175,8 @@ class AppLocalizationsVi extends AppLocalizations {
       'Nâng cấp tài khoản lên Elite để xem phân tích.';
 
   @override
-  String get upgradeToViewFullAnalysis => 'Nâng cấp để xem toàn bộ phân tích';
+  String get upgradeToViewFullAnalysis =>
+      'Nâng cấp tài khoản lên Elite để xem phân tích.';
 
   @override
   String get welcomeTo => 'Chào mừng đến với';
@@ -409,4 +410,28 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get subscriptionDetails => 'Chi tiết Gói đăng ký';
+
+  @override
+  String get notifications => 'Thông báo';
+
+  @override
+  String get noNotificationsYet => 'Chưa có thông báo nào.';
+
+  @override
+  String daysAgo(int count) {
+    return '$count ngày trước';
+  }
+
+  @override
+  String hoursAgo(int count) {
+    return '$count giờ trước';
+  }
+
+  @override
+  String minutesAgo(int count) {
+    return '$count phút trước';
+  }
+
+  @override
+  String get justNow => 'Vừa xong';
 }

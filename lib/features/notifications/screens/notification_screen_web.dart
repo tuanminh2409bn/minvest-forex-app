@@ -1,7 +1,6 @@
 // lib/features/notifications/screens/notification_screen_web.dart
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/notifications/models/notification_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -9,6 +8,7 @@ import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart'; // Import l10n
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -22,13 +22,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    // ▼▼▼ LOGIC CỐT LÕI: ĐÁNH DẤU ĐÃ ĐỌC KHI MỞ MÀN HÌNH ▼▼▼
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().markAllNotificationsAsRead();
     });
   }
 
-  // Hàm điều hướng khi nhấn vào thông báo
   void _onNotificationTap(NotificationModel notification) async {
     if (notification.signalId == null) return;
 
@@ -48,7 +46,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // Map chứa đường dẫn cờ.
   static const Map<String, String> _currencyFlags = {
     'AUD': 'assets/images/aud_flag.png',
     'CHF': 'assets/images/chf_flag.png',
@@ -60,14 +57,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
     'XAU': 'assets/images/crown_icon.png',
   };
 
-
   String? _extractSymbolFromTitle(String title) {
-    final RegExp regex = RegExp(r'([A-Z]{3}\/[A-Z]{3})');
+    // Cải tiến Regex để bắt cả XAU/USD và các cặp tiền tệ khác
+    final RegExp regex = RegExp(r'\b([A-Z]{3}\/[A-Z]{3}|XAU\/USD)\b');
     final Match? match = regex.firstMatch(title.toUpperCase());
     return match?.group(0);
   }
 
-  // Hàm lấy cặp cờ từ symbol
   List<String> _getFlagPathsFromSymbol(String? symbol) {
     if (symbol == null) return [];
 
@@ -83,16 +79,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return [];
   }
 
-
   @override
   Widget build(BuildContext context) {
+    // Lấy l10n để sử dụng
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text('NOTIFICATIONS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        // === FIX: SỬ DỤNG l10n ĐỂ DỊCH TIÊU ĐỀ ===
+        title: Text(l10n.notifications, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -112,8 +111,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
             child: Consumer<NotificationProvider>(
               builder: (context, provider, child) {
                 if (provider.notifications.isEmpty) {
-                  return const Center(
-                    child: Text('No notifications yet.', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  return Center(
+                    // Sử dụng l10n
+                    child: Text(l10n.noNotificationsYet, style: const TextStyle(color: Colors.white70, fontSize: 16)),
                   );
                 }
                 return ListView.builder(
@@ -121,7 +121,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   itemCount: provider.notifications.length,
                   itemBuilder: (context, index) {
                     final notification = provider.notifications[index];
-                    final timeAgo = _formatTimestamp(notification.timestamp);
                     return _buildNotificationTile(notification);
                   },
                 );
@@ -195,6 +194,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
+  // Hàm này không dùng trong UI web nhưng giữ lại không sao
   String _formatTimestamp(Timestamp timestamp) {
     final DateTime date = timestamp.toDate();
     final Duration diff = DateTime.now().difference(date);
@@ -209,4 +209,3 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 }
-

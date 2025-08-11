@@ -841,6 +841,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Subscription Details'**
   String get subscriptionDetails;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @noNotificationsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet.'**
+  String get noNotificationsYet;
+
+  /// No description provided for @daysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days ago'**
+  String daysAgo(int count);
+
+  /// No description provided for @hoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hours ago'**
+  String hoursAgo(int count);
+
+  /// No description provided for @minutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} minutes ago'**
+  String minutesAgo(int count);
+
+  /// No description provided for @justNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get justNow;
 }
 
 class _AppLocalizationsDelegate

@@ -407,4 +407,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subscriptionDetails => 'Subscription Details';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get noNotificationsYet => 'No notifications yet.';
+
+  @override
+  String daysAgo(int count) {
+    return '$count days ago';
+  }
+
+  @override
+  String hoursAgo(int count) {
+    return '$count hours ago';
+  }
+
+  @override
+  String minutesAgo(int count) {
+    return '$count minutes ago';
+  }
+
+  @override
+  String get justNow => 'Just now';
 }
