@@ -12,7 +12,7 @@ import 'package:minvest_forex_app/l10n/app_localizations.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  // --- CÁC HÀM LOGIC ĐÃ ĐƯỢC CẬP NHẬT ĐỂ DÙNG l10n ---
+  // --- CÁC HÀM LOGIC ĐÃ ĐƯỢỢC CẬP NHẬT ĐỂ DÙNG l10n ---
 
   Map<String, String> _getTierInfo(String tier, AppLocalizations l10n) {
     switch (tier.toLowerCase()) {
@@ -82,7 +82,6 @@ class ProfileScreen extends StatelessWidget {
   // --- BUILD WIDGET CHÍNH ---
   @override
   Widget build(BuildContext context) {
-    // Lấy l10n ở đây để truyền xuống các widget con
     final l10n = AppLocalizations.of(context)!;
 
     return Consumer<UserProvider>(
@@ -90,7 +89,6 @@ class ProfileScreen extends StatelessWidget {
         final currentUser = FirebaseAuth.instance.currentUser;
         final userTier = userProvider.userTier ?? 'free';
         final userRole = userProvider.role ?? 'user';
-        // Truyền l10n vào hàm _getTierInfo
         final tierInfo = _getTierInfo(userTier, l10n);
 
         return Scaffold(
@@ -108,10 +106,8 @@ class ProfileScreen extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 if (constraints.maxWidth > 900) {
-                  // Truyền l10n xuống layout rộng
                   return _buildWideLayout(context, currentUser, userTier, tierInfo, userRole, l10n);
                 } else {
-                  // Truyền l10n xuống layout hẹp
                   return _buildNarrowLayout(context, currentUser, userTier, tierInfo, userRole, l10n);
                 }
               },
@@ -122,7 +118,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // === GIAO DIỆN RỘNG (WEB) - ĐÃ KHÔI PHỤC BỐ CỤC VÀ TÍCH HỢP l10n ===
+  // === GIAO DIỆN RỘNG (WEB) ===
   Widget _buildWideLayout(BuildContext context, User? currentUser, String userTier, Map<String, String> tierInfo, String userRole, AppLocalizations l10n) {
     return Center(
       child: Container(
@@ -144,7 +140,7 @@ class ProfileScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.only(top: 40.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch, // Thay vì .start
                   children: [
                     Row(
                       children: [
@@ -172,7 +168,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     )),
                     const SizedBox(height: 50),
-                    _UpgradeCardWeb(l10n: l10n), // Truyền l10n
+                    _UpgradeCardWeb(l10n: l10n),
                   ],
                 ),
               ),
@@ -183,7 +179,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // === GIAO DIỆN HẸP (TABLET/MOBILE) - ĐÃ TÍCH HỢP l10n ===
+  // === GIAO DIỆN HẸP (TABLET/MOBILE) ===
   Widget _buildNarrowLayout(BuildContext context, User? currentUser, String userTier, Map<String, String> tierInfo, String userRole, AppLocalizations l10n) {
     return SafeArea(
       child: SingleChildScrollView(
@@ -197,7 +193,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // === CỘT THÔNG TIN CHUNG - ĐÃ TÍCH HỢP l10n ===
+  // === CỘT THÔNG TIN CHUNG ===
   Widget _buildInfoColumn(BuildContext context, User? currentUser, String userTier, String userRole, AppLocalizations l10n, {bool isNarrow = false, Map<String, String>? tierInfo}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -207,9 +203,6 @@ class ProfileScreen extends StatelessWidget {
         CircleAvatar(radius: 50, backgroundImage: currentUser?.photoURL != null ? NetworkImage(currentUser!.photoURL!) : null, child: currentUser?.photoURL == null ? const Icon(Icons.person, size: 50) : null),
         const SizedBox(height: 20),
         Text(currentUser?.displayName ?? l10n.yourName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-        const SizedBox(height: 8),
-        Text(currentUser?.email ?? l10n.yourEmail, style: const TextStyle(fontSize: 15, color: Colors.white70)),
-
         if(isNarrow && tierInfo != null) ...[
           const SizedBox(height: 30),
           ...tierInfo.entries.map((entry) => Padding(
@@ -217,7 +210,7 @@ class ProfileScreen extends StatelessWidget {
             child: Text('${entry.key}: ${entry.value}', style: const TextStyle(color: Colors.white, fontSize: 16)),
           )),
           const SizedBox(height: 30),
-          _UpgradeCard(l10n: l10n), // Truyền l10n
+          _UpgradeCard(l10n: l10n),
           const SizedBox(height: 20),
         ],
 
@@ -256,7 +249,7 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-// === CÁC WIDGET CON - ĐÃ TÍCH HỢP l10n ===
+// === CÁC WIDGET CON ===
 
 class _UpgradeCard extends StatelessWidget {
   final AppLocalizations l10n;
@@ -292,12 +285,13 @@ class _UpgradeCardWeb extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFF157CC9), Color(0xFF2A43B9), Color(0xFFC611CE)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Icon(Icons.workspace_premium, color: Colors.amber, size: 40),
           const SizedBox(height: 12),
           Text(l10n.upgradeCardTitle, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
           const SizedBox(height: 8),
-          Text(l10n.upgradeCardSubtitle, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+          Text(l10n.upgradeCardSubtitle, style: const TextStyle(color: Colors.white70, fontSize: 16), textAlign: TextAlign.center),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen())),
