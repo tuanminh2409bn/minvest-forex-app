@@ -44,7 +44,6 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // Could not launch the url
     }
   }
 
@@ -115,7 +114,6 @@ class ProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // TỐI ƯU OVERFLOW: Bọc tên trong Flexible
                       Flexible(
                         child: Text(
                           currentUser?.displayName ?? l10n.yourName,
@@ -137,15 +135,9 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
-                    currentUser?.email ?? l10n.yourEmail,
-                    style: const TextStyle(fontSize: 14, color: Colors.white70),
-                  ),
                   const SizedBox(height: 30),
-
                   ...tierInfo.entries.map((entry) => Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
-                    // TỐI ƯU OVERFLOW: Dùng Row và Flexible
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

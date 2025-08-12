@@ -8,7 +8,7 @@ import 'package:minvest_forex_app/features/notifications/screens/notification_sc
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart'; // Import localization
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class SignalScreen extends StatefulWidget {
   const SignalScreen({super.key});
@@ -123,15 +123,20 @@ class _SignalScreenState extends State<SignalScreen> {
       createdAt: Timestamp.now(), entryPrice: 0, stopLoss: 0, takeProfits: [], isMatched: false, matchStatus: 'NOT MATCHED',
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Column(
-        children: [
-          SignalCard(signal: dummySignal1, userTier: 'free', isLocked: true),
-          SignalCard(signal: dummySignal2, userTier: 'free', isLocked: true),
-          const SizedBox(height: 20),
-          _buildUpgradeButton(l10n),
-        ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Column(
+            children: [
+              SignalCard(signal: dummySignal1, userTier: 'free', isLocked: true),
+              SignalCard(signal: dummySignal2, userTier: 'free', isLocked: true),
+              const SizedBox(height: 20),
+              _buildUpgradeButton(l10n),
+            ],
+          ),
+        ),
       ),
     );
   }

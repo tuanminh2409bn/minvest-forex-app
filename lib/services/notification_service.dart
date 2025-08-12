@@ -1,8 +1,10 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:minvest_forex_app/services/device_info_service.dart'; // Import service lấy deviceId
 
 class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -11,34 +13,31 @@ class NotificationService {
 
   // Hàm khởi tạo toàn bộ dịch vụ
   Future<void> initialize() async {
-    // 1. Xin quyền nhận thông báo trên iOS & Android 13+
-    await _firebaseMessaging.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
+    // 1. Xin quyền nhận thông báo
+    await _firebaseMessaging.requestPermission();
 
-    // 2. Lấy FCM Token và lưu vào Firestore
-    await _saveFcmTokenToFirestore();
+    // 2. Lấy FCM Token và gọi hàm quản lý session
+    await _getTokenAndManageSession();
 
     // 3. Cấu hình để hiển thị thông báo khi app đang mở (foreground)
-    await _initializeLocalNotifications();
+    // Chỉ cần thiết cho mobile, web tự hiển thị
+    if (!kIsWeb) {
+      await _initializeLocalNotifications();
+    }
 
-    // 4. Lắng nghe các tin nhắn Data-Only khi app đang mở
+    // 4. Lắng nghe các tin nhắn khi app đang mở
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print("Got a message whilst in the foreground!");
       print("Message data: ${message.data}");
 
-      final notificationData = message.data;
-      if (notificationData['title'] != null && notificationData['body'] != null) {
-        _showLocalNotification(
-          notificationData['title']!,
-          notificationData['body']!,
-        );
+      if (!kIsWeb) {
+        final notificationData = message.data;
+        if (notificationData['title'] != null && notificationData['body'] != null) {
+          _showLocalNotification(
+            notificationData['title']!,
+            notificationData['body']!,
+          );
+        }
       }
     });
 
@@ -50,12 +49,44 @@ class NotificationService {
     });
   }
 
-  // Hàm hiển thị thông báo cục bộ
+  // Hàm lấy token và gọi Cloud Function `manageUserSession`
+  Future<void> _getTokenAndManageSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    String? fcmToken;
+    if (kIsWeb) {
+      // !!! QUAN TRỌNG: Dán VAPID key của bạn vào đây
+      const String vapidKey = "BF1kL9v7A-1bOSz642aCWoZEKvFpjKvkMQuTPd_GXBLxNakYt6apNf9Aa25hGk1QJP0VFrCVRx4B9mO8h5gBUA8";
+      fcmToken = await _firebaseMessaging.getToken(vapidKey: vapidKey);
+    } else {
+      fcmToken = await _firebaseMessaging.getToken();
+    }
+
+    if (fcmToken == null) {
+      print('Không thể lấy được FCM token.');
+      return;
+    }
+
+    print('Platform: ${kIsWeb ? "Web" : "Mobile"}, FCM Token: $fcmToken');
+
+    // Lấy deviceId và gọi Cloud Function
+    try {
+      final deviceId = await DeviceInfoService.getDeviceId();
+      final callable = FirebaseFunctions.instanceFor(region: 'asia-southeast1').httpsCallable('manageUserSession');
+      await callable.call({'deviceId': deviceId, 'fcmToken': fcmToken});
+      print('Đã gọi manageUserSession thành công.');
+    } catch (e) {
+      print('Lỗi khi gọi manageUserSession: $e');
+    }
+  }
+
+  // --- CÁC HÀM CHO MOBILE FOREGROUND (Giữ nguyên) ---
   Future<void> _showLocalNotification(String title, String body) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
     AndroidNotificationDetails(
-      'high_importance_channel', // ID của channel
-      'High Importance Notifications', // Tên channel
+      'high_importance_channel',
+      'High Importance Notifications',
       channelDescription: 'This channel is used for important notifications.',
       importance: Importance.max,
       priority: Priority.high,
@@ -65,53 +96,19 @@ class NotificationService {
     NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await _flutterLocalNotificationsPlugin.show(
-      0, // ID của thông báo
+      0,
       title,
       body,
       platformChannelSpecifics,
-      // payload: 'item x' // Dữ liệu đính kèm nếu cần
     );
   }
 
-  // Hàm cấu hình ban đầu cho local notifications
   Future<void> _initializeLocalNotifications() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
-    AndroidInitializationSettings('@mipmap/ic_launcher'); // Dùng icon mặc định của app
-
-    // Cần cấu hình thêm cho iOS nếu bạn làm sau này
-    // final DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
-
+    AndroidInitializationSettings('@mipmap/ic_launcher');
     final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
-      // iOS: initializationSettingsIOS,
     );
     await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
-  }
-
-
-  // Hàm lấy token và lưu vào Firestore
-  Future<void> _saveFcmTokenToFirestore() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    // Lấy FCM token của thiết bị
-    final fcmToken = await _firebaseMessaging.getToken();
-    if (fcmToken == null) {
-      print('Không thể lấy được FCM token.');
-      return;
-    }
-
-    print('FCM Token của thiết bị: $fcmToken');
-
-    // Lưu token vào document của người dùng
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'fcmToken': fcmToken});
-      print('Đã lưu FCM token vào Firestore thành công.');
-    } catch (e) {
-      print('Lỗi khi lưu FCM token: $e');
-    }
   }
 }

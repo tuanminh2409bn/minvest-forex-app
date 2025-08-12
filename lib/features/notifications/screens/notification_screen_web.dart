@@ -23,12 +23,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NotificationProvider>().markAllNotificationsAsRead();
+      if (mounted) {
+        context.read<NotificationProvider>().markAllNotificationsAsRead();
+      }
     });
   }
 
   void _onNotificationTap(NotificationModel notification) async {
-    if (notification.signalId == null) return;
+    if (notification.signalId == null || !mounted) return;
 
     final signal = await SignalService().getSignalById(notification.signalId!);
     final userTier = context.read<UserProvider>().userTier ?? 'free';
@@ -58,7 +60,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   };
 
   String? _extractSymbolFromTitle(String title) {
-    // Cải tiến Regex để bắt cả XAU/USD và các cặp tiền tệ khác
     final RegExp regex = RegExp(r'\b([A-Z]{3}\/[A-Z]{3}|XAU\/USD)\b');
     final Match? match = regex.firstMatch(title.toUpperCase());
     return match?.group(0);
@@ -81,7 +82,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lấy l10n để sử dụng
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -90,7 +90,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
         backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
         scrolledUnderElevation: 0,
-        // === FIX: SỬ DỤNG l10n ĐỂ DỊCH TIÊU ĐỀ ===
         title: Text(l10n.notifications, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -112,7 +111,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
               builder: (context, provider, child) {
                 if (provider.notifications.isEmpty) {
                   return Center(
-                    // Sử dụng l10n
                     child: Text(l10n.noNotificationsYet, style: const TextStyle(color: Colors.white70, fontSize: 16)),
                   );
                 }
@@ -121,7 +119,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   itemCount: provider.notifications.length,
                   itemBuilder: (context, index) {
                     final notification = provider.notifications[index];
-                    return _buildNotificationTile(notification);
+                    // Truyền l10n vào hàm build
+                    return _buildNotificationTile(notification, l10n);
                   },
                 );
               },
@@ -132,7 +131,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  Widget _buildNotificationTile(NotificationModel notification) {
+  // === THAY ĐỔI BẮT ĐẦU TỪ ĐÂY ===
+  Widget _buildNotificationTile(NotificationModel notification, AppLocalizations l10n) {
+    // 1. Gọi hàm format thời gian
+    final timeAgo = _formatTimestamp(notification.timestamp, l10n);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
@@ -143,7 +146,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
       child: ListTile(
         leading: _buildLeadingIcon(notification),
         title: Text(notification.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        subtitle: Text(notification.body, style: const TextStyle(color: Colors.white70), maxLines: 2, overflow: TextOverflow.ellipsis),
+        // 2. Cập nhật subtitle để hiển thị cả body và timeAgo
+        subtitle: Text(
+            '${notification.body} - $timeAgo',
+            style: const TextStyle(color: Colors.white70),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis
+        ),
         onTap: () => _onNotificationTap(notification),
       ),
     );
@@ -194,18 +203,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // Hàm này không dùng trong UI web nhưng giữ lại không sao
-  String _formatTimestamp(Timestamp timestamp) {
+  // 3. Cập nhật hàm format thời gian để dùng l10n
+  String _formatTimestamp(Timestamp timestamp, AppLocalizations l10n) {
     final DateTime date = timestamp.toDate();
     final Duration diff = DateTime.now().difference(date);
     if (diff.inDays > 1) {
-      return '${diff.inDays} ngày trước';
+      return l10n.daysAgo(diff.inDays);
     } else if (diff.inHours > 0) {
-      return '${diff.inHours} giờ trước';
+      return l10n.hoursAgo(diff.inHours);
     } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes} phút trước';
+      return l10n.minutesAgo(diff.inMinutes);
     } else {
-      return 'Vừa xong';
+      return l10n.justNow;
     }
   }
 }

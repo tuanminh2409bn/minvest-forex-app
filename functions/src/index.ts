@@ -30,7 +30,7 @@ const APPLE_VERIFY_RECEIPT_URL_PRODUCTION = "https://buy.itunes.apple.com/verify
 const APPLE_VERIFY_RECEIPT_URL_SANDBOX = "https://sandbox.itunes.apple.com/verifyReceipt";
 
 // =================================================================
-// === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS (Không thay đổi) ===
+// === FUNCTION XỬ LÝ ẢNH XÁC THỰC EXNESS ===
 // =================================================================
 export const processVerificationImage = onObjectFinalized(
   { region: "asia-southeast1", cpu: 2, memory: "1GiB" },
@@ -210,8 +210,9 @@ export const createVnpayOrder = onCall({ region: "asia-southeast1" }, async (req
   return {paymentUrl: paymentUrl};
 });
 
+
 // =================================================================
-// === FUNCTION WEBHOOK CHO TELEGRAM BOT ===
+// === FUNCTION WEBHOOK CHO TELEGRAM BOT (ĐÃ SỬA LỖI LOGIC) ===
 // =================================================================
 const TELEGRAM_CHAT_ID = "-1002785712406";
 
@@ -247,25 +248,25 @@ export const telegramWebhook = functions.https.onRequest(
           updatePayload = { isMatched: true, result: "Matched", matchedAt: admin.firestore.FieldValue.serverTimestamp() };
           logMessage = `Tín hiệu ${signalDoc.id} đã KHỚP LỆNH (MATCHED).`;
         } else if (updateText.includes("tp1 hit")) {
-          updatePayload = { result: "TP1 Hit", hitTps: admin.firestore.FieldValue.arrayUnion(1) };
-          logMessage = `Tín hiệu ${signalDoc.id} đã TP1 Hit, vẫn LIVE.`;
+            updatePayload = { result: "TP1 Hit", hitTps: admin.firestore.FieldValue.arrayUnion(1) };
+            logMessage = `Tín hiệu ${signalDoc.id} đã TP1 Hit.`;
         } else if (updateText.includes("tp2 hit")) {
-          updatePayload = { result: "TP2 Hit", hitTps: admin.firestore.FieldValue.arrayUnion(1, 2) };
-          logMessage = `Tín hiệu ${signalDoc.id} đã TP2 Hit, vẫn LIVE.`;
-        } else {
-          let resultText: string | null = null;
-          if (updateText.includes("sl hit")) resultText = "SL Hit";
-          else if (updateText.includes("tp3 hit")) resultText = "TP3 Hit";
-          else if (updateText.includes("exit tại giá") || updateText.includes("exit lệnh")) resultText = "Exited by Admin";
-          else if (updateText.includes("bỏ tín hiệu")) resultText = "Cancelled";
-          if (resultText) {
-            updatePayload = { status: "closed", result: resultText, closedAt: admin.firestore.FieldValue.serverTimestamp() };
-            if (resultText === "TP3 Hit") {
-              updatePayload.hitTps = admin.firestore.FieldValue.arrayUnion(1, 2, 3);
-            }
-            logMessage = `Tín hiệu ${signalDoc.id} đã chuyển sang END với kết quả: ${resultText}`;
-          }
+            updatePayload = { result: "TP2 Hit", hitTps: admin.firestore.FieldValue.arrayUnion(1, 2) };
+            logMessage = `Tín hiệu ${signalDoc.id} đã TP2 Hit.`;
+        } else if (updateText.includes("sl hit")) {
+            updatePayload = { status: "closed", result: "SL Hit", closedAt: admin.firestore.FieldValue.serverTimestamp() };
+            logMessage = `Tín hiệu ${signalDoc.id} đã SL Hit.`;
+        } else if (updateText.includes("tp3 hit")) {
+            updatePayload = { status: "closed", result: "TP3 Hit", hitTps: admin.firestore.FieldValue.arrayUnion(1, 2, 3), closedAt: admin.firestore.FieldValue.serverTimestamp() };
+            logMessage = `Tín hiệu ${signalDoc.id} đã TP3 Hit.`;
+        } else if (updateText.includes("exit tại giá") || updateText.includes("exit lệnh")) {
+            updatePayload = { status: "closed", result: "Exited by Admin", closedAt: admin.firestore.FieldValue.serverTimestamp() };
+            logMessage = `Tín hiệu ${signalDoc.id} đã được đóng bởi admin.`;
+        } else if (updateText.includes("bỏ tín hiệu")) {
+            updatePayload = { status: "closed", result: "Cancelled", closedAt: admin.firestore.FieldValue.serverTimestamp() };
+            logMessage = `Tín hiệu ${signalDoc.id} đã bị hủy.`;
         }
+
         if (Object.keys(updatePayload).length > 0) {
           await signalRef.update(updatePayload);
           functions.logger.log(logMessage);
@@ -276,9 +277,11 @@ export const telegramWebhook = functions.https.onRequest(
           const batch = firestore.batch();
           const unmatchedQuery = await firestore.collection("signals").where("status", "==", "running").where("isMatched", "==", false).get();
           unmatchedQuery.forEach(doc => batch.update(doc.ref, { status: "closed", result: "Cancelled (new signal)" }));
+
           const oppositeType = signalData.type === 'buy' ? 'sell' : 'buy';
           const runningTpQuery = await firestore.collection("signals").where("status", "==", "running").where("type", "==", oppositeType).where("result", "in", ["TP1 Hit", "TP2 Hit"]).get();
           runningTpQuery.forEach(doc => batch.update(doc.ref, { status: "closed", result: "Exited (new signal)" }));
+
           const newSignalRef = firestore.collection("signals").doc();
           batch.set(newSignalRef, {
             ...signalData,
@@ -299,6 +302,7 @@ export const telegramWebhook = functions.https.onRequest(
     }
   }
 );
+
 
 function parseSignalMessage(text: string): any | null {
     const signal: any = { takeProfits: [] };
@@ -341,7 +345,7 @@ function parseSignalMessage(text: string): any | null {
 }
 
 // =================================================================
-// === FUNCTION XÁC THỰC GIAO DỊCH IN-APP PURCHASE (ĐÃ NÂNG CẤP) ===
+// === FUNCTION XÁC THỰC GIAO DỊCH IN-APP PURCHASE ===
 // =================================================================
 export const verifyPurchase = onCall(
     { region: "asia-southeast1", secrets: ["APPLE_SHARED_SECRET"] },
@@ -475,7 +479,7 @@ async function upgradeUserAccount(userId: string, productId: string, expiryDate:
 
 
 // =================================================================
-// === HỆ THỐNG GỬI THÔNG BÁO (Không thay đổi) ===
+// === HỆ THỐNG GỬI THÔNG BÁO ===
 // =================================================================
 function isGoldenHour(): boolean {
   const now = new Date();
