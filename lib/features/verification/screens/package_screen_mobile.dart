@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io'; // Import để kiểm tra nền tảng
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -22,7 +23,8 @@ class _PackageScreenState extends State<PackageScreen> {
   bool _isLoading = true;
   bool _isPurchasing = false;
   String _loadingError = '';
-  final Set<String> _kIds = {'elite_1_month', 'elite_12_months'};
+  // Sửa lại kIds để khớp với cả App Store Connect
+  final Set<String> _kIds = {'minvest.elite.1month', 'minvest.elite.12months'};
 
   @override
   void initState() {
@@ -39,7 +41,6 @@ class _PackageScreenState extends State<PackageScreen> {
       });
       _initStoreInfo();
     } else {
-      // For VNPay, no async init is needed
       setState(() => _isLoading = false);
     }
   }
@@ -107,38 +108,54 @@ class _PackageScreenState extends State<PackageScreen> {
     }
   }
 
+  // === SỬA LỖI LOGIC NẰM Ở ĐÂY ===
   Future<void> _verifyPurchase(PurchaseDetails purchaseDetails) async {
     final l10n = AppLocalizations.of(context)!;
+    if(mounted) setState(() => _isPurchasing = true);
+
     try {
       final HttpsCallable callable = FirebaseFunctions.instanceFor(region: 'asia-southeast1').httpsCallable('verifyPurchase');
 
+      // 1. Xác định nền tảng
+      final String platform = Platform.isIOS ? 'ios' : 'android';
+
+      // 2. Chuẩn bị dữ liệu giao dịch tùy theo nền tảng
+      Map<String, dynamic> transactionData = {};
+      if (platform == 'ios') {
+        transactionData['receiptData'] = purchaseDetails.verificationData.serverVerificationData;
+      } else { // Android
+        transactionData['purchaseToken'] = purchaseDetails.verificationData.serverVerificationData;
+      }
+
+      // 3. Gửi dữ liệu đã được chuẩn hóa lên Cloud Function
       final HttpsCallableResult result = await callable.call<dynamic>({
+        'platform': platform,
         'productId': purchaseDetails.productID,
-        'purchaseToken': purchaseDetails.verificationData.serverVerificationData,
+        'transactionData': transactionData,
       });
 
       if(mounted) {
-        setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.data['message'] ?? l10n.loginSuccess), backgroundColor: Colors.green),
         );
-        Navigator.of(context).pop();
+        // Pop 2 lần để quay về màn hình chính, thay vì chỉ màn hình chọn phương thức
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
 
     } on FirebaseFunctionsException catch (e) {
       if(mounted) {
-        setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.iapVerificationError(e.message ?? '')), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if(mounted) {
-        setState(() => _isPurchasing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.iapUnknownError(e.toString())), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if(mounted) setState(() => _isPurchasing = false);
     }
   }
 
@@ -266,8 +283,8 @@ class _PackageScreenState extends State<PackageScreen> {
                 textAlign: TextAlign.center),
           ));
     }
-    final product1Month = _products['elite_1_month'];
-    final product12Months = _products['elite_12_months'];
+    final product1Month = _products['minvest.elite.1month'];
+    final product12Months = _products['minvest.elite.12months'];
     final features = [
       l10n.featureReceiveAllSignals,
       l10n.featureAnalyzeReason,
@@ -302,6 +319,7 @@ class _PackageScreenState extends State<PackageScreen> {
   }
 }
 
+// Các widget con không thay đổi
 class _PackageCard extends StatelessWidget {
   final String tier;
   final String duration;
