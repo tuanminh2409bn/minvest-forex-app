@@ -6,6 +6,7 @@ import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
+import 'dart:typed_data'; // Import thư viện typed_data
 
 enum VerificationState { initial, imageSelected, loading, success, failure }
 
@@ -17,7 +18,8 @@ class AccountVerificationScreen extends StatefulWidget {
 }
 
 class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
-  XFile? _selectedImageWeb;
+  XFile? _pickedImageFile;
+  Uint8List? _selectedImageDataWeb;
   VerificationState _currentState = VerificationState.initial;
   String _errorMessage = '';
   String _successTier = '';
@@ -29,14 +31,16 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        _selectedImageWeb = pickedFile;
+        _pickedImageFile = pickedFile;
         _currentState = VerificationState.imageSelected;
       });
+      // Đọc dữ liệu ảnh để hiển thị
+      _selectedImageDataWeb = await pickedFile.readAsBytes();
     }
   }
 
   Future<void> _uploadImage() async {
-    if (_selectedImageWeb == null) return;
+    if (_pickedImageFile == null || _selectedImageDataWeb == null) return;
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
@@ -45,21 +49,44 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     });
 
     try {
+      // --- THAY ĐỔI BẮT ĐẦU ---
+
+      // 1. Lấy đuôi file gốc (png, jpg, etc.)
+      final fileExtension = _pickedImageFile!.name.split('.').last;
+
+      // 2. Tạo đường dẫn với đuôi file chính xác
       final storageRef = FirebaseStorage.instance.ref();
-      final imageRef = storageRef.child('verification_images/$userId.jpg');
-      await imageRef.putData(await _selectedImageWeb!.readAsBytes());
+      final imageRef = storageRef.child('verification_images/$userId.$fileExtension');
+
+      // 3. Tạo metadata để đính kèm content type
+      final metadata = SettableMetadata(
+        contentType: _pickedImageFile!.mimeType ?? 'image/jpeg', // Gán loại file ảnh
+      );
+
+      // 4. Tải dữ liệu byte LÊN KÈM metadata
+      await imageRef.putData(_selectedImageDataWeb!, metadata);
+
+      // --- THAY ĐỔI KẾT THÚC ---
+
     } catch (e) {
-      setState(() {
-        _currentState = VerificationState.failure;
-        _errorMessage = "Failed to upload image. Please try again.";
-      });
+      if (mounted) {
+        setState(() {
+          _currentState = VerificationState.failure;
+          if (e is FirebaseException && e.code == 'permission-denied') {
+            _errorMessage = "Upload failed: Permission denied. Check Storage Rules.";
+          } else {
+            _errorMessage = "Failed to upload image. Please check your connection.";
+          }
+        });
+      }
     }
   }
 
+  // didChangeDependencies giữ nguyên như bản mobile
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final userProvider = Provider.of<UserProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context, listen: true);
 
     if (_currentState == VerificationState.loading) {
       if (userProvider.verificationStatus == 'success') {
@@ -86,7 +113,6 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          // SỬA LỖI: Gọi l10n.couldNotLaunch như một hàm
           SnackBar(content: Text(l10n.couldNotLaunch(url))),
         );
       }
@@ -170,11 +196,11 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                 color: Colors.black.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: _selectedImageWeb == null
+              child: _selectedImageDataWeb == null // Hiển thị từ dữ liệu byte
                   ? Image.asset('assets/images/exness_example.png', fit: BoxFit.contain)
                   : ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(_selectedImageWeb!.path, fit: BoxFit.contain),
+                child: Image.memory(_selectedImageDataWeb!, fit: BoxFit.contain), // Dùng Image.memory
               ),
             ),
             const SizedBox(height: 30),
@@ -192,7 +218,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
             const SizedBox(height: 16),
             _buildActionButton(
               text: l10n.send,
-              onPressed: _selectedImageWeb != null ? _uploadImage : null,
+              onPressed: _selectedImageDataWeb != null ? _uploadImage : null,
               isPrimary: true,
             ),
           ],
@@ -201,6 +227,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
+  // Các hàm build view còn lại giữ nguyên...
   Widget _buildSuccessView(AppLocalizations l10n) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -257,7 +284,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           text: l10n.reuploadImage,
           onPressed: () {
             setState(() {
-              _selectedImageWeb = null;
+              _pickedImageFile = null;
+              _selectedImageDataWeb = null;
               _currentState = VerificationState.initial;
             });
           },
@@ -295,7 +323,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           text: l10n.iHaveRegisteredReupload,
           onPressed: () {
             setState(() {
-              _selectedImageWeb = null;
+              _pickedImageFile = null;
+              _selectedImageDataWeb = null;
               _currentState = VerificationState.initial;
             });
           },

@@ -55,6 +55,7 @@ export const processVerificationImage = onObjectFinalized(
     const userRef = firestore.collection("users").doc(userId);
 
     try {
+      // Xóa trạng thái xác thực cũ để bắt đầu lại
       await userRef.update({
         verificationStatus: admin.firestore.FieldValue.delete(),
         verificationError: admin.firestore.FieldValue.delete(),
@@ -70,7 +71,7 @@ export const processVerificationImage = onObjectFinalized(
       }
       functions.logger.log("Văn bản đọc được:", fullText);
 
-      const balanceRegex = /(\d{1,3}(?:,\d{3})*[.,]\d{2})(?:\s*USD)?/;
+      const balanceRegex = /(\d{1,3}(?:,\d{3})*[,.]\d{2})(?:\s*USD)?/;
       const idRegex = /#\s*(\d{7,})/;
 
       const balanceMatch = fullText.match(balanceRegex);
@@ -80,7 +81,13 @@ export const processVerificationImage = onObjectFinalized(
         throw new Error("Không tìm thấy đủ thông tin Số dư và ID trong ảnh.");
       }
 
-      const balanceString = balanceMatch[1].replace(/,/g, "");
+      // Logic xử lý số dư đã được cải tiến
+      let balanceString = balanceMatch[1];
+      if (balanceString.lastIndexOf(',') > balanceString.lastIndexOf('.')) {
+          balanceString = balanceString.replace(/\./g, '').replace(',', '.');
+      } else {
+          balanceString = balanceString.replace(/,/g, '');
+      }
       const balance = parseFloat(balanceString);
       const exnessId = idMatch[1];
 
@@ -91,11 +98,22 @@ export const processVerificationImage = onObjectFinalized(
 
       try {
         const response = await axios.get(affiliateCheckUrl);
-        if (!response.data || !response.data.client_uid) {
-          throw new Error("API không trả về dữ liệu hợp lệ.");
+        functions.logger.log("Dữ liệu thô từ mInvest API:", response.data);
+
+        const firstAccountObject = response.data?.data?.[0];
+        const finalData = firstAccountObject?.data?.[0];
+
+        if (!finalData || !finalData.client_uid) {
+            throw new Error("API không trả về dữ liệu hợp lệ hoặc không tìm thấy client_uid trong cấu trúc mới.");
         }
-        affiliateData = response.data;
+
+        affiliateData = {
+          client_uid: finalData.client_uid,
+          client_account: finalData.partner_account,
+        };
+
         functions.logger.log("Kiểm tra affiliate thành công, kết quả:", affiliateData);
+
       } catch (apiError) {
         functions.logger.error("Lỗi khi kiểm tra affiliate:", apiError);
         throw new Error(`Account ${exnessId} is not under mInvest's affiliate link.`);
