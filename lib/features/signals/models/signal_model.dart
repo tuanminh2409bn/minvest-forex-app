@@ -11,7 +11,7 @@ class Signal {
   final Timestamp createdAt;
   final String? result;
   final num? pips;
-  final String? reason;
+  final dynamic reason;
   final String matchStatus;
   final List<int> hitTps;
   final bool isMatched;
@@ -47,10 +47,9 @@ class Signal {
       result: data['result'],
       pips: data['pips'],
       reason: data['reason'],
-      // --- LẤY DỮ LIỆU MỚI TỪ FIRESTORE ---
       matchStatus: data['matchStatus'] ?? 'NOT MATCHED',
       hitTps: List<int>.from(data['hitTps'] ?? []),
-      isMatched: data['isMatched'] ?? false, // Lấy dữ liệu isMatched
+      isMatched: data['isMatched'] ?? false,
     );
   }
 }

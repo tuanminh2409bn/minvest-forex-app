@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 
 class SignalDetailScreen extends StatelessWidget {
   final Signal signal;
@@ -30,6 +32,39 @@ class SignalDetailScreen extends StatelessWidget {
     }
     return [];
   }
+
+  // ▼▼▼ HÀM ĐÃ ĐƯỢC SỬA LẠI ĐỂ AN TOÀN TUYỆT ĐỐI ▼▼▼
+  String _getTranslatedReason(BuildContext context, AppLocalizations l10n) {
+    final currentLocale = Provider.of<LanguageProvider>(context, listen: false).locale;
+    final dynamic reasonData = signal.reason; // Giữ kiểu là dynamic
+
+    // Trường hợp 1: Dữ liệu là dạng Map (cấu trúc mới)
+    // Kiểm tra tường minh `is Map` để Dart hiểu và cho phép truy cập key
+    if (reasonData is Map) {
+      final langCode = currentLocale?.languageCode ?? 'en';
+
+      // Lấy bản dịch và kiểm tra kiểu an toàn
+      final translatedText = reasonData[langCode];
+      if (translatedText is String && translatedText.isNotEmpty) {
+        return translatedText;
+      }
+
+      // Nếu không có, dự phòng về tiếng Anh
+      final fallbackText = reasonData['en'];
+      if (fallbackText is String && fallbackText.isNotEmpty) {
+        return fallbackText;
+      }
+    }
+
+    // Trường hợp 2: Dữ liệu là String (tương thích ngược với tín hiệu cũ)
+    if (reasonData is String && reasonData.isNotEmpty) {
+      return reasonData;
+    }
+
+    // Trường hợp 3: Dữ liệu null, rỗng hoặc không đúng định dạng
+    return l10n.noReasonProvided;
+  }
+  // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +163,8 @@ class SignalDetailScreen extends StatelessWidget {
 
   Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor, AppLocalizations l10n) {
     const int decimalPlaces = 2;
+    final String reasonText = _getTranslatedReason(context, l10n);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -153,16 +190,15 @@ class SignalDetailScreen extends StatelessWidget {
           const SizedBox(height: 10),
           canViewReason
               ? Text(
-            signal.reason ?? l10n.noReasonProvided,
+            reasonText,
             style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
           )
-              : _buildUpgradeToView(context, signal.reason, l10n),
+              : _buildUpgradeToView(context, reasonText, l10n),
         ],
       ),
     );
   }
 
-  // TỐI ƯU CHỐNG OVERFLOW
   Widget _buildInfoRow(String title, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -170,8 +206,7 @@ class SignalDetailScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
-          const SizedBox(width: 16), // Thêm khoảng cách
-          // Bọc giá trị trong Flexible để nó tự xuống dòng nếu cần
+          const SizedBox(width: 16),
           Flexible(
             child: Text(
               value,
@@ -184,7 +219,6 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  // TỐI ƯU CHỐNG OVERFLOW
   Widget _buildPriceRow(String title, String value, String? result) {
     Icon? statusIcon;
     final String lowerTitle = title.toLowerCase().replaceAll(' ', '');
@@ -205,7 +239,6 @@ class SignalDetailScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Bọc tiêu đề trong Flexible để nó tự xuống dòng
           Flexible(
               child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14))
           ),
@@ -223,8 +256,8 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpgradeToView(BuildContext context, String? reason, AppLocalizations l10n) {
-    if (reason == null || reason.isEmpty) {
+  Widget _buildUpgradeToView(BuildContext context, String reason, AppLocalizations l10n) {
+    if (reason == l10n.noReasonProvided) {
       return Column(
         children: [
           Text(
@@ -296,7 +329,6 @@ class SignalDetailScreen extends StatelessWidget {
                     children: [
                       Image.asset('assets/images/crown_icon.png', height: 24, width: 24),
                       const SizedBox(width: 8),
-                      // TỐI ƯU CHỐNG OVERFLOW
                       Flexible(
                         child: Text(
                             l10n.upgradeToViewFullAnalysis,

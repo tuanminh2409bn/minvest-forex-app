@@ -10,12 +10,14 @@ import * as querystring from "qs";
 import axios from "axios";
 import { GoogleAuth } from "google-auth-library";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { v2 as translate } from '@google-cloud/translate';
 
 // =================================================================
 // === KHỞI TẠO CÁC DỊCH VỤ CƠ BẢN ===
 // =================================================================
 admin.initializeApp();
 const firestore = admin.firestore();
+const translateClient = new translate.Translate();
 
 const PRODUCT_PRICES: { [key: string]: number } = {
   'elite_1_month': 78,
@@ -55,7 +57,6 @@ export const processVerificationImage = onObjectFinalized(
     const userRef = firestore.collection("users").doc(userId);
 
     try {
-      // Xóa trạng thái xác thực cũ để bắt đầu lại
       await userRef.update({
         verificationStatus: admin.firestore.FieldValue.delete(),
         verificationError: admin.firestore.FieldValue.delete(),
@@ -81,7 +82,6 @@ export const processVerificationImage = onObjectFinalized(
         throw new Error("Không tìm thấy đủ thông tin Số dư và ID trong ảnh.");
       }
 
-      // Logic xử lý số dư đã được cải tiến
       let balanceString = balanceMatch[1];
       if (balanceString.lastIndexOf(',') > balanceString.lastIndexOf('.')) {
           balanceString = balanceString.replace(/\./g, '').replace(',', '.');
@@ -165,7 +165,6 @@ export const processVerificationImage = onObjectFinalized(
     }
   });
 
-
 // =================================================================
 // === FUNCTION TẠO LINK THANH TOÁN VNPAY ===
 // =================================================================
@@ -230,7 +229,7 @@ export const createVnpayOrder = onCall({ region: "asia-southeast1" }, async (req
 
 
 // =================================================================
-// === FUNCTION WEBHOOK CHO TELEGRAM BOT (ĐÃ SỬA LỖI LOGIC) ===
+// === FUNCTION WEBHOOK CHO TELEGRAM BOT (ĐÃ NÂNG CẤP DỊCH THUẬT) ===
 // =================================================================
 const TELEGRAM_CHAT_ID = "-1002785712406";
 
@@ -292,6 +291,25 @@ export const telegramWebhook = functions.https.onRequest(
       } else if (message.text) {
         const signalData = parseSignalMessage(message.text);
         if (signalData) {
+          if (signalData.reason) {
+            try {
+              functions.logger.log(`Đang dịch phần giải thích: "${signalData.reason}"`);
+              const [translation] = await translateClient.translate(signalData.reason, "en");
+              functions.logger.log(`Dịch thành công: "${translation}"`);
+
+              signalData.reason = {
+                vi: signalData.reason,
+                en: translation,
+              };
+            } catch (translationError) {
+              functions.logger.error("Lỗi khi dịch phần giải thích:", translationError);
+              signalData.reason = {
+                vi: signalData.reason,
+                en: "Translation failed.",
+              };
+            }
+          }
+
           const batch = firestore.batch();
           const unmatchedQuery = await firestore.collection("signals").where("status", "==", "running").where("isMatched", "==", false).get();
           unmatchedQuery.forEach(doc => batch.update(doc.ref, { status: "closed", result: "Cancelled (new signal)" }));
@@ -594,13 +612,10 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
   const newDeviceId = request.data.deviceId;
   const newFcmToken = request.data.fcmToken;
   if (!newDeviceId || !newFcmToken) throw new functions.https.HttpsError("invalid-argument", "The function must be called with 'deviceId' and 'fcmToken' arguments.");
-
   const userDocRef = firestore.collection("users").doc(uid);
-
   try {
     await firestore.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userDocRef);
-
 
       if (!userDoc.exists) {
         functions.logger.error(`manageUserSession được gọi cho user ${uid} nhưng document không tồn tại.`);
@@ -609,8 +624,6 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
 
       const userData = userDoc.data();
       const currentSession = userData?.activeSession;
-
-      // Gửi thông báo FORCE_LOGOUT cho thiết bị cũ nếu cần
       if (currentSession && currentSession.deviceId && currentSession.deviceId !== newDeviceId && currentSession.fcmToken) {
         const message = {
           token: currentSession.fcmToken, data: { action: "FORCE_LOGOUT" },
@@ -619,13 +632,9 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
         };
         try { await admin.messaging().send(message); } catch (error) { functions.logger.error(`Error sending FORCE_LOGOUT to ${currentSession.fcmToken}:`, error); }
       }
-
-      // Chỉ cập nhật session cho document đã tồn tại
       const newSessionData = { deviceId: newDeviceId, fcmToken: newFcmToken, loginAt: admin.firestore.FieldValue.serverTimestamp() };
       transaction.update(userDocRef, { activeSession: newSessionData });
-      // ▲▲▲ KẾT THÚC LOGIC MỚI ▲▲▲
     });
-
     return { status: "success", message: "Session managed successfully." };
   } catch (error) {
     functions.logger.error("Error in manageUserSession transaction:", error);

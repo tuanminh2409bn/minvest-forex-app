@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 
 class SignalDetailScreen extends StatelessWidget {
   final Signal signal;
@@ -30,6 +32,39 @@ class SignalDetailScreen extends StatelessWidget {
     }
     return [];
   }
+
+  // ▼▼▼ HÀM ĐÃ ĐƯỢC SỬA LẠI ĐỂ AN TOÀN TUYỆT ĐỐI ▼▼▼
+  String _getTranslatedReason(BuildContext context, AppLocalizations l10n) {
+    final currentLocale = Provider.of<LanguageProvider>(context, listen: false).locale;
+    final dynamic reasonData = signal.reason; // Giữ kiểu là dynamic
+
+    // Trường hợp 1: Dữ liệu là dạng Map (cấu trúc mới)
+    // Kiểm tra tường minh `is Map` để Dart hiểu và cho phép truy cập key
+    if (reasonData is Map) {
+      final langCode = currentLocale?.languageCode ?? 'en';
+
+      // Lấy bản dịch và kiểm tra kiểu an toàn
+      final translatedText = reasonData[langCode];
+      if (translatedText is String && translatedText.isNotEmpty) {
+        return translatedText;
+      }
+
+      // Nếu không có, dự phòng về tiếng Anh
+      final fallbackText = reasonData['en'];
+      if (fallbackText is String && fallbackText.isNotEmpty) {
+        return fallbackText;
+      }
+    }
+
+    // Trường hợp 2: Dữ liệu là String (tương thích ngược với tín hiệu cũ)
+    if (reasonData is String && reasonData.isNotEmpty) {
+      return reasonData;
+    }
+
+    // Trường hợp 3: Dữ liệu null, rỗng hoặc không đúng định dạng
+    return l10n.noReasonProvided;
+  }
+  // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +169,8 @@ class SignalDetailScreen extends StatelessWidget {
 
   Widget _buildDetailCard(BuildContext context, bool canViewReason, String statusText, Color statusColor, AppLocalizations l10n) {
     const int decimalPlaces = 2;
+    final String reasonText = _getTranslatedReason(context, l10n);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -159,10 +196,10 @@ class SignalDetailScreen extends StatelessWidget {
           const SizedBox(height: 10),
           canViewReason
               ? Text(
-            signal.reason ?? l10n.noReasonProvided,
+            reasonText,
             style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14),
           )
-              : _buildUpgradeToView(context, signal.reason, l10n),
+              : _buildUpgradeToView(context, reasonText, l10n),
         ],
       ),
     );
@@ -229,8 +266,8 @@ class SignalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpgradeToView(BuildContext context, String? reason, AppLocalizations l10n) {
-    if (reason == null || reason.isEmpty) {
+  Widget _buildUpgradeToView(BuildContext context, String reason, AppLocalizations l10n) {
+    if (reason == l10n.noReasonProvided) {
       return Column(
         children: [
           Text(l10n.upgradeToViewReason, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, height: 1.5, fontSize: 14)),
