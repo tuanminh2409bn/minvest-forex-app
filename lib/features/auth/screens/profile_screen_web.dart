@@ -12,15 +12,13 @@ import 'package:minvest_forex_app/l10n/app_localizations.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  // --- CÁC HÀM LOGIC ĐÃ ĐƯỢỢC CẬP NHẬT ĐỂ DÙNG l10n ---
-
   Map<String, String> _getTierInfo(String tier, AppLocalizations l10n) {
     switch (tier.toLowerCase()) {
       case 'demo':
         return {
           l10n.signalTime: '8h-17h',
           l10n.lotPerWeek: '0.05',
-          l10n.signalQty: '7-8 signals per day',
+          l10n.signalQty: '8 signals',
         };
       case 'vip':
         return {
@@ -241,6 +239,8 @@ class ProfileScreen extends StatelessWidget {
             _SocialIcon(iconPath: 'assets/images/youtube_logo.png', url: 'https://www.youtube.com/@minvestvn'),
             const SizedBox(width: 20),
             _SocialIcon(iconPath: 'assets/images/telegram_logo.png', url: 'https://t.me/Minvestchungkhoan', size: 32),
+            const SizedBox(width: 20),
+            _SocialIcon(iconPath: 'assets/images/web_logo.png', url: 'https://minvest.vn/'),
           ],
         ),
         if (isNarrow) const SizedBox(height: 20),

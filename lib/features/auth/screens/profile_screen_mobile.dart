@@ -18,7 +18,7 @@ class ProfileScreen extends StatelessWidget {
         return {
           l10n.signalTime: '8h-17h',
           l10n.lotPerWeek: '0.05',
-          l10n.signalQty: '7-8 signals per day',
+          l10n.signalQty: '8 signals',
         };
       case 'vip':
         return {
@@ -191,7 +191,9 @@ class ProfileScreen extends StatelessWidget {
                       const SizedBox(width: 20),
                       _SocialIcon(iconPath: 'assets/images/youtube_logo.png', url: 'https://www.youtube.com/@minvestvn'),
                       const SizedBox(width: 20),
-                      _SocialIcon(iconPath: 'assets/images/telegram_logo.png', url: 'https://t.me/Minvestchungkhoan', size: 32),
+                      _SocialIcon(iconPath: 'assets/images/telegram_logo.png', url: 'https://t.me/minvest_free', size: 32),
+                      const SizedBox(width: 20),
+                      _SocialIcon(iconPath: 'assets/images/web_logo.png', url: 'https://minvest.vn/'),
                     ],
                   ),
                   const SizedBox(height: 20),

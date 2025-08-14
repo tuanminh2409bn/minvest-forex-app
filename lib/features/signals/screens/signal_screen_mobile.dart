@@ -1,4 +1,7 @@
+// lib/features/signals/screens/signal_screen_mobile.dart
+
 import 'package:flutter/material.dart';
+import 'package:minvest_forex_app/core/providers/language_provider.dart'; // <<< THÊM MỚI
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -8,7 +11,8 @@ import 'package:minvest_forex_app/features/notifications/screens/notification_sc
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart'; // Import localization
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
+
 
 class SignalScreen extends StatefulWidget {
   const SignalScreen({super.key});
@@ -30,7 +34,7 @@ class _SignalScreenState extends State<SignalScreen> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final userTier = userProvider.userTier ?? 'free';
-    final l10n = AppLocalizations.of(context)!; // Khai báo biến dịch
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -48,55 +52,64 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           child: Column(
             children: [
+              // ▼▼▼ KHU VỰC ĐÃ SỬA ĐỔI ▼▼▼
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildTabs(l10n), // Truyền l10n vào
+                    _buildTabs(l10n),
                     if (userTier != 'free')
-                      Consumer<NotificationProvider>(
-                        builder: (context, notificationProvider, child) {
-                          final bool hasUnread = notificationProvider.unreadCount > 0;
-                          return Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.notifications_none, size: 28),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const NotificationScreen()),
-                                  );
-                                },
-                              ),
-                              if (hasUnread)
-                                Positioned(
-                                  top: 10,
-                                  right: 10,
-                                  child: Container(
-                                    height: 9,
-                                    width: 9,
-                                    decoration: const BoxDecoration(
-                                        color: Colors.redAccent,
-                                        shape: BoxShape.circle,
-                                        border: Border.fromBorderSide(BorderSide(color: Color(0xFF0D1117), width: 1.5))
-                                    ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const _LanguageSwitcher(), // Thêm nút chuyển ngôn ngữ
+                          const SizedBox(width: 4),
+                          Consumer<NotificationProvider>(
+                            builder: (context, notificationProvider, child) {
+                              final bool hasUnread = notificationProvider.unreadCount > 0;
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.notifications_none, size: 28),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const NotificationScreen()),
+                                      );
+                                    },
                                   ),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
+                                  if (hasUnread)
+                                    Positioned(
+                                      top: 10,
+                                      right: 10,
+                                      child: Container(
+                                        height: 9,
+                                        width: 9,
+                                        decoration: const BoxDecoration(
+                                            color: Colors.redAccent,
+                                            shape: BoxShape.circle,
+                                            border: Border.fromBorderSide(BorderSide(color: Color(0xFF0D1117), width: 1.5))
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      )
                   ],
                 ),
               ),
+              // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: _buildFilters(l10n), // Truyền l10n vào
+                child: _buildFilters(l10n),
               ),
               Expanded(
-                child: _buildContent(userTier, l10n), // Truyền l10n vào
+                child: _buildContent(userTier, l10n),
               ),
             ],
           ),
@@ -276,12 +289,12 @@ class _SignalScreenState extends State<SignalScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-              width: 80, // Tăng chiều rộng để vừa chữ "TRỰC TIẾP"
+              width: 80,
               height: 32,
               child: _buildTabItem(l10n.live, _isLive, () => setState(() => _isLive = true))
           ),
           SizedBox(
-              width: 80, // Tăng chiều rộng
+              width: 80,
               height: 32,
               child: _buildTabItem(l10n.end, !_isLive, () => setState(() => _isLive = false))
           ),
@@ -334,6 +347,40 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 }
 
+// ▼▼▼ WIDGET MỚI ĐƯỢC THÊM VÀO ▼▼▼
+class _LanguageSwitcher extends StatelessWidget {
+  const _LanguageSwitcher();
+
+  @override
+  Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    return PopupMenuButton<Locale>(
+      onSelected: (Locale locale) => languageProvider.setLocale(locale),
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: Locale('en'), child: Text('English')),
+        const PopupMenuItem(value: Locale('vi'), child: Text('Tiếng Việt')),
+      ],
+      child: Consumer<LanguageProvider>(
+        builder: (context, provider, child) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(4.0),
+            child: Image.asset(
+              provider.locale?.languageCode == 'vi'
+                  ? 'assets/images/vn_flag.png'
+                  : 'assets/images/us_flag.png',
+              height: 24,
+              width: 36,
+              fit: BoxFit.cover,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+// ▲▲▲ KẾT THÚC WIDGET MỚI ▲▲▲
+
+
 class _GradientFilterButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
@@ -347,9 +394,7 @@ class _GradientFilterButton extends StatelessWidget {
       child: Container(
         height: 32,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-          ),
+          gradient: const LinearGradient(colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)]),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.blueGrey.withOpacity(0.5)),
         ),

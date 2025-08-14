@@ -1,4 +1,7 @@
+// lib/features/signals/screens/signal_screen_web.dart
+
 import 'package:flutter/material.dart';
+import 'package:minvest_forex_app/core/providers/language_provider.dart'; // <<< THÊM MỚI
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -30,7 +33,7 @@ class _SignalScreenState extends State<SignalScreen> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final userTier = userProvider.userTier ?? 'free';
-    final l10n = AppLocalizations.of(context)!; // Khai báo biến dịch
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -48,6 +51,7 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           child: Column(
             children: [
+              // ▼▼▼ KHU VỰC ĐÃ SỬA ĐỔI ▼▼▼
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
@@ -56,7 +60,9 @@ class _SignalScreenState extends State<SignalScreen> {
                     const SizedBox(width: 40),
                     _buildFilters(l10n),
                     const Spacer(),
-                    if (userTier != 'free')
+                    if (userTier != 'free') ...[
+                      const _LanguageSwitcher(), // Thêm nút chuyển ngôn ngữ
+                      const SizedBox(width: 16),
                       Consumer<NotificationProvider>(
                         builder: (context, notificationProvider, child) {
                           final bool hasUnread = notificationProvider.unreadCount > 0;
@@ -90,9 +96,11 @@ class _SignalScreenState extends State<SignalScreen> {
                           );
                         },
                       ),
+                    ]
                   ],
                 ),
               ),
+              // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
               Expanded(
                 child: _buildContent(userTier, l10n),
               ),
@@ -207,37 +215,47 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
+  // ▼▼▼ KHU VỰC ĐÃ SỬA ĐỔI ▼▼▼
   Widget _buildOutOfHoursView(String userTier, AppLocalizations l10n) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.timer_off_outlined, size: 80, color: Colors.blueAccent),
-          const SizedBox(height: 20),
-          Text(
-            l10n.outOfGoldenHours,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-            textAlign: TextAlign.center,
+    // Thêm Center và ConstrainedBox để giới hạn chiều rộng của nội dung và nút bấm
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.timer_off_outlined, size: 80, color: Colors.blueAccent),
+              const SizedBox(height: 20),
+              Text(
+                l10n.outOfGoldenHours,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                userTier == 'vip' ? l10n.outOfGoldenHoursVipDesc : l10n.outOfGoldenHoursDemoDesc,
+                style: TextStyle(fontSize: 16, color: Colors.grey[400]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 30),
+              _buildUpgradeButton(l10n),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            userTier == 'vip' ? l10n.outOfGoldenHoursVipDesc : l10n.outOfGoldenHoursDemoDesc,
-            style: TextStyle(fontSize: 16, color: Colors.grey[400]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 30),
-          _buildUpgradeButton(l10n),
-        ],
+        ),
       ),
     );
   }
+  // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
 
   Widget _buildUpgradeButton(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: SizedBox(
         height: 50,
+        // Giới hạn chiều rộng tối đa của nút bấm để nó không bị kéo dài
+        width: 300,
         child: ElevatedButton(
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen())),
           style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -289,6 +307,40 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 }
+
+// ▼▼▼ WIDGET MỚI ĐƯỢC THÊM VÀO ▼▼▼
+class _LanguageSwitcher extends StatelessWidget {
+  const _LanguageSwitcher();
+
+  @override
+  Widget build(BuildContext context) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    return PopupMenuButton<Locale>(
+      onSelected: (Locale locale) => languageProvider.setLocale(locale),
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: Locale('en'), child: Text('English')),
+        const PopupMenuItem(value: Locale('vi'), child: Text('Tiếng Việt')),
+      ],
+      child: Consumer<LanguageProvider>(
+        builder: (context, provider, child) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(4.0),
+            child: Image.asset(
+              provider.locale?.languageCode == 'vi'
+                  ? 'assets/images/vn_flag.png'
+                  : 'assets/images/us_flag.png',
+              height: 24,
+              width: 36,
+              fit: BoxFit.cover,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+// ▲▲▲ KẾT THÚC WIDGET MỚI ▲▲▲
+
 
 class _GradientFilterButton extends StatelessWidget {
   final String text;
