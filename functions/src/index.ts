@@ -594,12 +594,23 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
   const newDeviceId = request.data.deviceId;
   const newFcmToken = request.data.fcmToken;
   if (!newDeviceId || !newFcmToken) throw new functions.https.HttpsError("invalid-argument", "The function must be called with 'deviceId' and 'fcmToken' arguments.");
+
   const userDocRef = firestore.collection("users").doc(uid);
+
   try {
     await firestore.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userDocRef);
+
+
+      if (!userDoc.exists) {
+        functions.logger.error(`manageUserSession được gọi cho user ${uid} nhưng document không tồn tại.`);
+        return;
+      }
+
       const userData = userDoc.data();
       const currentSession = userData?.activeSession;
+
+      // Gửi thông báo FORCE_LOGOUT cho thiết bị cũ nếu cần
       if (currentSession && currentSession.deviceId && currentSession.deviceId !== newDeviceId && currentSession.fcmToken) {
         const message = {
           token: currentSession.fcmToken, data: { action: "FORCE_LOGOUT" },
@@ -608,13 +619,13 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
         };
         try { await admin.messaging().send(message); } catch (error) { functions.logger.error(`Error sending FORCE_LOGOUT to ${currentSession.fcmToken}:`, error); }
       }
+
+      // Chỉ cập nhật session cho document đã tồn tại
       const newSessionData = { deviceId: newDeviceId, fcmToken: newFcmToken, loginAt: admin.firestore.FieldValue.serverTimestamp() };
-      const updatePayload: any = { activeSession: newSessionData };
-      if (!userData?.createdAt) {
-        updatePayload.createdAt = admin.firestore.FieldValue.serverTimestamp();
-      }
-      transaction.set(userDocRef, updatePayload, { merge: true });
+      transaction.update(userDocRef, { activeSession: newSessionData });
+      // ▲▲▲ KẾT THÚC LOGIC MỚI ▲▲▲
     });
+
     return { status: "success", message: "Session managed successfully." };
   } catch (error) {
     functions.logger.error("Error in manageUserSession transaction:", error);
@@ -655,21 +666,6 @@ export const manageUserStatus = onCall({ region: "asia-southeast1" }, async (req
         }
     }
     return { status: "success", message: `Đã cập nhật thành công ${userIds.length} tài khoản.` };
-});
-
-export const checkSignalTimeouts = onSchedule({ schedule: "every 10 minutes", region: "asia-southeast1", timeZone: "Asia/Ho_Chi_Minh" }, async () => {
-    const now = admin.firestore.Timestamp.now();
-    const timeoutThreshold = admin.firestore.Timestamp.fromMillis(now.toMillis() - 20 * 60 * 1000);
-    try {
-        const overdueSignalsQuery = firestore.collection("signals").where("status", "==", "running").where("isMatched", "==", true).where("matchedAt", "<=", timeoutThreshold);
-        const overdueSignals = await overdueSignalsQuery.get();
-        if (overdueSignals.empty) return;
-        const batch = firestore.batch();
-        overdueSignals.forEach(doc => batch.update(doc.ref, { status: "closed", result: "Exited (Timeout)", closedAt: now }));
-        await batch.commit();
-    } catch (error) {
-        functions.logger.error("Lỗi nghiêm trọng khi kiểm tra tín hiệu quá hạn:", error);
-    }
 });
 
 export const resetDemoNotificationCounters = onSchedule({ schedule: "1 0 * * *", timeZone: "Asia/Ho_Chi_Minh", region: "asia-southeast1" }, async () => {

@@ -31,41 +31,69 @@ class AuthService {
     return digest.toString();
   }
 
+  // =======================================================================
+  // === HÀM XỬ LÝ TRUNG TÂM (PHIÊN BẢN HOÀN THIỆN NHẤT) ===
+  // =======================================================================
   Future<User?> _handleSuccessfulSignIn(UserCredential userCredential, {
+    // Dữ liệu gốc đáng tin cậy từ các nhà cung cấp
     Map<String, dynamic>? facebookUserData,
+    String? appleEmail,
+    String? appleFullName,
+    String? googleEmail,
   }) async {
     final User? user = userCredential.user;
     if (user == null) return null;
 
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    if (userDoc.exists && userDoc.data()?['isSuspended'] == true) {
-      final reason = userDoc.data()?['suspensionReason'] ?? 'Vui lòng liên hệ quản trị viên.';
-      await signOut();
-      throw SuspendedAccountException(reason);
-    }
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final userDocRef = _firestore.collection('users').doc(user.uid);
+        final userDoc = await transaction.get(userDocRef);
 
-    final photoURL = facebookUserData?['picture']?['data']?['url'] ?? user.photoURL;
+        if (!userDoc.exists) {
+          // LOGIC ƯU TIÊN VÀNG: Lấy email từ nguồn đáng tin cậy nhất trước.
+          final email = googleEmail // 1. Ưu tiên Google
+              ?? appleEmail // 2. Ưu tiên Apple
+              ?? facebookUserData?['email'] // 3. Ưu tiên Facebook
+              ?? user.email; // 4. Cuối cùng mới dùng của Firebase (dự phòng)
 
-    if (user.photoURL != photoURL) {
-      await user.updatePhotoURL(photoURL);
-    }
+          // Tương tự, lấy tên từ nguồn đáng tin cậy nhất
+          final displayName = appleFullName
+              ?? facebookUserData?['name']
+              ?? user.displayName;
 
-    if (userCredential.additionalUserInfo?.isNewUser ?? false) {
-      final email = facebookUserData?['email'] ?? user.email;
-      final displayName = facebookUserData?['name'] ?? user.displayName;
+          final photoURL = facebookUserData?['picture']?['data']?['url'] ?? user.photoURL;
 
-      await _firestore.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'email': email,
-        'displayName': displayName,
-        'photoURL': photoURL,
-        'createdAt': Timestamp.now(),
-        'subscriptionTier': 'free',
-        'role': 'user',
-        'isSuspended': false,
+          if (email == null) {
+            throw Exception("Không thể lấy được địa chỉ email. Vui lòng thử lại.");
+          }
+
+          transaction.set(userDocRef, {
+            'uid': user.uid,
+            'email': email,
+            'displayName': displayName,
+            'photoURL': photoURL,
+            'createdAt': Timestamp.now(),
+            'subscriptionTier': 'free',
+            'role': 'user',
+            'isSuspended': false,
+          });
+        } else {
+          // Nếu document đã tồn tại, chỉ kiểm tra xem tài khoản có bị khóa không
+          if (userDoc.data()?['isSuspended'] == true) {
+            throw SuspendedAccountException(userDoc.data()?['suspensionReason'] ?? 'Vui lòng liên hệ quản trị viên.');
+          }
+        }
       });
+    } on SuspendedAccountException {
+      await signOut();
+      rethrow;
+    } catch (e) {
+      print("Lỗi nghiêm trọng trong transaction tạo user: $e");
+      await signOut();
+      return null;
     }
 
+    // Luôn cập nhật session sau khi đã đảm bảo hồ sơ tồn tại và hợp lệ
     if (!kIsWeb) {
       await _updateUserSession();
     }
@@ -86,17 +114,27 @@ class AuthService {
     }
   }
 
+  // =======================================================================
+  // === CÁC PHƯƠNG THỨC ĐĂNG NHẬP (PHIÊN BẢN HOÀN THIỆN NHẤT) ===
+  // =======================================================================
+
   Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null;
+      if (googleUser == null) return null; // Người dùng đã hủy
+
+      // LẤY TẠI NGUỒN: Lấy email trực tiếp từ Google.
+      final String? googleEmail = googleUser.email;
+
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
       final userCredential = await _firebaseAuth.signInWithCredential(credential);
-      return await _handleSuccessfulSignIn(userCredential);
+
+      // Truyền dữ liệu gốc vào hàm xử lý
+      return await _handleSuccessfulSignIn(userCredential, googleEmail: googleEmail);
     } on SuspendedAccountException {
       rethrow;
     } catch (e) {
@@ -108,28 +146,29 @@ class AuthService {
   Future<User?> signInWithFacebook() async {
     try {
       UserCredential userCredential;
-      Map<String, dynamic>? userData;
+      Map<String, dynamic>? facebookUserData;
 
       if (kIsWeb) {
-        final FacebookAuthProvider facebookProvider = FacebookAuthProvider();
-        facebookProvider.addScope('email');
-        facebookProvider.addScope('public_profile');
-        userCredential = await _firebaseAuth.signInWithPopup(facebookProvider);
+        userCredential = await _firebaseAuth.signInWithPopup(FacebookAuthProvider());
+        // Lưu ý: Lấy Facebook User Data trên web phức tạp hơn, có thể cần gọi Graph API sau khi đăng nhập.
+        // Tạm thời bỏ qua để giữ luồng đơn giản, vì lỗi chính nằm trên mobile.
       } else {
         final LoginResult result = await FacebookAuth.instance.login(
           permissions: ['public_profile', 'email'],
         );
-
         if (result.status != LoginStatus.success) return null;
 
-        userData = await FacebookAuth.instance.getUserData(
+        // LẤY TẠI NGUỒN: Lấy dữ liệu trực tiếp từ Facebook.
+        facebookUserData = await FacebookAuth.instance.getUserData(
           fields: "name,email,picture.width(200)",
         );
 
         final OAuthCredential credential = FacebookAuthProvider.credential(result.accessToken!.tokenString);
         userCredential = await _firebaseAuth.signInWithCredential(credential);
       }
-      return await _handleSuccessfulSignIn(userCredential, facebookUserData: userData);
+
+      // Truyền dữ liệu gốc vào hàm xử lý
+      return await _handleSuccessfulSignIn(userCredential, facebookUserData: facebookUserData);
     } on SuspendedAccountException {
       rethrow;
     } catch (e) {
@@ -141,28 +180,38 @@ class AuthService {
   Future<User?> signInWithApple() async {
     try {
       UserCredential userCredential;
+      String? appleEmail;
+      String? appleFullName;
+
       if (kIsWeb) {
         final appleProvider = AppleAuthProvider();
         userCredential = await _firebaseAuth.signInWithPopup(appleProvider);
       } else if (Platform.isIOS || Platform.isMacOS) {
         final rawNonce = _generateNonce();
         final nonce = _sha256(rawNonce);
+
+        // LẤY TẠI NGUỒN: Lấy thông tin trực tiếp từ Apple.
         final appleCredential = await SignInWithApple.getAppleIDCredential(
-          scopes: [
-            AppleIDAuthorizationScopes.email,
-            AppleIDAuthorizationScopes.fullName,
-          ],
+          scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
           nonce: nonce,
         );
+
+        appleEmail = appleCredential.email;
+        if (appleCredential.givenName != null || appleCredential.familyName != null) {
+          appleFullName = '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'.trim();
+        }
+
         final oAuthCredential = OAuthProvider('apple.com').credential(
           idToken: appleCredential.identityToken,
           rawNonce: rawNonce,
         );
         userCredential = await _firebaseAuth.signInWithCredential(oAuthCredential);
       } else {
-        throw UnsupportedError('Đăng nhập bằng Apple không được hỗ trợ trên thiết bị này.');
+        throw UnsupportedError('Đăng nhập Apple không được hỗ trợ trên thiết bị này.');
       }
-      return await _handleSuccessfulSignIn(userCredential);
+
+      // Truyền dữ liệu gốc vào hàm xử lý
+      return await _handleSuccessfulSignIn(userCredential, appleEmail: appleEmail, appleFullName: appleFullName);
     } on SuspendedAccountException {
       rethrow;
     } catch (e) {
