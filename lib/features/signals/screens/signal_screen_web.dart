@@ -51,7 +51,6 @@ class _SignalScreenState extends State<SignalScreen> {
           ),
           child: Column(
             children: [
-              // ▼▼▼ KHU VỰC ĐÃ SỬA ĐỔI ▼▼▼
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
@@ -61,7 +60,7 @@ class _SignalScreenState extends State<SignalScreen> {
                     _buildFilters(l10n),
                     const Spacer(),
                     if (userTier != 'free') ...[
-                      const _LanguageSwitcher(), // Thêm nút chuyển ngôn ngữ
+                      const _LanguageSwitcher(),
                       const SizedBox(width: 16),
                       Consumer<NotificationProvider>(
                         builder: (context, notificationProvider, child) {
@@ -215,12 +214,10 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
-  // ▼▼▼ KHU VỰC ĐÃ SỬA ĐỔI ▼▼▼
   Widget _buildOutOfHoursView(String userTier, AppLocalizations l10n) {
-    // Thêm Center và ConstrainedBox để giới hạn chiều rộng của nội dung và nút bấm
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
+        constraints: const BoxConstraints(maxWidth: 700),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -247,15 +244,12 @@ class _SignalScreenState extends State<SignalScreen> {
       ),
     );
   }
-  // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
 
   Widget _buildUpgradeButton(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: SizedBox(
         height: 50,
-        // Giới hạn chiều rộng tối đa của nút bấm để nó không bị kéo dài
-        width: 300,
         child: ElevatedButton(
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const UpgradeScreen())),
           style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
