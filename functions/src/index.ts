@@ -72,7 +72,7 @@ export const processVerificationImage = onObjectFinalized(
       }
       functions.logger.log("Văn bản đọc được:", fullText);
 
-      const balanceRegex = /(\d{1,3}(?:,\d{3})*[,.]\d{2})(?:\s*USD)?/;
+      const balanceRegex = /(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})(?:\s*USD)?/;
       const idRegex = /#\s*(\d{7,})/;
 
       const balanceMatch = fullText.match(balanceRegex);
@@ -81,16 +81,18 @@ export const processVerificationImage = onObjectFinalized(
       if (!balanceMatch || !idMatch) {
         throw new Error("Không tìm thấy đủ thông tin Số dư và ID trong ảnh.");
       }
-
       let balanceString = balanceMatch[1];
-      if (balanceString.lastIndexOf(',') > balanceString.lastIndexOf('.')) {
-          balanceString = balanceString.replace(/\./g, '').replace(',', '.');
-      } else {
-          balanceString = balanceString.replace(/,/g, '');
-      }
-      const balance = parseFloat(balanceString);
-      const exnessId = idMatch[1];
+      const isCommaDecimal = balanceString.lastIndexOf(',') > balanceString.lastIndexOf('.');
 
+      if (isCommaDecimal) {
+        balanceString = balanceString.replace(/\./g, "").replace(',', '.');
+      } else {
+        balanceString = balanceString.replace(/,/g, "");
+      }
+
+      const balance = parseFloat(balanceString);
+
+      const exnessId = idMatch[1];
       functions.logger.log(`Tìm thấy - Số dư: ${balance}, ID Exness: ${exnessId}`);
 
       const affiliateCheckUrl = `https://chcke.minvest.vn/api/users/check-allocation?mt4Account=${exnessId}`;
@@ -104,19 +106,18 @@ export const processVerificationImage = onObjectFinalized(
         const finalData = firstAccountObject?.data?.[0];
 
         if (!finalData || !finalData.client_uid) {
-            throw new Error("API không trả về dữ liệu hợp lệ hoặc không tìm thấy client_uid trong cấu trúc mới.");
+            throw new Error("API không trả về dữ liệu hợp lệ hoặc không tìm thấy client_uid.");
         }
 
         affiliateData = {
           client_uid: finalData.client_uid,
           client_account: finalData.partner_account,
         };
-
         functions.logger.log("Kiểm tra affiliate thành công, kết quả:", affiliateData);
-
       } catch (apiError) {
         functions.logger.error("Lỗi khi kiểm tra affiliate:", apiError);
-        throw new Error(`Account ${exnessId} is not under mInvest's affiliate link.`);
+        // Ném lỗi rõ ràng hơn
+        throw new Error(`Tài khoản ${exnessId} không thuộc affiliate của mInvest.`);
       }
 
       const idDoc = await firestore
@@ -124,7 +125,7 @@ export const processVerificationImage = onObjectFinalized(
         .doc(exnessId).get();
 
       if (idDoc.exists) {
-        throw new Error(`ID Exness ${exnessId} has already been used.`);
+        throw new Error(`ID Exness ${exnessId} đã được sử dụng.`);
       }
 
       let tier = "demo";
@@ -133,11 +134,9 @@ export const processVerificationImage = onObjectFinalized(
       } else if (balance >= 200) {
         tier = "vip";
       }
-
       functions.logger.log(`Phân quyền cho user ${userId}: ${tier}`);
 
       const idRef = firestore.collection("verifiedExnessIds").doc(exnessId);
-
       const updateData = {
         subscriptionTier: tier,
         verificationStatus: "success",
@@ -155,7 +154,7 @@ export const processVerificationImage = onObjectFinalized(
       return null;
     } catch (error) {
       const errorMessage = (error as Error).message;
-      functions.logger.error("Xử lý ảnh thất bại:", errorMessage);
+      functions.logger.error(`Xử lý ảnh thất bại cho user ${userId}:`, errorMessage);
 
       await userRef.set(
         { verificationStatus: "failed", verificationError: errorMessage },
