@@ -23,7 +23,6 @@ class _PackageScreenState extends State<PackageScreen> {
   bool _isLoading = true;
   bool _isPurchasing = false;
   String _loadingError = '';
-  // Sửa lại kIds để khớp với cả App Store Connect
   final Set<String> _kIds = {'minvest.elite.1month', 'minvest.elite.12months'};
 
   @override

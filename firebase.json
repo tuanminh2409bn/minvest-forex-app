@@ -51,16 +51,16 @@
     ],
     "headers": [
       {
-        "source": "**/@(index.html|main.dart.js|flutter.js)",
+        "source": "index.html",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "public, max-age=0, must-revalidate"
+            "value": "no-cache, no-store, must-revalidate"
           }
         ]
       },
       {
-        "source": "**/assets/**",
+        "source": "**",
         "headers": [
           {
             "key": "Cache-Control",

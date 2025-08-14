@@ -1,35 +1,34 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:minvest_forex_app/app/auth_gate.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
+import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
-import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
-import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
-import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
+import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
+import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
 import 'package:minvest_forex_app/firebase_options.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
-import 'package:flutter/foundation.dart';
 
-// --- HÀM XỬ LÝ NỀN (GIỮ NGUYÊN) ---
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (message.data['action'] == 'FORCE_LOGOUT') {
-    await AuthService().signOut();
   }
 }
 
-// --- KHAI BÁO CÁC BIẾN TOÀN CỤC ---
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,26 +36,9 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await FirebaseMessaging.instance.requestPermission();
-
-  if (kIsWeb) {
-    final fcmToken = await FirebaseMessaging.instance.getToken(
-      vapidKey: "BF1kL9v7A-1bOSz642aCWoZEKvFpjKvkMQuTPd_GXBLxNakYt6apNf9Aa25hGk1QJP0VFrCVRx4B9mO8h5gBUA8",
-    );
-    print("FCM Token for Web: $fcmToken");
-  }
-
-  // Khởi tạo plugin thông báo local
-  const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('@mipmap/ic_launcher');
-  final InitializationSettings initializationSettings =
-  InitializationSettings(android: initializationSettingsAndroid);
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
   runApp(
     MultiProvider(
       providers: [
-        // Các provider cũ của bạn
         Provider<AuthService>(create: (_) => AuthService()),
         BlocProvider<AuthBloc>(
           create: (context) => AuthBloc(
@@ -83,35 +65,48 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // ▼▼▼ BƯỚC 1: THIẾT LẬP TOÀN BỘ CÁC TRÌNH LẮNG NGHE THÔNG BÁO ▼▼▼
-    _setupNotificationListeners();
+    _initializeServices();
   }
 
-  void _setupNotificationListeners() {
-    // 1. Lắng nghe khi app đang mở (Foreground)
+  Future<void> _initializeServices() async {
+    if (!kIsWeb) {
+      const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+      await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    }
+
+    await _setupNotificationListeners();
+  }
+
+  Future<void> _setupNotificationListeners() async {
+    await FirebaseMessaging.instance.requestPermission();
+    if (kIsWeb) {
+      final fcmToken = await FirebaseMessaging.instance.getToken(
+        vapidKey: "BF1kL9v7A-1bOSz642aCWoZEKvFpjKvkMQuTPd_GXBLxNakYt6apNf9Aa25hGk1QJP0VFrCVRx4B9mO8h5gBUA8",
+      );
+      print("FCM Token for Web: $fcmToken");
+    }
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Foreground message received: ${message.data}');
-
       if (message.data['action'] == 'FORCE_LOGOUT') {
         _showLogoutDialog(message.data['reason']);
         return;
       }
-
-      // Hiển thị thông báo local khi có tín hiệu mới hoặc cập nhật
       final title = message.data['title'];
       final body = message.data['body'];
-      if (title != null && body != null) {
+      if (title != null && body != null && !kIsWeb) {
         _showLocalNotification(title, body, message.data);
       }
     });
 
-    // 2. Lắng nghe khi người dùng NHẤN vào thông báo (từ trạng thái background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       print('Message opened from background: ${message.data}');
       _handleNotificationNavigation(message.data);
     });
 
-    // 3. Xử lý nếu app được mở từ trạng thái terminated bằng cách nhấn vào thông báo
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
         print('Message opened from terminated: ${message.data}');
@@ -120,21 +115,15 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  // ▼▼▼ BƯỚC 2: HÀM ĐIỀU HƯỚNG TỰ ĐỘNG (DEEP-LINKING) ▼▼▼
   Future<void> _handleNotificationNavigation(Map<String, dynamic> data) async {
     final String? signalId = data['signalId'];
     if (signalId == null) return;
-
-    // Đợi một chút để đảm bảo widget tree đã được build xong
     await Future.delayed(const Duration(milliseconds: 500));
-
     try {
       final signal = await SignalService().getSignalById(signalId);
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final userTier = userProvider.userTier ?? 'free';
-
       if (signal != null) {
-        // Sử dụng navigatorKey để điều hướng
         navigatorKey.currentState?.push(
           MaterialPageRoute(
             builder: (_) => SignalDetailScreen(
@@ -158,10 +147,8 @@ class _MyAppState extends State<MyApp> {
         showWhen: false);
     const NotificationDetails platformChannelSpecifics =
     NotificationDetails(android: androidPlatformChannelSpecifics);
-    flutterLocalNotificationsPlugin.show(
-        0, title, body, platformChannelSpecifics,
-        payload: payload['signalId']
-    );
+    flutterLocalNotificationsPlugin.show(0, title, body, platformChannelSpecifics,
+        payload: payload['signalId']);
   }
 
   void _showLogoutDialog(String? reason) {
