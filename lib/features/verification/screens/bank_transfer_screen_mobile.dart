@@ -7,11 +7,13 @@ import 'package:minvest_forex_app/l10n/app_localizations.dart';
 class BankTransferScreen extends StatefulWidget {
   final double amountUSD;
   final String orderInfo;
+  final String productId; // <<< THÊM VÀO
 
   const BankTransferScreen({
     super.key,
     required this.amountUSD,
     required this.orderInfo,
+    required this.productId, // <<< THÊM VÀO
   });
 
   @override
@@ -30,7 +32,6 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
   @override
   void initState() {
     super.initState();
-    // Sử dụng addPostFrameCallback để đảm bảo context có sẵn cho l10n
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
@@ -48,10 +49,11 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
     setState(() { _isLoading = true; });
 
     try {
-      // === FIX: Gửi lại đúng tham số 'amount' như code cũ ===
+      // <<< SỬA ĐỔI: Thêm productId vào payload gửi đi
       final result = await _createVnpayOrderCallable.call<Map<String, dynamic>>({
         'amount': widget.amountUSD,
         'orderInfo': widget.orderInfo,
+        'productId': widget.productId,
       });
 
       final paymentUrl = result.data['paymentUrl'];
@@ -92,7 +94,8 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (NavigationRequest request) {
-            const String returnUrl = 'https://sandbox.vnpayment.vn/tryitnow/Home/VnPayReturn';
+            // Thay bằng Return URL thực tế của bạn nếu khác
+            const String returnUrl = 'https://minvest.vn/payment-result';
 
             if (request.url.startsWith(returnUrl)) {
               final uri = Uri.parse(request.url);

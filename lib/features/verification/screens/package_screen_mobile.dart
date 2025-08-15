@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io'; // Import để kiểm tra nền tảng
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -107,26 +107,19 @@ class _PackageScreenState extends State<PackageScreen> {
     }
   }
 
-  // === SỬA LỖI LOGIC NẰM Ở ĐÂY ===
   Future<void> _verifyPurchase(PurchaseDetails purchaseDetails) async {
     final l10n = AppLocalizations.of(context)!;
     if(mounted) setState(() => _isPurchasing = true);
 
     try {
       final HttpsCallable callable = FirebaseFunctions.instanceFor(region: 'asia-southeast1').httpsCallable('verifyPurchase');
-
-      // 1. Xác định nền tảng
       final String platform = Platform.isIOS ? 'ios' : 'android';
-
-      // 2. Chuẩn bị dữ liệu giao dịch tùy theo nền tảng
       Map<String, dynamic> transactionData = {};
       if (platform == 'ios') {
         transactionData['receiptData'] = purchaseDetails.verificationData.serverVerificationData;
       } else { // Android
         transactionData['purchaseToken'] = purchaseDetails.verificationData.serverVerificationData;
       }
-
-      // 3. Gửi dữ liệu đã được chuẩn hóa lên Cloud Function
       final HttpsCallableResult result = await callable.call<dynamic>({
         'platform': platform,
         'productId': purchaseDetails.productID,
@@ -137,10 +130,8 @@ class _PackageScreenState extends State<PackageScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.data['message'] ?? l10n.loginSuccess), backgroundColor: Colors.green),
         );
-        // Pop 2 lần để quay về màn hình chính, thay vì chỉ màn hình chọn phương thức
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
-
     } on FirebaseFunctionsException catch (e) {
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -240,6 +231,7 @@ class _PackageScreenState extends State<PackageScreen> {
                   builder: (context) => BankTransferScreen(
                     amountUSD: 78,
                     orderInfo: l10n.orderInfo1Month,
+                    productId: 'elite_1_month_vnpay', // <<< SỬA ĐỔI Ở ĐÂY
                   ),
                 ),
               );
@@ -258,6 +250,7 @@ class _PackageScreenState extends State<PackageScreen> {
                   builder: (context) => BankTransferScreen(
                     amountUSD: 460,
                     orderInfo: l10n.orderInfo12Months,
+                    productId: 'elite_12_months_vnpay', // <<< SỬA ĐỔI Ở ĐÂY
                   ),
                 ),
               );

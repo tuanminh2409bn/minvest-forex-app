@@ -1,16 +1,16 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
-import { Response } from "express";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { onObjectFinalized } from "firebase-functions/v2/storage";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { v2 as translate } from '@google-cloud/translate';
 import * as crypto from "crypto";
 import * as querystring from "qs";
 import axios from "axios";
 import { GoogleAuth } from "google-auth-library";
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import { v2 as translate } from '@google-cloud/translate';
+import { Response, Request } from "express";
+import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
 
 // =================================================================
 // === KHỞI TẠO CÁC DỊCH VỤ CƠ BẢN ===
@@ -167,63 +167,67 @@ export const processVerificationImage = onObjectFinalized(
 // =================================================================
 // === FUNCTION TẠO LINK THANH TOÁN VNPAY ===
 // =================================================================
-const TMN_CODE = "EZTRTEST";
-const HASH_SECRET = "DGTXQMK0DF9NZTZBH63RV3AM3E53K8AX";
-const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-const RETURN_URL = "https://sandbox.vnpayment.vn/tryitnow/Home/VnPayReturn";
+const TMN_CODE = "EZTRTEST"; // Sẽ đổi khi lên Production
+const HASH_SECRET = "DGTXQMK0DF9NZTZBH63RV3AM3E53K8AX"; // Sẽ đổi khi lên Production
+const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"; // Sẽ đổi khi lên Production
+const RETURN_URL = "https://minvest.vn/";
 const USD_TO_VND_RATE = 25500;
 
-export const createVnpayOrder = onCall({ region: "asia-southeast1" }, async (request) => {
-  functions.logger.info("Đã nhận được yêu cầu thanh toán với dữ liệu:", request.data);
+export const createVnpayOrder = onCall({ region: "asia-southeast1", secrets: ["VNPAY_HASH_SECRET"] }, async (request) => {
+    const userId = request.auth?.uid;
+    if (!userId) {
+        throw new functions.https.HttpsError("unauthenticated", "Người dùng phải đăng nhập để tạo đơn hàng.");
+    }
+    const { amount, productId, orderInfo } = request.data;
+    if (!amount || !productId || !orderInfo) {
+        throw new functions.https.HttpsError("invalid-argument", "Function cần được gọi với 'amount', 'productId' và 'orderInfo'.");
+    }
 
-  const amountUSD = request.data.amount;
-  const orderInfo = request.data.orderInfo;
+    const amountVND = Math.round(amount * USD_TO_VND_RATE) * 100;
+    const createDate = new Date().toISOString().replace(/T|Z|\..*$/g, "").replace(/[-:]/g, "");
+    const orderId = `${createDate}-${userId}-${productId}`;
+    const ipAddr = request.rawRequest.ip || "127.0.0.1";
 
-  if (!amountUSD || !orderInfo) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "Function cần được gọi với 'amount' và 'orderInfo'."
-    );
-  }
+    const orderRef = firestore.collection('vnpayOrders').doc(orderId);
+    await orderRef.set({
+        userId: userId,
+        productId: productId,
+        amountVND: amountVND,
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
 
-  const amountVND = Math.round(amountUSD * USD_TO_VND_RATE) * 100;
-  const createDate = new Date().toISOString().replace(/T|Z|\..*$/g, "").replace(/[-:]/g, "");
-  const orderId = createDate + Math.random().toString().slice(2, 8);
-  const ipAddr = request.rawRequest.ip || "127.0.0.1";
+    let vnpParams: any = {};
+    vnpParams["vnp_Version"] = "2.1.0";
+    vnpParams["vnp_Command"] = "pay";
+    vnpParams["vnp_TmnCode"] = TMN_CODE;
+    vnpParams["vnp_Locale"] = "vn";
+    vnpParams["vnp_CurrCode"] = "VND";
+    vnpParams["vnp_TxnRef"] = orderId;
+    vnpParams["vnp_OrderInfo"] = orderInfo;
+    vnpParams["vnp_OrderType"] = "other";
+    vnpParams["vnp_Amount"] = amountVND;
+    vnpParams["vnp_ReturnUrl"] = RETURN_URL;
+    vnpParams["vnp_IpAddr"] = ipAddr;
+    vnpParams["vnp_CreateDate"] = createDate;
 
-  let vnpParams: any = {};
-  vnpParams["vnp_Version"] = "2.1.0";
-  vnpParams["vnp_Command"] = "pay";
-  vnpParams["vnp_TmnCode"] = TMN_CODE;
-  vnpParams["vnp_Locale"] = "vn";
-  vnpParams["vnp_CurrCode"] = "VND";
-  vnpParams["vnp_TxnRef"] = orderId;
-  vnpParams["vnp_OrderInfo"] = orderInfo;
-  vnpParams["vnp_OrderType"] = "other";
-  vnpParams["vnp_Amount"] = amountVND;
-  vnpParams["vnp_ReturnUrl"] = RETURN_URL;
-  vnpParams["vnp_IpAddr"] = ipAddr;
-  vnpParams["vnp_CreateDate"] = createDate;
-
-  vnpParams = Object.keys(vnpParams)
-    .sort()
-    .reduce((acc, key) => {
-      acc[key] = vnpParams[key];
-      return acc;
+    vnpParams = Object.keys(vnpParams).sort().reduce((acc, key) => {
+        acc[key] = vnpParams[key];
+        return acc;
     }, {} as any);
 
-  let signData = querystring.stringify(vnpParams, { encode: true });
-  signData = signData.replace(/%20/g, "+");
+    let signData = querystring.stringify(vnpParams, { encode: true });
+    signData = signData.replace(/%20/g, "+");
 
-  const hmac = crypto.createHmac("sha512", HASH_SECRET);
-  const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-  vnpParams["vnp_SecureHash"] = signed;
+    const hmac = crypto.createHmac("sha512", HASH_SECRET);
+    const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+    vnpParams["vnp_SecureHash"] = signed;
 
-  const paymentUrl = VNP_URL + "?" + querystring.stringify(vnpParams, {encode: true});
+    let paymentUrl = VNP_URL + "?" + querystring.stringify(vnpParams, { encode: true });
+    paymentUrl = paymentUrl.replace(/%20/g, "+");
 
-  functions.logger.info("URL thanh toán được tạo:", paymentUrl);
-
-  return {paymentUrl: paymentUrl};
+    functions.logger.info("URL thanh toán được tạo:", paymentUrl);
+    return { paymentUrl: paymentUrl };
 });
 
 
@@ -485,31 +489,42 @@ async function verifyAppleReceipt(receiptData: string, sharedSecret: string): Pr
     }
 }
 
-async function upgradeUserAccount(userId: string, productId: string, expiryDate: Date, transactionId: string, platform: 'ios' | 'android') {
-    const userRef = firestore.collection("users").doc(userId);
-    const amountPaid = PRODUCT_PRICES[productId] ?? 0;
-    const transactionRef = userRef.collection("transactions").doc(transactionId);
-    const batch = firestore.batch();
+async function upgradeUserAccount(
+  userId: string,
+  productId: string,
+  expiryDate: Date,
+  transactionId: string,
+  platform: 'ios' | 'android' | 'vnpay'
+) {
+  const userRef = firestore.collection("users").doc(userId);
+  const amountPaid = PRODUCT_PRICES[productId] ?? 0;
+  const transactionRef = userRef.collection("transactions").doc(transactionId);
+  const batch = firestore.batch();
 
-    batch.set(userRef, {
-        subscriptionTier: "elite",
-        subscriptionExpiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-        totalPaidAmount: admin.firestore.FieldValue.increment(amountPaid),
-    }, { merge: true });
+  batch.set(userRef, {
+      subscriptionTier: "elite",
+      subscriptionExpiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
+      // Cập nhật: Xử lý cả trường hợp VNPAY
+      totalPaidAmount: platform === 'vnpay'
+        ? admin.firestore.FieldValue.increment(amountPaid * USD_TO_VND_RATE) // Nếu là VNPAY thì cộng tiền VND
+        : admin.firestore.FieldValue.increment(amountPaid), // Nếu là IAP thì cộng tiền USD
+  }, { merge: true });
 
-    batch.set(transactionRef, {
-        amount: amountPaid,
-        productId: productId,
-        paymentMethod: `in_app_purchase_${platform}`,
-        transactionDate: admin.firestore.FieldValue.serverTimestamp(),
-    });
+  batch.set(transactionRef, {
+      amount: amountPaid,
+      productId: productId,
+      // Sửa đổi ở đây: Tạo paymentMethod linh hoạt hơn
+      paymentMethod: platform === 'vnpay' ? 'vnpay' : `in_app_purchase_${platform}`,
+      transactionDate: admin.firestore.FieldValue.serverTimestamp(),
+  });
 
-    if (platform === 'ios') {
-        const processedTxRef = firestore.collection("processedTransactions").doc(transactionId);
-        batch.set(processedTxRef, { userId, processedAt: admin.firestore.FieldValue.serverTimestamp() });
-    }
+  // Chỉ ghi vào processedTransactions cho IAP, VNPAY có bảng riêng
+  if (platform === 'ios') {
+      const processedTxRef = firestore.collection("processedTransactions").doc(transactionId);
+      batch.set(processedTxRef, { userId, processedAt: admin.firestore.FieldValue.serverTimestamp() });
+  }
 
-    await batch.commit();
+  await batch.commit();
 }
 
 
@@ -599,6 +614,83 @@ export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}
     if (payload) {
         payload.signalId = event.params.signalId;
         await triggerNotifications(payload);
+    }
+});
+
+// =================================================================
+// === FUNCTION LẮNG NGHE IPN TỪ VNPAY ===
+// =================================================================
+export const vnpayIpnListener = onRequest({ region: "asia-southeast1" }, async (req: Request, res: Response) => {
+    const vnpParams = { ...req.query, ...req.body };
+    const secureHash = vnpParams['vnp_SecureHash'];
+
+    if(vnpParams['vnp_SecureHash']){ delete vnpParams['vnp_SecureHash']; }
+    if(vnpParams['vnp_SecureHashType']){ delete vnpParams['vnp_SecureHashType']; }
+
+    const sortedParams = Object.keys(vnpParams).sort().reduce(
+        (acc: { [key: string]: any }, key: string) => { acc[key] = vnpParams[key]; return acc; }, {}
+    );
+
+    functions.logger.info("VNPAY IPN Received:", { params: sortedParams, secureHash: secureHash, ip: req.ip });
+
+    let signData = querystring.stringify(sortedParams, { encode: true });
+    signData = signData.replace(/%20/g, "+");
+
+    const hmac = crypto.createHmac("sha512", HASH_SECRET);
+    const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+
+    if (secureHash === signed) {
+        const orderId = sortedParams['vnp_TxnRef'] as string;
+        const rspCode = sortedParams['vnp_ResponseCode'] as string;
+        const amountFromIPN = Number(sortedParams['vnp_Amount']);
+
+        try {
+            const orderRef = firestore.collection("vnpayOrders").doc(orderId);
+            const orderDoc = await orderRef.get();
+
+            if (!orderDoc.exists) {
+                functions.logger.error(`IPN Error: Không tìm thấy đơn hàng với ID: ${orderId}`);
+                res.status(200).json({ "RspCode": "01", "Message": "Order not found" });
+                return;
+            }
+            const orderData = orderDoc.data();
+            if (orderData?.amountVND !== amountFromIPN) {
+                functions.logger.error(`IPN Error: Sai số tiền. Expected: ${orderData?.amountVND}, Received: ${amountFromIPN}`);
+                res.status(200).json({ "RspCode": "04", "Message": "Invalid amount" });
+                return;
+            }
+            const transactionNo = sortedParams['vnp_TransactionNo'] as string;
+            if (rspCode === '00') {
+                const processedTxRef = firestore.collection("processedVnpayTransactions").doc(transactionNo);
+                const txDoc = await processedTxRef.get();
+
+                if (txDoc.exists) {
+                    res.status(200).json({ "RspCode": "02", "Message": "Order already confirmed" });
+                } else {
+                    const { userId, productId } = orderData;
+                    let monthsToAdd = 0;
+                    if (productId.includes('1_month')) monthsToAdd = 1;
+                    if (productId.includes('12_months')) monthsToAdd = 12;
+
+                    const now = new Date();
+                    const expiryDate = new Date(now.setMonth(now.getMonth() + monthsToAdd));
+
+                    await upgradeUserAccount(userId, productId, expiryDate, transactionNo, 'vnpay');
+                    await processedTxRef.set({ userId, orderId, amount: amountFromIPN / 100, processedAt: admin.firestore.FieldValue.serverTimestamp() });
+                    await orderRef.update({ status: 'completed', transactionNo: transactionNo });
+
+                    res.status(200).json({ "RspCode": "00", "Message": "Confirm Success" });
+                }
+            } else {
+                await orderRef.update({ status: 'failed', errorCode: rspCode });
+                res.status(200).json({ "RspCode": "00", "Message": "Confirm Success" });
+            }
+        } catch (error) {
+            functions.logger.error("IPN Error: Lỗi xử lý nghiệp vụ:", error);
+            res.status(200).json({ "RspCode": "99", "Message": "Unknown error" });
+        }
+    } else {
+        res.status(200).json({ "RspCode": "97", "Message": "Invalid Signature" });
     }
 });
 

@@ -1,3 +1,5 @@
+// bank_transfer_screen_web.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_success_screen.dart';
@@ -7,11 +9,13 @@ import 'package:minvest_forex_app/l10n/app_localizations.dart';
 class BankTransferScreen extends StatefulWidget {
   final double amountUSD;
   final String orderInfo;
+  final String productId;
 
   const BankTransferScreen({
     super.key,
     required this.amountUSD,
     required this.orderInfo,
+    required this.productId,
   });
 
   @override
@@ -49,21 +53,22 @@ class _BankTransferScreenState extends State<BankTransferScreen> {
       FirebaseFunctions functions = FirebaseFunctions.instanceFor(region: 'asia-southeast1');
       final HttpsCallable callable = functions.httpsCallable('createVnpayOrder');
 
-      // === FIX: Gửi lại đúng tham số 'amount' như code cũ ===
       final HttpsCallableResult result = await callable.call({
         'amount': widget.amountUSD,
         'orderInfo': widget.orderInfo,
+        'productId': widget.productId,
       });
 
       final paymentUrl = result.data['paymentUrl'];
 
       if (paymentUrl != null) {
         final Uri uri = Uri.parse(paymentUrl);
-        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+
+        if (!await launchUrl(uri, webOnlyWindowName: '_blank')) {
           throw Exception(l10n.couldNotLaunch(paymentUrl));
         }
+
         if (mounted) {
-          // Thoát khỏi màn hình loading sau khi đã mở link thành công
           Navigator.of(context).pop();
         }
       } else {

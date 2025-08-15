@@ -1,3 +1,5 @@
+// package_screen_web.dart (ĐÃ SỬA LỖI HOÀN CHỈNH)
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
@@ -101,7 +103,12 @@ class _PackageScreenState extends State<PackageScreen> {
     return _PackageCard(
       tier: l10n.tierElite, duration: l10n.duration1Month, price: '\$78',
       features: [l10n.featureReceiveAllSignals, l10n.featureAnalyzeReason, l10n.featureHighPrecisionAI],
-      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BankTransferScreen(amountUSD: 78, orderInfo: l10n.orderInfo1Month))),
+      // <<< SỬA ĐỔI QUAN TRỌNG NẰM Ở ĐÂY >>>
+      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BankTransferScreen(
+        amountUSD: 78,
+        orderInfo: l10n.orderInfo1Month,
+        productId: 'elite_1_month_vnpay', // Thêm dòng này
+      ))),
     );
   }
 
@@ -109,11 +116,17 @@ class _PackageScreenState extends State<PackageScreen> {
     return _PackageCard(
       tier: l10n.tierElite, duration: l10n.duration12Months, price: '\$460',
       features: [l10n.featureReceiveAllSignals, l10n.featureAnalyzeReason, l10n.featureHighPrecisionAI],
-      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BankTransferScreen(amountUSD: 460, orderInfo: l10n.orderInfo12Months))),
+      // <<< SỬA ĐỔI QUAN TRỌNG NẰM Ở ĐÂY >>>
+      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => BankTransferScreen(
+        amountUSD: 460,
+        orderInfo: l10n.orderInfo12Months,
+        productId: 'elite_12_months_vnpay', // Thêm dòng này
+      ))),
     );
   }
 }
 
+// _PackageCard và _buildActionButton giữ nguyên, không cần thay đổi
 class _PackageCard extends StatelessWidget {
   final String tier;
   final String duration;
