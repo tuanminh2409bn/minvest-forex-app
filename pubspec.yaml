@@ -1,7 +1,7 @@
 name: minvest_forex_app
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+3
+version: 1.0.0+4
 
 environment:
   sdk: '>=3.2.6 <4.0.0'
@@ -12,34 +12,43 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  firebase_core: ^3.1.1
-  firebase_auth: ^5.1.1
-  cloud_firestore: ^5.0.2
-  firebase_storage: ^12.1.1
-  firebase_messaging: ^15.0.2
-  cloud_functions: ^5.0.2
-  google_sign_in: ^6.2.1
-  flutter_facebook_auth: ^7.1.0
-  sign_in_with_apple: ^6.1.1
-  flutter_bloc: ^8.1.6
+  # Firebase Ecosystem
+  firebase_core:
+  firebase_auth:
+  cloud_firestore:
+  firebase_storage:
+  firebase_messaging:
+  cloud_functions:
+
+  # Authentication
+  google_sign_in:
+  flutter_facebook_auth:
+  sign_in_with_apple:
+
+  # State Management & Core Utilities
+  flutter_bloc:
   equatable: ^2.0.5
-  provider: ^6.1.2
-  shared_preferences: ^2.2.3
-  intl: ^0.20.0
+  provider:
+  shared_preferences:
+  intl:
+
+  # Other packages
   cupertino_icons: ^1.0.8
-  url_launcher: ^6.3.0
-  image_picker: ^1.1.2
-  webview_flutter: ^4.8.0
-  in_app_purchase: ^3.1.13
-  flutter_local_notifications: ^17.2.1
-  device_info_plus: ^10.1.0
-  crypto: ^3.0.3
-  uuid: ^4.4.0
+  url_launcher:
+  image_picker:
+  webview_flutter:
+  in_app_purchase:
+  flutter_local_notifications:
+  device_info_plus:
+  crypto:
+  uuid:
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+
+
+  flutter_lints:
 
 flutter:
   generate: true

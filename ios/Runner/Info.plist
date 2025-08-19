@@ -23,23 +23,28 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>fb[APP_ID]</string>
-			</array>
-		</dict>
-	</array>
-	<key>CFBundleVersion</key>
+    <array>
+        <!-- Google Sign-In -->
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68</string>
+            </array>
+        </dict>
+
+        <!-- Facebook Login -->
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>fb2152057538646527</string>
+            </array>
+        </dict>
+    </array>
+    <key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>FacebookAppID</key>
 	<string>2152057538646527</string>
