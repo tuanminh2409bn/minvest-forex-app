@@ -69,14 +69,42 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initializeServices() async {
+    // Chỉ thực hiện thiết lập này cho mobile, không phải web
     if (!kIsWeb) {
+      // 1. Thêm cấu hình cho iOS (và macOS)
+      // DarwinInitializationSettings được dùng cho cả iOS và macOS.
+      const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+        requestAlertPermission: true, // Yêu cầu quyền hiển thị thông báo
+        requestBadgePermission: true, // Yêu cầu quyền hiển thị số trên icon
+        requestSoundPermission: true, // Yêu cầu quyền phát âm thanh
+      );
+
+      // Cấu hình cho Android vẫn giữ nguyên
       const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-      const InitializationSettings initializationSettings =
-      InitializationSettings(android: initializationSettingsAndroid);
-      await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+      // 2. Kết hợp các cấu hình cho các nền tảng khác nhau
+      const InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS, // Thêm cấu hình cho iOS
+      );
+
+      // 3. Khởi tạo plugin với đầy đủ cấu hình và thêm callback khi người dùng nhấn vào thông báo
+      await flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        // Callback này sẽ được gọi khi người dùng nhấn vào một thông báo cục bộ
+        onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) async {
+          if (notificationResponse.payload != null) {
+            print('Local notification tapped with payload: ${notificationResponse.payload}');
+            // Tái sử dụng hàm điều hướng bạn đã viết
+            _handleNotificationNavigation({'signalId': notificationResponse.payload});
+          }
+        },
+      );
     }
 
+    // Thiết lập các listener của Firebase Messaging vẫn được gọi sau khi khởi tạo xong
     await _setupNotificationListeners();
   }
 
