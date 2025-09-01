@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68.apps.googleusercontent.com</string>
+	<string>245218403052-qpg9dde269i19ga6cks0cj6nk8hc2n2r.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68</string>
+	<string>com.googleusercontent.apps.245218403052-qpg9dde269i19ga6cks0cj6nk8hc2n2r</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>245218403052-4j43e7qgrldk4n8jf8shovk4ovr2sh1t.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.minvestForexApp</string>
+	<string>com.minvest.aisignals</string>
 	<key>PROJECT_ID</key>
 	<string>minvestforexapp-33dff</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:245218403052:ios:c5d314db21e0ee24b03bc9</string>
+	<string>1:245218403052:ios:c899d3eafc21146cb03bc9</string>
 </dict>
 </plist>

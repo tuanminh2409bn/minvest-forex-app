@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>MInvest</string>
+	<string>Minvest</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,35 +23,32 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
-    <array>
-        <!-- Google Sign-In -->
-        <dict>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>com.googleusercontent.apps.245218403052-2q6m9neo6l34jfnsferv5ui3h3r4fk68</string>
-            </array>
-        </dict>
-
-        <!-- Facebook Login -->
-        <dict>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>fb2152057538646527</string>
-            </array>
-        </dict>
-    </array>
-    <key>CFBundleVersion</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.245218403052-qpg9dde269i19ga6cks0cj6nk8hc2n2r</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb2152057538646527</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>FacebookAppID</key>
 	<string>2152057538646527</string>
 	<key>FacebookClientToken</key>
 	<string>205ee108a6b9bb6e944659dd1814e20b</string>
 	<key>FacebookDisplayName</key>
-	<string>MInvest</string>
+	<string>Minvest</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>fbapi</string>
@@ -65,6 +62,10 @@
 	<string>Chúng tôi cần truy cập thư viện ảnh để bạn có thể chọn ảnh chụp màn hình tài khoản để xác thực.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
