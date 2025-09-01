@@ -1,3 +1,4 @@
+import 'dart:io' show Platform; // Thêm import để kiểm tra nền tảng (iOS/Android)
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -17,6 +18,14 @@ class SessionService {
         const String vapidKey = "BF1kL9v7A-1bOSz642aCWoZEKvFpjKvkMQuTPd_GXBLxNakYt6apNf9Aa25hGk1QJP0VFrCVRx4B9mO8h5gBUA8";
         fcmToken = await _firebaseMessaging.getToken(vapidKey: vapidKey);
       } else {
+        // **Đây là phần thay đổi quan trọng**
+        // CHỈ TRÊN iOS: Yêu cầu APNS token trước để đảm bảo nó đã sẵn sàng.
+        if (Platform.isIOS) {
+          String? apnsToken = await _firebaseMessaging.getAPNSToken();
+          print('SessionService: APNS Token cho iOS là: $apnsToken');
+        }
+
+        // Sau khi đã yêu cầu APNS, việc lấy FCM token sẽ an toàn hơn.
         fcmToken = await _firebaseMessaging.getToken();
       }
 
