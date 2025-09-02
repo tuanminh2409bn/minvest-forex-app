@@ -47,13 +47,23 @@ class AuthService {
         final userDoc = await transaction.get(userDocRef);
 
         if (!userDoc.exists) {
-          final email = googleEmail ?? appleEmail ?? facebookUserData?['email'] ?? user.email;
+          // ▼▼▼ LOGIC LẤY EMAIL ĐÃ ĐƯỢC LÀM CHO LINH HOẠT HƠN ▼▼▼
+          String? email = googleEmail ?? appleEmail ?? facebookUserData?['email'] ?? user.email;
           final displayName = appleFullName ?? facebookUserData?['name'] ?? user.displayName;
           final photoURL = facebookUserData?['picture']?['data']?['url'] ?? user.photoURL;
 
+          // Nếu email vẫn là null, kiểm tra xem có phải do Apple không cung cấp không
+          if (email == null && user.providerData.any((p) => p.providerId == 'apple.com')) {
+            print("AuthService: Email từ Apple là null (có thể do máy ảo). Tạo email tạm thời.");
+            // Tạo một email tạm thời để vượt qua bước này
+            email = '${user.uid}@appleid.placeholder.com';
+          }
+
+          // Bây giờ mới kiểm tra lần cuối, nếu vẫn null thì mới là lỗi thực sự
           if (email == null) {
             throw Exception("Không thể lấy được địa chỉ email. Vui lòng thử lại.");
           }
+          // ▲▲▲ KẾT THÚC THAY ĐỔI ▲▲▲
 
           transaction.set(userDocRef, {
             'uid': user.uid,
@@ -67,51 +77,33 @@ class AuthService {
           });
         } else {
           if (userDoc.data()?['isSuspended'] == true) {
-            // Sửa lỗi #5: Chỉ throw, không signOut ở đây
             throw SuspendedAccountException(userDoc.data()?['suspensionReason'] ?? 'Vui lòng liên hệ quản trị viên.');
           }
         }
       });
-    } on SuspendedAccountException {
-      // BLoC sẽ bắt lỗi này, không cần signOut ở đây nữa
-      rethrow;
     } catch (e) {
-      print("Lỗi nghiêm trọng trong transaction tạo user: $e");
-      await signOut();
-      throw Exception('Đã có lỗi xảy ra trong quá trình thiết lập tài khoản của bạn.');
+      print("Lỗi trong transaction tạo user: $e");
+      rethrow;
     }
 
-    // Luôn cập nhật session sau khi đã đảm bảo hồ sơ tồn tại và hợp lệ
     await _updateUserSession();
-
     return user;
   }
 
-  // ▼▼▼ HÀM ĐÃ ĐƯỢC SỬA LỖI ▼▼▼
   Future<void> _updateUserSession() async {
-    // Không cập nhật session trên web từ client
     if (kIsWeb) return;
-
     try {
       String? fcmToken;
-
-      // Thêm lại logic kiểm tra APNS Token cho iOS
       if (Platform.isIOS) {
         final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
         if (apnsToken == null) {
           print('AuthService: Không thể lấy APNS token (máy ảo), bỏ qua cập nhật session.');
-          return; // Thoát ra sớm để tránh lỗi
+          return;
         }
       }
-
-      // Chỉ lấy FCM token khi chắc chắn có APNS token (trên máy thật)
       fcmToken = await FirebaseMessaging.instance.getToken();
       final deviceId = await DeviceInfoService.getDeviceId();
-
-      if (fcmToken == null) {
-        print('AuthService: Không thể lấy được FCM token.');
-        return;
-      }
+      if (fcmToken == null) return;
 
       final callable = FirebaseFunctions.instanceFor(region: "asia-southeast1").httpsCallable('manageUserSession');
       await callable.call({'deviceId': deviceId, 'fcmToken': fcmToken});
@@ -121,8 +113,9 @@ class AuthService {
     }
   }
 
+  // --- Các hàm signInWith... giữ nguyên, chỉ cần đảm bảo chúng `rethrow` lỗi ---
+
   Future<User?> signInWithGoogle() async {
-    // ... code của bạn giữ nguyên ...
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return null;
@@ -136,13 +129,11 @@ class AuthService {
       return await _handleSuccessfulSignIn(userCredential, googleEmail: googleEmail);
     } catch (e) {
       print('Lỗi đăng nhập Google: $e');
-      if (e is SuspendedAccountException) rethrow;
-      return null;
+      rethrow;
     }
   }
 
   Future<User?> signInWithFacebook() async {
-    // ... code của bạn giữ nguyên ...
     try {
       UserCredential userCredential;
       Map<String, dynamic>? facebookUserData;
@@ -153,27 +144,22 @@ class AuthService {
           permissions: ['public_profile', 'email'],
         );
         if (result.status != LoginStatus.success) return null;
-        facebookUserData = await FacebookAuth.instance.getUserData(
-          fields: "name,email,picture.width(200)",
-        );
+        facebookUserData = await FacebookAuth.instance.getUserData(fields: "name,email,picture.width(200)");
         final OAuthCredential credential = FacebookAuthProvider.credential(result.accessToken!.tokenString);
         userCredential = await _firebaseAuth.signInWithCredential(credential);
       }
       return await _handleSuccessfulSignIn(userCredential, facebookUserData: facebookUserData);
     } catch (e) {
       print('Lỗi đăng nhập Facebook: $e');
-      if (e is SuspendedAccountException) rethrow;
-      return null;
+      rethrow;
     }
   }
 
   Future<User?> signInWithApple() async {
-    // ... code của bạn giữ nguyên ...
     try {
       UserCredential userCredential;
       String? appleEmail;
       String? appleFullName;
-
       if (kIsWeb) {
         userCredential = await _firebaseAuth.signInWithPopup(AppleAuthProvider());
       } else if (Platform.isIOS || Platform.isMacOS) {
@@ -199,8 +185,7 @@ class AuthService {
       return await _handleSuccessfulSignIn(userCredential, appleEmail: appleEmail, appleFullName: appleFullName);
     } catch (e) {
       print('Lỗi đăng nhập Apple: $e');
-      if (e is SuspendedAccountException) rethrow;
-      return null;
+      rethrow;
     }
   }
 
