@@ -11,6 +11,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
+import '../../notifications/providers/notification_provider.dart';
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -74,8 +76,19 @@ class ProfileScreen extends StatelessWidget {
       },
     );
 
-    if (confirmLogout == true && context.mounted) {
-      context.read<AuthBloc>().add(SignOutRequested());
+    Future<void> _handleLogout(BuildContext context) async {
+      // ... code dialog của bạn giữ nguyên ...
+
+      if (confirmLogout == true && context.mounted) {
+        // Lấy cả 2 provider từ context
+        final userProvider = context.read<UserProvider>();
+        final notificationProvider = context.read<NotificationProvider>();
+
+        // Gửi event đăng xuất KÈM THEO DANH SÁCH provider cần dọn dẹp
+        context.read<AuthBloc>().add(
+            SignOutRequested(providersToReset: [userProvider, notificationProvider])
+        );
+      }
     }
   }
 

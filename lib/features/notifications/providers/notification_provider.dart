@@ -17,39 +17,49 @@ class NotificationProvider with ChangeNotifier {
   List<NotificationModel> get notifications => _notifications;
   int get unreadCount => _unreadCount;
 
-  NotificationProvider() {
-    // Bắt đầu lắng nghe ngay khi provider được tạo
-    _listenToNotifications();
-  }
+  // 1. Xóa hàm khởi tạo cũ để provider không tự động lắng nghe nữa
+  // NotificationProvider() {
+  //   _listenToNotifications();
+  // }
 
-  void _listenToNotifications() {
-    // Hủy các listener cũ để tránh rò rỉ bộ nhớ
+  // 2. Đổi tên hàm private `_listenToNotifications` thành public `startListening`
+  //    AuthGate sẽ gọi hàm này khi đăng nhập thành công.
+  void startListening() {
+    // Hủy các listener cũ nếu có
     _notificationsSubscription?.cancel();
     _unreadCountSubscription?.cancel();
 
-    // Lắng nghe danh sách thông báo
+    // Logic lắng nghe gốc của bạn được giữ nguyên
     _notificationsSubscription = _notificationService.getNotifications().listen((notificationsList) {
       _notifications = notificationsList;
-      notifyListeners(); // Thông báo cho UI build lại
+      notifyListeners();
     });
 
-    // Lắng nghe số lượng thông báo chưa đọc
     _unreadCountSubscription = _notificationService.getUnreadNotificationCount().listen((count) {
       _unreadCount = count;
-      notifyListeners(); // Thông báo cho UI build lại (cập nhật dấu chấm đỏ)
+      notifyListeners();
     });
   }
 
-  // Hàm được gọi khi người dùng mở màn hình thông báo
-  Future<void> markAllNotificationsAsRead() async {
+  // 3. Tạo hàm mới để dừng lắng nghe và dọn dẹp
+  //    AuthBloc sẽ gọi hàm này trước khi đăng xuất
+  Future<void> stopListeningAndReset() async {
+    await _notificationsSubscription?.cancel();
+    await _unreadCountSubscription?.cancel();
+    _notificationsSubscription = null;
+    _unreadCountSubscription = null;
+    _notifications = [];
+    _unreadCount = 0;
+    notifyListeners();
+  }
+
+  // Hàm gốc của bạn được đổi tên cho nhất quán
+  Future<void> markAllAsRead() async {
     await _notificationService.markAllAsRead();
-    // Sau khi đánh dấu đã đọc, unreadCount sẽ tự động cập nhật về 0
-    // nhờ vào listener ở trên, không cần gọi notifyListeners() ở đây.
   }
 
   @override
   void dispose() {
-    // Rất quan trọng: Hủy tất cả các listener khi provider bị hủy
     _notificationsSubscription?.cancel();
     _unreadCountSubscription?.cancel();
     super.dispose();

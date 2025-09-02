@@ -1,7 +1,8 @@
 // lib/features/auth/bloc/auth_state.dart
 part of 'auth_bloc.dart';
 
-enum AuthStatus { unknown, authenticated, unauthenticated }
+// ▼▼▼ THÊM TRẠNG THÁI MỚI ▼▼▼
+enum AuthStatus { unknown, authenticated, unauthenticated, loggingOut }
 
 class AuthState extends Equatable {
   final AuthStatus status;
@@ -19,9 +20,11 @@ class AuthState extends Equatable {
   const AuthState.authenticated(User user)
       : this._(status: AuthStatus.authenticated, user: user);
 
-  // ▼▼▼ SỬA LẠI CONSTRUCTOR NÀY ▼▼▼
   const AuthState.unauthenticated({String? errorMessage})
       : this._(status: AuthStatus.unauthenticated, errorMessage: errorMessage);
+
+  // ▼▼▼ THÊM CONSTRUCTOR CHO TRẠNG THÁI MỚI ▼▼▼
+  const AuthState.loggingOut() : this._(status: AuthStatus.loggingOut);
 
   @override
   List<Object?> get props => [status, user, errorMessage];

@@ -15,9 +15,11 @@ class AuthStateChanged extends AuthEvent {
   List<Object?> get props => [user];
 }
 
-class SignOutRequested extends AuthEvent {}
+class SignOutRequested extends AuthEvent {
+  final List<ChangeNotifier> providersToReset;
+  const SignOutRequested({this.providersToReset = const []});
+}
 
-// ▼▼▼ Thêm các Event cho từng hành động đăng nhập ▼▼▼
 class SignInWithGoogleRequested extends AuthEvent {}
 class SignInWithFacebookRequested extends AuthEvent {}
 class SignInWithAppleRequested extends AuthEvent {}

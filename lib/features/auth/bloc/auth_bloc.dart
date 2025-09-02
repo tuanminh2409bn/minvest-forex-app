@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
-
-// Import exception của bạn để có thể bắt nó một cách cụ thể
+import 'package:flutter/material.dart'; // Import material để dùng ChangeNotifier
 import 'package:minvest_forex_app/core/exceptions/auth_exceptions.dart';
+import 'package:minvest_forex_app/core/providers/user_provider.dart'; // Import UserProvider
+import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
+import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
+
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -29,28 +31,48 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<SignInWithAppleRequested>(_onSignInWithAppleRequested);
   }
 
+  // ▼▼▼ SỬA LẠI HÀM NÀY ▼▼▼
+  Future<void> _onSignOutRequested(SignOutRequested event, Emitter<AuthState> emit) async {
+    print("AuthBloc: Yêu cầu đăng xuất. Bắt đầu dọn dẹp provider...");
+
+    // ▼▼▼ LOGIC DỌN DẸP TỔNG QUÁT HƠN ▼▼▼
+    for (var provider in event.providersToReset) {
+      if (provider is UserProvider) {
+        await provider.stopListeningAndReset();
+      }
+      // Thêm trường hợp cho NotificationProvider
+      if (provider is NotificationProvider) {
+        await provider.stopListeningAndReset();
+      }
+    }
+    // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
+
+    print("AuthBloc: Dọn dẹp provider hoàn tất.");
+    emit(const AuthState.loggingOut());
+    print("AuthBloc: Đã phát ra trạng thái loggingOut.");
+    await Future.delayed(const Duration(milliseconds: 50));
+    print("AuthBloc: Thực hiện đăng xuất khỏi Firebase.");
+    await _authService.signOut();
+  }
+  // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
+
   void _onAuthStateChanged(AuthStateChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
       emit(AuthState.authenticated(event.user!));
     } else {
-      // Chỉ emit unauthenticated nếu state hiện tại không chứa lỗi.
-      // Điều này ngăn việc ghi đè thông báo lỗi quan trọng.
       if (state.errorMessage == null) {
         emit(const AuthState.unauthenticated());
       }
     }
   }
 
-  // Helper function để xử lý các hành động đăng nhập
+  // ... các hàm signIn... giữ nguyên ...
   Future<void> _handleSignIn(Future<void> Function() signInMethod, Emitter<AuthState> emit) async {
     try {
       await signInMethod();
-      // Thành công thì không cần emit, authStateChanges sẽ lo.
     } on SuspendedAccountException catch (e) {
-      // Bắt lỗi tài khoản bị treo
       emit(AuthState.unauthenticated(errorMessage: e.reason));
     } catch (e) {
-      // Bắt tất cả các lỗi khác và hiển thị thông báo của chúng
       emit(AuthState.unauthenticated(errorMessage: e.toString()));
     }
   }
@@ -68,10 +90,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onSignInWithAppleRequested(
       SignInWithAppleRequested event, Emitter<AuthState> emit) async {
     await _handleSignIn(_authService.signInWithApple, emit);
-  }
-
-  void _onSignOutRequested(SignOutRequested event, Emitter<AuthState> emit) {
-    _authService.signOut();
   }
 
   @override
