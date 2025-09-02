@@ -1,42 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // Import Bloc
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
-import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
+import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart'; // Import AuthBloc
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
+  // Helper function để hiển thị dialog lỗi
+  void _showErrorDialog(BuildContext context, String message) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.error),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.5, 1.0],
+    // ▼▼▼ Bọc toàn bộ Scaffold trong BlocListener để lắng nghe và xử lý lỗi ▼▼▼
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state.status == AuthStatus.unauthenticated && state.errorMessage != null) {
+          _showErrorDialog(context, state.errorMessage!);
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.5, 1.0],
+            ),
           ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth > 800) {
-              return _buildWebLayout(context, authService, languageProvider);
-            } else {
-              return _buildMobileLayout(context, authService, languageProvider);
-            }
-          },
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 800) {
+                return _buildWebLayout(context, languageProvider);
+              } else {
+                return _buildMobileLayout(context, languageProvider);
+              }
+            },
+          ),
         ),
       ),
     );
   }
 
-  // === WIDGET ĐÃ ĐƯỢC SỬA LỖI BỐ CỤC ===
-  Widget _buildWebLayout(BuildContext context, AuthService authService, LanguageProvider languageProvider) {
+  Widget _buildWebLayout(BuildContext context, LanguageProvider languageProvider) {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 64.0, vertical: 32.0),
@@ -52,10 +77,7 @@ class WelcomeScreen extends StatelessWidget {
                 Text(l10n.welcomeTo, style: const TextStyle(fontSize: 24, color: Colors.white)),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
-                  child: Image.asset(
-                    'assets/images/minvest_logo.png',
-                    height: 180,
-                  ),
+                  child: Image.asset('assets/images/minvest_logo.png', height: 180),
                 ),
                 Text(
                   l10n.appSlogan,
@@ -68,13 +90,11 @@ class WelcomeScreen extends StatelessWidget {
           const VerticalDivider(color: Colors.white24, thickness: 1),
           const SizedBox(width: 64),
 
-          // --- CỘT BÊN PHẢI (ĐÃ SỬA LẠI BỐ CỤC) ---
+          // --- CỘT BÊN PHẢI ---
           Expanded(
             flex: 1,
-            // 1. Sử dụng Stack để đặt nút ngôn ngữ ở góc mà không ảnh hưởng bố cục chính
             child: Stack(
               children: [
-                // Nút chọn ngôn ngữ
                 Align(
                   alignment: Alignment.topRight,
                   child: PopupMenuButton<Locale>(
@@ -91,33 +111,30 @@ class WelcomeScreen extends StatelessWidget {
                             provider.locale?.languageCode == 'vi'
                                 ? 'assets/images/vn_flag.png'
                                 : 'assets/images/us_flag.png',
-                            height: 24,
-                            width: 36,
-                            fit: BoxFit.cover,
+                            height: 24, width: 36, fit: BoxFit.cover,
                           ),
                         );
                       },
                     ),
                   ),
                 ),
-
-                // 2. Toàn bộ nội dung đăng nhập được giữ trong một Column căn giữa
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(l10n.signIn, textAlign: TextAlign.center, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
                     const SizedBox(height: 32),
+                    // ▼▼▼ Sửa lại onPressed để gửi Event ▼▼▼
                     _SocialSignInButton(
                       icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
                       text: l10n.continueByGoogle,
-                      onPressed: () => authService.signInWithGoogle(),
+                      onPressed: () => context.read<AuthBloc>().add(SignInWithGoogleRequested()),
                     ),
                     const SizedBox(height: 16),
                     _SocialSignInButton(
                       icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
                       text: l10n.continueByFacebook,
-                      onPressed: () => authService.signInWithFacebook(),
+                      onPressed: () => context.read<AuthBloc>().add(SignInWithFacebookRequested()),
                     ),
                   ],
                 ),
@@ -129,7 +146,7 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMobileLayout(BuildContext context, AuthService authService, LanguageProvider languageProvider) {
+  Widget _buildMobileLayout(BuildContext context, LanguageProvider languageProvider) {
     final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
@@ -155,9 +172,7 @@ class WelcomeScreen extends StatelessWidget {
                           provider.locale?.languageCode == 'vi'
                               ? 'assets/images/vn_flag.png'
                               : 'assets/images/us_flag.png',
-                          height: 24,
-                          width: 36,
-                          fit: BoxFit.cover,
+                          height: 24, width: 36, fit: BoxFit.cover,
                         ),
                       );
                     },
@@ -175,16 +190,17 @@ class WelcomeScreen extends StatelessWidget {
             const SizedBox(height: 50),
             Text(l10n.signIn, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 24),
+            // ▼▼▼ Sửa lại onPressed để gửi Event ▼▼▼
             _SocialSignInButton(
               icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
               text: l10n.continueByGoogle,
-              onPressed: () => authService.signInWithGoogle(),
+              onPressed: () => context.read<AuthBloc>().add(SignInWithGoogleRequested()),
             ),
             const SizedBox(height: 16),
             _SocialSignInButton(
               icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
               text: l10n.continueByFacebook,
-              onPressed: () => authService.signInWithFacebook(),
+              onPressed: () => context.read<AuthBloc>().add(SignInWithFacebookRequested()),
             ),
             const Spacer(flex: 2),
           ],
@@ -194,6 +210,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
+// Widget _SocialSignInButton không thay đổi
 class _SocialSignInButton extends StatelessWidget {
   final Widget icon;
   final String text;
@@ -220,12 +237,7 @@ class _SocialSignInButton extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [
-                Color(0xFF0C0938),
-                Color(0xFF141A4C),
-                Color(0xFF1D2B62),
-              ],
-              stops: [0.0, 0.5, 1.0],
+              colors: [Color(0xFF0C0938), Color(0xFF141A4C), Color(0xFF1D2B62)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),

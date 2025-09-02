@@ -1,3 +1,5 @@
+// profile_screen_web.dart
+
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/admin/screens/admin_panel_screen.dart';
 import 'package:provider/provider.dart';

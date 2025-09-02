@@ -1,3 +1,5 @@
+// lib/app/main_screen_mobile.dart
+
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/auth/screens/profile_screen.dart';
 import 'package:minvest_forex_app/features/chart/screens/chart_screen.dart';

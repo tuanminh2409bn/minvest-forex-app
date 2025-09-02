@@ -1,110 +1,116 @@
+// lib/features/auth/screens/welcome/welcome_screen_mobile.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
-import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
+import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
+  void _showErrorDialog(BuildContext context, String message) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.error), // <<< SỬA Ở ĐÂY
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
     final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.5, 1.0],
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state.status == AuthStatus.unauthenticated && state.errorMessage != null) {
+          _showErrorDialog(context, state.errorMessage!);
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.5, 1.0],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 30),
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: PopupMenuButton<Locale>(
-                      onSelected: (Locale locale) => languageProvider.setLocale(locale),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(value: Locale('en'), child: Text('English')),
-                        const PopupMenuItem(value: Locale('vi'), child: Text('Tiếng Việt')),
-                      ],
-                      child: Consumer<LanguageProvider>(
-                        builder: (context, provider, child) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(4.0),
-                            child: Image.asset(
-                              provider.locale?.languageCode == 'vi'
-                                  ? 'assets/images/vn_flag.png'
-                                  : 'assets/images/us_flag.png',
-                              height: 24,
-                              width: 36,
-                              fit: BoxFit.cover,
-                            ),
-                          );
-                        },
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 30),
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: PopupMenuButton<Locale>(
+                        onSelected: (Locale locale) => languageProvider.setLocale(locale),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(value: Locale('en'), child: Text('English')),
+                          const PopupMenuItem(value: Locale('vi'), child: Text('Tiếng Việt')),
+                        ],
+                        child: Consumer<LanguageProvider>(
+                          builder: (context, provider, child) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(4.0),
+                              child: Image.asset(
+                                provider.locale?.languageCode == 'vi'
+                                    ? 'assets/images/vn_flag.png'
+                                    : 'assets/images/us_flag.png',
+                                height: 24,
+                                width: 36,
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const Spacer(),
-                // 3. Thay thế các chuỗi tĩnh bằng biến l10n
-                Text(
-                  l10n.welcomeTo,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 18, color: Colors.white),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Image.asset(
-                    'assets/images/minvest_logo.png',
-                    height: 150,
+                  const Spacer(),
+                  Text(l10n.welcomeTo, textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, color: Colors.white)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Image.asset('assets/images/minvest_logo.png', height: 150),
                   ),
-                ),
-                Text(
-                  l10n.appSlogan,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, color: Colors.white, height: 1.5),
-                ),
-                const SizedBox(height: 50),
-                Text(
-                  l10n.signIn,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 24),
-
-                _SocialSignInButton(
-                  icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
-                  text: l10n.continueByGoogle,
-                  onPressed: () => authService.signInWithGoogle(),
-                ),
-                const SizedBox(height: 16),
-
-                _SocialSignInButton(
-                  icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
-                  text: l10n.continueByFacebook,
-                  onPressed: () => authService.signInWithFacebook(),
-                ),
-
-                const SizedBox(height: 16),
-                _SocialSignInButton(
-                  icon: const Icon(Icons.apple, color: Colors.white, size: 24),
-                  text: l10n.continueByApple,
-                  onPressed: () => authService.signInWithApple(),
-                ),
-                const Spacer(flex: 2),
-              ],
+                  Text(l10n.appSlogan, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, color: Colors.white, height: 1.5)),
+                  const SizedBox(height: 50),
+                  Text(l10n.signIn, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const SizedBox(height: 24),
+                  _SocialSignInButton(
+                    icon: Image.asset('assets/images/google_logo.png', height: 24, width: 24),
+                    text: l10n.continueByGoogle,
+                    onPressed: () => context.read<AuthBloc>().add(SignInWithGoogleRequested()),
+                  ),
+                  const SizedBox(height: 16),
+                  _SocialSignInButton(
+                    icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
+                    text: l10n.continueByFacebook,
+                    onPressed: () => context.read<AuthBloc>().add(SignInWithFacebookRequested()),
+                  ),
+                  const SizedBox(height: 16),
+                  _SocialSignInButton(
+                    icon: const Icon(Icons.apple, color: Colors.white, size: 24),
+                    text: l10n.continueByApple,
+                    onPressed: () => context.read<AuthBloc>().add(SignInWithAppleRequested()),
+                  ),
+                  const Spacer(flex: 2),
+                ],
+              ),
             ),
           ),
         ),
@@ -139,12 +145,7 @@ class _SocialSignInButton extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [
-                Color(0xFF0C0938),
-                Color(0xFF141A4C),
-                Color(0xFF1D2B62),
-              ],
-              stops: [0.0, 0.5, 1.0],
+              colors: [Color(0xFF0C0938), Color(0xFF141A4C), Color(0xFF1D2B62)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),

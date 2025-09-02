@@ -1,9 +1,16 @@
 // lib/core/providers/user_provider.dart
-
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+enum UserDataStatus {
+  initial,
+  loading,
+  fromCache,
+  fromServer,
+  error
+}
 
 class UserProvider with ChangeNotifier {
   String? _userTier;
@@ -12,6 +19,7 @@ class UserProvider with ChangeNotifier {
   String? _role;
   bool _isSuspended = false;
   String? _suspensionReason;
+  UserDataStatus _status = UserDataStatus.initial;
 
   String? get userTier => _userTier;
   String? get verificationStatus => _verificationStatus;
@@ -19,33 +27,22 @@ class UserProvider with ChangeNotifier {
   String? get role => _role;
   bool get isSuspended => _isSuspended;
   String? get suspensionReason => _suspensionReason;
+  UserDataStatus get status => _status;
 
-  StreamSubscription<User?>? _authSubscription;
   StreamSubscription<DocumentSnapshot>? _userSubscription;
 
-  UserProvider() {
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
-  }
+  void listenToUserData(User firebaseUser) {
+    _userSubscription?.cancel();
+    _status = UserDataStatus.loading;
+    // Không cần notifyListeners() ngay đây, để tránh rebuild không cần thiết
 
-  Future<void> _onAuthStateChanged(User? firebaseUser) async {
-    // ▼▼▼ LOGIC ĐÃ ĐƯỢC LÀM AN TOÀN HƠN ▼▼▼
-
-    // 1. Luôn hủy listener cũ ngay từ đầu để tránh rò rỉ.
-    await _userSubscription?.cancel();
-
-    if (firebaseUser == null) {
-      // 2. Nếu người dùng đã đăng xuất, reset trạng thái ngay lập tức và thoát.
-      _resetState();
-      notifyListeners();
-      return;
-    }
-
-    // 3. Chỉ tạo listener mới khi chắc chắn có người dùng đã đăng nhập.
     _userSubscription = FirebaseFirestore.instance
         .collection('users')
         .doc(firebaseUser.uid)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .listen((snapshot) {
+      final bool isFromCache = snapshot.metadata.isFromCache;
+
       if (snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>;
         _userTier = data['subscriptionTier'];
@@ -54,11 +51,28 @@ class UserProvider with ChangeNotifier {
         _role = data['role'] ?? 'user';
         _isSuspended = data['isSuspended'] ?? false;
         _suspensionReason = data['suspensionReason'];
+        _status = isFromCache ? UserDataStatus.fromCache : UserDataStatus.fromServer;
       } else {
         _resetState();
+        _status = UserDataStatus.fromServer;
       }
       notifyListeners();
+    }, onError: (error) {
+      print("Lỗi khi lắng nghe dữ liệu người dùng: $error");
+      _status = UserDataStatus.error;
+      _resetState();
+      notifyListeners();
     });
+  }
+
+  // ▼▼▼ HÀM ĐÃ ĐƯỢC SỬA LỖI ▼▼▼
+  Future<void> stopListeningAndReset() async {
+    // Chờ cho stream được hủy hoàn toàn
+    await _userSubscription?.cancel();
+    _userSubscription = null;
+    _resetState();
+    _status = UserDataStatus.initial;
+    notifyListeners();
   }
 
   void _resetState() {
@@ -79,7 +93,6 @@ class UserProvider with ChangeNotifier {
 
   @override
   void dispose() {
-    _authSubscription?.cancel();
     _userSubscription?.cancel();
     super.dispose();
   }
