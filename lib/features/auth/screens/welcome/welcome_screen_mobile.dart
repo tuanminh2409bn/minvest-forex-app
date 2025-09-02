@@ -1,13 +1,23 @@
 // lib/features/auth/screens/welcome/welcome_screen_mobile.dart
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
+
+  Future<void> _requestTrackingPermission() async {
+    // Chỉ thực hiện trên iOS
+    if (Platform.isIOS) {
+      final status = await AppTrackingTransparency.requestTrackingAuthorization();
+      print('ATT Status: $status');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,12 +103,16 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _SocialSignInButton(
-                  icon: Image.asset(
-                      'assets/images/facebook_logo.png', height: 24, width: 24),
+                  icon: Image.asset('assets/images/facebook_logo.png', height: 24, width: 24),
                   text: l10n.continueByFacebook,
-                  onPressed: () =>
-                      context.read<AuthBloc>().add(
-                          SignInWithFacebookRequested()),
+                  onPressed: () async { // Biến thành async
+                    // 1. Xin quyền trước
+                    await _requestTrackingPermission();
+                    // 2. Sau đó mới gửi event đăng nhập
+                    if (context.mounted) {
+                      context.read<AuthBloc>().add(SignInWithFacebookRequested());
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
                 _SocialSignInButton(

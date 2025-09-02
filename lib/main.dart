@@ -102,6 +102,12 @@ class _MyAppState extends State<MyApp> {
           }
         },
       );
+
+      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+        alert: true, // Hiển thị banner
+        badge: true, // Cập nhật số trên icon
+        sound: true, // Phát âm thanh
+      );
     }
 
     // Thiết lập các listener của Firebase Messaging vẫn được gọi sau khi khởi tạo xong

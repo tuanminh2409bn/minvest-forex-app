@@ -33,6 +33,7 @@ dependencies:
   intl:
 
   # Other packages
+  app_tracking_transparency:
   cupertino_icons: ^1.0.8
   url_launcher:
   image_picker:

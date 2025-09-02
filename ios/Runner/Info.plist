@@ -50,10 +50,12 @@
 	<key>FacebookDisplayName</key>
 	<string>Minvest</string>
 	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>fbapi</string>
-		<string>fb-messenger-share-api</string>
-	</array>
+    <array>
+      <string>fbapi</string>
+      <string>fb-messenger-share-api</string>
+      <string>fbauth2</string>
+      <string>fbshareextension</string>
+    </array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
@@ -83,5 +85,7 @@
 	</array>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
+	<key>NSUserTrackingUsageDescription</key>
+    <string>Chúng tôi cần quyền này để cá nhân hóa trải nghiệm của bạn và phục vụ cho việc đăng nhập.</string>
 </dict>
 </plist>

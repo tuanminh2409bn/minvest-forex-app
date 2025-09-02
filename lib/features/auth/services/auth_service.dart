@@ -113,8 +113,6 @@ class AuthService {
     }
   }
 
-  // --- Các hàm signInWith... giữ nguyên, chỉ cần đảm bảo chúng `rethrow` lỗi ---
-
   Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
