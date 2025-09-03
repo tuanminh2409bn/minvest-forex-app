@@ -31,13 +31,14 @@ import FBSDKCoreKit
       open url: URL,
       options: [UIApplication.OpenURLOptionsKey : Any] = [:]
   ) -> Bool {
-      ApplicationDelegate.shared.application(
+      return ApplicationDelegate.shared.application(
           app,
           open: url,
           sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String,
           annotation: options[UIApplication.OpenURLOptionsKey.annotation]
       )
   }
+    
   override func application(_ application: UIApplication,
                             didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     Messaging.messaging().apnsToken = deviceToken
