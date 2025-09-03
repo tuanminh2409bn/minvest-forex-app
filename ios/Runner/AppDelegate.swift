@@ -1,6 +1,7 @@
 import UIKit
 import Flutter
 import Firebase
+import FBSDKCoreKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -8,8 +9,8 @@ import Firebase
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    FirebaseApp.configure()
 
+    FirebaseApp.configure()
     GeneratedPluginRegistrant.register(with: self)
 
     if #available(iOS 10.0, *) {
@@ -17,13 +18,29 @@ import Firebase
     }
     application.registerForRemoteNotifications()
 
+    ApplicationDelegate.shared.application(
+        application,
+        didFinishLaunchingWithOptions: launchOptions
+    )
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  override func application(
+      _ app: UIApplication,
+      open url: URL,
+      options: [UIApplication.OpenURLOptionsKey : Any] = [:]
+  ) -> Bool {
+      ApplicationDelegate.shared.application(
+          app,
+          open: url,
+          sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String,
+          annotation: options[UIApplication.OpenURLOptionsKey.annotation]
+      )
+  }
   override func application(_ application: UIApplication,
                             didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     Messaging.messaging().apnsToken = deviceToken
-    print("APNS token retrieved: \(deviceToken)")
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
 
