@@ -10,6 +10,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:minvest_forex_app/services/device_info_service.dart';
 import 'package:minvest_forex_app/core/exceptions/auth_exceptions.dart';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
@@ -19,6 +20,15 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+
+  Future<void> _requestTrackingPermission() async {
+    if (Platform.isIOS) {
+      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+      if (status == TrackingStatus.notDetermined) {
+        await AppTrackingTransparency.requestTrackingAuthorization();
+      }
+    }
+  }
 
   String _generateNonce([int length = 32]) {
     const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
@@ -133,12 +143,14 @@ class AuthService {
 
   Future<User?> signInWithFacebook() async {
     try {
+      await _requestTrackingPermission();
       UserCredential userCredential;
       Map<String, dynamic>? facebookUserData;
       if (kIsWeb) {
         userCredential = await _firebaseAuth.signInWithPopup(FacebookAuthProvider());
       } else {
         final LoginResult result = await FacebookAuth.instance.login(
+          loginTracking: LoginTracking.enabled,
           permissions: ['public_profile', 'email'],
         );
         if (result.status != LoginStatus.success) return null;

@@ -26,27 +26,14 @@ import FBSDKCoreKit
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  override func application(
-      _ app: UIApplication,
-      open url: URL,
-      options: [UIApplication.OpenURLOptionsKey : Any] = [:]
-  ) -> Bool {
-      return ApplicationDelegate.shared.application(
-          app,
-          open: url,
-          sourceApplication: options[UIApplication.OpenURLOptionsKey.sourceApplication] as? String,
-          annotation: options[UIApplication.OpenURLOptionsKey.annotation]
-      )
-  }
-    
   override func application(_ application: UIApplication,
-                            didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+                           didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     Messaging.messaging().apnsToken = deviceToken
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
 
   override func application(_ application: UIApplication,
-                            didFailToRegisterForRemoteNotificationsWithError error: Error) {
+                           didFailToRegisterForRemoteNotificationsWithError error: Error) {
     print("Failed to register for remote notifications: \(error.localizedDescription)")
     super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }

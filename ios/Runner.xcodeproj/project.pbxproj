@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -30,19 +30,6 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXCopyFilesBuildPhase section */
-		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
@@ -67,6 +54,9 @@
 		BC06FA1D2E67F3C700EA94BD /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		BC33281C2E65C35500501D61 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		BC59A9142E49D7DA00ABEEB9 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		BC86F7712E680596002DD216 /* FBSDKCoreKit.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:V9WTTPBFK9:Meta Platforms, Inc."; lastKnownFileType = wrapper.xcframework; path = FBSDKCoreKit.xcframework; sourceTree = "<group>"; };
+		BC9182DE2E680CA200ECFD4A /* FBSDKCoreKit_Basics.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:V9WTTPBFK9:Meta Platforms, Inc."; lastKnownFileType = wrapper.xcframework; name = FBSDKCoreKit_Basics.xcframework; path = Pods/FBSDKCoreKit_Basics/XCFrameworks/FBSDKCoreKit_Basics.xcframework; sourceTree = "<group>"; };
+		BC9182DF2E680CA200ECFD4A /* FBSDKLoginKit.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:V9WTTPBFK9:Meta Platforms, Inc."; lastKnownFileType = wrapper.xcframework; name = FBSDKLoginKit.xcframework; path = Pods/FBSDKLoginKit/XCFrameworks/FBSDKLoginKit.xcframework; sourceTree = "<group>"; };
 		C80516956BA5261EEF72F7B5 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E7270D2E60D749E30F1DDF35 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		FFC854634472FFE10C0D964D /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -150,6 +140,23 @@
 			path = Runner;
 			sourceTree = "<group>";
 		};
+		BC86F7722E680596002DD216 /* XCFrameworks */ = {
+			isa = PBXGroup;
+			children = (
+				BC86F7712E680596002DD216 /* FBSDKCoreKit.xcframework */,
+			);
+			path = XCFrameworks;
+			sourceTree = "<group>";
+		};
+		BC86F7732E680596002DD216 /* FBSDKCoreKit */ = {
+			isa = PBXGroup;
+			children = (
+				BC86F7722E680596002DD216 /* XCFrameworks */,
+			);
+			name = FBSDKCoreKit;
+			path = Pods/FBSDKCoreKit;
+			sourceTree = "<group>";
+		};
 		E582F5FC845065A37BFC5468 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
@@ -166,6 +173,9 @@
 		E9F812E924F2B5E368B8C659 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BC9182DE2E680CA200ECFD4A /* FBSDKCoreKit_Basics.xcframework */,
+				BC9182DF2E680CA200ECFD4A /* FBSDKLoginKit.xcframework */,
+				BC86F7732E680596002DD216 /* FBSDKCoreKit */,
 				C80516956BA5261EEF72F7B5 /* Pods_Runner.framework */,
 				FFC854634472FFE10C0D964D /* Pods_RunnerTests.framework */,
 			);
@@ -203,7 +213,6 @@
 				97C146EA1CF9000F007C117D /* Sources */,
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
-				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				186C226C4D5BD780A40B00C0 /* [CP] Embed Pods Frameworks */,
 				F4F2A428D46B8C351C0CD5F4 /* [CP] Copy Pods Resources */,
@@ -245,6 +254,8 @@
 				Base,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
+			packageReferences = (
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
 			projectDirPath = "";
