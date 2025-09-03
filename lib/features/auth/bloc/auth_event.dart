@@ -23,3 +23,8 @@ class SignOutRequested extends AuthEvent {
 class SignInWithGoogleRequested extends AuthEvent {}
 class SignInWithFacebookRequested extends AuthEvent {}
 class SignInWithAppleRequested extends AuthEvent {}
+
+// MỚI BẮT ĐẦU
+class SignInAnonymouslyRequested extends AuthEvent {}
+class DeleteAccountRequested extends AuthEvent {}
+// MỚI KẾT THÚC

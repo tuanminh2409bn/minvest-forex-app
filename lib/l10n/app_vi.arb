@@ -126,6 +126,12 @@
     "upgradeCardSubtitleWeb": "Để mở khóa tín hiệu cao cấp và hỗ trợ toàn thời gian",
     "subscriptionDetails": "Chi tiết Gói đăng ký",
     "notifications": "Thông báo",
+    "continueAsGuest": "Tiếp tục với tư cách khách",
+    "deleteAccount": "Xóa tài khoản",
+    "deleteAccountWarning": "Bạn có chắc chắn muốn xóa tài khoản không? Mọi dữ liệu của bạn sẽ bị xóa vĩnh viễn và không thể khôi phục.",
+    "delete": "Xóa",
+    "privacyPolicy": "Chính sách bảo mật",
+    "termsOfService": "Điều khoản dịch vụ",
         "noNotificationsYet": "Chưa có thông báo nào.",
         "daysAgo": "{count} ngày trước",
         "@daysAgo": {

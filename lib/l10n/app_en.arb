@@ -126,6 +126,12 @@
     "upgradeCardSubtitleWeb": "To unlock premium signals and full-time support",
     "subscriptionDetails": "Subscription Details",
     "notifications": "Notifications",
+    "continueAsGuest": "Continue as Guest",
+    "deleteAccount": "Delete Account",
+    "deleteAccountWarning": "Are you sure you want to delete your account? All of your data will be permanently erased and cannot be recovered.",
+    "delete": "Delete",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
         "noNotificationsYet": "No notifications yet.",
         "daysAgo": "{count} days ago",
         "@daysAgo": {

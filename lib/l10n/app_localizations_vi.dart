@@ -415,6 +415,25 @@ class AppLocalizationsVi extends AppLocalizations {
   String get notifications => 'Thông báo';
 
   @override
+  String get continueAsGuest => 'Tiếp tục với tư cách khách';
+
+  @override
+  String get deleteAccount => 'Xóa tài khoản';
+
+  @override
+  String get deleteAccountWarning =>
+      'Bạn có chắc chắn muốn xóa tài khoản không? Mọi dữ liệu của bạn sẽ bị xóa vĩnh viễn và không thể khôi phục.';
+
+  @override
+  String get delete => 'Xóa';
+
+  @override
+  String get privacyPolicy => 'Chính sách bảo mật';
+
+  @override
+  String get termsOfService => 'Điều khoản dịch vụ';
+
+  @override
   String get noNotificationsYet => 'Chưa có thông báo nào.';
 
   @override

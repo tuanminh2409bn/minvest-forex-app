@@ -412,6 +412,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifications => 'Notifications';
 
   @override
+  String get continueAsGuest => 'Continue as Guest';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get deleteAccountWarning =>
+      'Are you sure you want to delete your account? All of your data will be permanently erased and cannot be recovered.';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get termsOfService => 'Terms of Service';
+
+  @override
   String get noNotificationsYet => 'No notifications yet.';
 
   @override

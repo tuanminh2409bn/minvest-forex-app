@@ -1,5 +1,4 @@
-// profile_screen_mobile.dart
-
+// lib/features/auth/screens/profile_screen_mobile.dart
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/admin/screens/admin_panel_screen.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
-
 import '../../notifications/providers/notification_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -48,6 +46,7 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      // Handle error
     }
   }
 
@@ -76,16 +75,46 @@ class ProfileScreen extends StatelessWidget {
     );
 
     if (confirmLogout == true && context.mounted) {
-      // Lấy cả 2 provider từ context
       final userProvider = context.read<UserProvider>();
       final notificationProvider = context.read<NotificationProvider>();
-
-      // Gửi event đăng xuất KÈM THEO DANH SÁCH provider cần dọn dẹp
       context.read<AuthBloc>().add(
           SignOutRequested(providersToReset: [userProvider, notificationProvider])
       );
     }
   }
+
+  // MỚI BẮT ĐẦU: Hàm xử lý xóa tài khoản
+  Future<void> _handleDeleteAccount(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF161B22),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(l10n.deleteAccount, style: const TextStyle(color: Colors.redAccent)), // Giả sử có key 'deleteAccount'
+          content: Text(l10n.deleteAccountWarning, style: const TextStyle(color: Colors.white70)), // Giả sử có key 'deleteAccountWarning'
+          actions: <Widget>[
+            TextButton(
+              child: Text(l10n.cancel, style: const TextStyle(color: Colors.white)),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+            ),
+            TextButton(
+              child: Text(l10n.delete, style: const TextStyle(color: Colors.red)), // Giả sử có key 'delete'
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmDelete == true && context.mounted) {
+      // TODO: Gọi sự kiện xóa tài khoản
+      // context.read<AuthBloc>().add(DeleteAccountRequested());
+      print('Delete account confirmed');
+    }
+  }
+  // MỚI KẾT THÚC
 
   @override
   Widget build(BuildContext context) {
@@ -158,10 +187,8 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   )),
                   const SizedBox(height: 30),
-
                   _UpgradeCard(),
                   const SizedBox(height: 20),
-
                   if (userRole == 'admin')
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -170,27 +197,31 @@ class ProfileScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const AdminPanelScreen(),
-                            ),
+                            MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
                           );
                         },
                       ),
                     ),
-
                   _buildActionButton(
                     text: l10n.contactUs247,
-                    onPressed: () {
-                      _launchURL('https://zalo.me/0969156969');
-                    },
+                    onPressed: () => _launchURL('https://zalo.me/0969156969'),
                   ),
                   const SizedBox(height: 16),
+
+                  // MỚI BẮT ĐẦU: Thêm nút xóa tài khoản
+                  _buildActionButton(
+                    text: l10n.deleteAccount, // Giả sử có key 'deleteAccount'
+                    onPressed: () => _handleDeleteAccount(context),
+                    isDestructive: true, // Thêm cờ để có thể tùy chỉnh style nếu cần
+                  ),
+                  const SizedBox(height: 16),
+                  // MỚI KẾT THÚC
+
                   _buildActionButton(
                     text: l10n.logout,
                     onPressed: () => _handleLogout(context),
                   ),
                   const SizedBox(height: 40),
-
                   Text(l10n.followMinvest, style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 10),
                   Row(
@@ -207,7 +238,12 @@ class ProfileScreen extends StatelessWidget {
                       _SocialIcon(iconPath: 'assets/images/web_logo.png', url: 'https://minvest.vn/'),
                     ],
                   ),
+
+                  // MỚI BẮT ĐẦU: Thêm liên kết chính sách và điều khoản
+                  const SizedBox(height: 30),
+                  _buildInfoLinks(context),
                   const SizedBox(height: 20),
+                  // MỚI KẾT THÚC
                 ],
               ),
             ),
@@ -216,8 +252,35 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
+
+  // MỚI BẮT ĐẦU: Widget cho các liên kết thông tin
+  Widget _buildInfoLinks(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        TextButton(
+          onPressed: () => _launchURL('https://tuanminh2409bn.github.io/minvest-privacy/'), // THAY THẾ URL CỦA BẠN
+          child: Text(
+            l10n.privacyPolicy, // Giả sử có key 'privacyPolicy'
+            style: const TextStyle(color: Colors.white70, decoration: TextDecoration.underline, decorationColor: Colors.white70),
+          ),
+        ),
+        const Text("•", style: TextStyle(color: Colors.white70)),
+        TextButton(
+          onPressed: () => _launchURL('https://tuanminh2409bn.github.io/minvest-terms/'), // THAY THẾ URL CỦA BẠN
+          child: Text(
+            l10n.termsOfService, // Giả sử có key 'termsOfService'
+            style: const TextStyle(color: Colors.white70, decoration: TextDecoration.underline, decorationColor: Colors.white70),
+          ),
+        ),
+      ],
+    );
+  }
+// MỚI KẾT THÚC
 }
 
+// ... các Widget còn lại giữ nguyên ...
 class _UpgradeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -271,7 +334,8 @@ class _UpgradeCard extends StatelessWidget {
   }
 }
 
-Widget _buildActionButton({required String text, required VoidCallback onPressed}) {
+// MỚI: Cập nhật hàm buildActionButton để có thể tùy chỉnh style
+Widget _buildActionButton({required String text, required VoidCallback onPressed, bool isDestructive = false}) {
   return SizedBox(
     width: double.infinity,
     height: 50,
@@ -285,8 +349,10 @@ Widget _buildActionButton({required String text, required VoidCallback onPressed
       ),
       child: Ink(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0C0938), Color(0xFF141A4C), Color(0xFF1D2B62)],
+          gradient: LinearGradient(
+            colors: isDestructive
+                ? [const Color(0xFF8B0000), const Color(0xFFB22222)] // Màu đỏ cho hành động xóa
+                : [const Color(0xFF0C0938), const Color(0xFF141A4C), const Color(0xFF1D2B62)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -303,6 +369,7 @@ Widget _buildActionButton({required String text, required VoidCallback onPressed
     ),
   );
 }
+
 
 class _SocialIcon extends StatelessWidget {
   final String iconPath;

@@ -3,12 +3,11 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart'; // Import material để dùng ChangeNotifier
+import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/core/exceptions/auth_exceptions.dart';
-import 'package:minvest_forex_app/core/providers/user_provider.dart'; // Import UserProvider
+import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
-
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -29,23 +28,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<SignInWithGoogleRequested>(_onSignInWithGoogleRequested);
     on<SignInWithFacebookRequested>(_onSignInWithFacebookRequested);
     on<SignInWithAppleRequested>(_onSignInWithAppleRequested);
+    on<SignInAnonymouslyRequested>(_onSignInAnonymouslyRequested);
+    on<DeleteAccountRequested>(_onDeleteAccountRequested);
   }
 
-  // ▼▼▼ SỬA LẠI HÀM NÀY ▼▼▼
+  Future<void> _onDeleteAccountRequested(
+      DeleteAccountRequested event, Emitter<AuthState> emit) async {
+    final currentUser = state.user;
+    if (currentUser == null) {
+      // Trường hợp hiếm gặp: không có user nhưng vẫn gọi được hàm xóa
+      emit(const AuthState.unauthenticated(errorMessage: 'Không tìm thấy người dùng để xóa.'));
+      return;
+    }
+
+    try {
+      emit(const AuthState.loggingOut()); // Hiển thị màn hình loading
+      await _authService.deleteAccountAndData();
+      // Xóa thành công, authStateChanges sẽ phát ra null -> tự động chuyển về unauthenticated
+    } catch (e) {
+      // Nếu có lỗi, quay lại trạng thái đã xác thực và báo lỗi
+      emit(AuthState.authenticated(
+        currentUser, // Dùng user đã lấy từ state
+        errorMessage: 'Lỗi xóa tài khoản: ${e.toString()}',
+      ));
+    }
+  }
+
   Future<void> _onSignOutRequested(SignOutRequested event, Emitter<AuthState> emit) async {
     print("AuthBloc: Yêu cầu đăng xuất. Bắt đầu dọn dẹp provider...");
 
-    // ▼▼▼ LOGIC DỌN DẸP TỔNG QUÁT HƠN ▼▼▼
     for (var provider in event.providersToReset) {
       if (provider is UserProvider) {
         await provider.stopListeningAndReset();
       }
-      // Thêm trường hợp cho NotificationProvider
       if (provider is NotificationProvider) {
         await provider.stopListeningAndReset();
       }
     }
-    // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
 
     print("AuthBloc: Dọn dẹp provider hoàn tất.");
     emit(const AuthState.loggingOut());
@@ -54,7 +73,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     print("AuthBloc: Thực hiện đăng xuất khỏi Firebase.");
     await _authService.signOut();
   }
-  // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
 
   void _onAuthStateChanged(AuthStateChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
@@ -66,8 +84,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // ... các hàm signIn... giữ nguyên ...
-  Future<void> _handleSignIn(Future<void> Function() signInMethod, Emitter<AuthState> emit) async {
+  Future<void> _handleSignIn(Future<User?> Function() signInMethod, Emitter<AuthState> emit) async {
     try {
       await signInMethod();
     } on SuspendedAccountException catch (e) {
@@ -91,6 +108,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       SignInWithAppleRequested event, Emitter<AuthState> emit) async {
     await _handleSignIn(_authService.signInWithApple, emit);
   }
+
+  Future<void> _onSignInAnonymouslyRequested(
+      SignInAnonymouslyRequested event, Emitter<AuthState> emit) async {
+    await _handleSignIn(_authService.signInAnonymously, emit);
+  }
+
 
   @override
   Future<void> close() {

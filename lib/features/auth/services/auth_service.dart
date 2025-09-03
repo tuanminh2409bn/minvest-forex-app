@@ -18,6 +18,7 @@ import 'dart:io';
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: "asia-southeast1");
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
@@ -43,6 +44,7 @@ class AuthService {
   }
 
   Future<User?> _handleSuccessfulSignIn(UserCredential userCredential, {
+    bool isAnonymous = false, // MỚI: Thêm cờ để nhận biết đăng nhập ẩn danh
     Map<String, dynamic>? facebookUserData,
     String? appleEmail,
     String? appleFullName,
@@ -57,34 +59,43 @@ class AuthService {
         final userDoc = await transaction.get(userDocRef);
 
         if (!userDoc.exists) {
-          // ▼▼▼ LOGIC LẤY EMAIL ĐÃ ĐƯỢC LÀM CHO LINH HOẠT HƠN ▼▼▼
-          String? email = googleEmail ?? appleEmail ?? facebookUserData?['email'] ?? user.email;
-          final displayName = appleFullName ?? facebookUserData?['name'] ?? user.displayName;
-          final photoURL = facebookUserData?['picture']?['data']?['url'] ?? user.photoURL;
+          if (isAnonymous) {
+            // MỚI: Xử lý cho người dùng ẩn danh
+            transaction.set(userDocRef, {
+              'uid': user.uid,
+              'email': 'guest_${user.uid}@minvest.com',
+              'displayName': 'Guest',
+              'photoURL': null,
+              'createdAt': Timestamp.now(),
+              'subscriptionTier': 'free',
+              'role': 'guest', // Gán vai trò là 'guest'
+              'isSuspended': false,
+            });
+          } else {
+            // Logic cũ cho người dùng đăng nhập qua mạng xã hội
+            String? email = googleEmail ?? appleEmail ?? facebookUserData?['email'] ?? user.email;
+            final displayName = appleFullName ?? facebookUserData?['name'] ?? user.displayName;
+            final photoURL = facebookUserData?['picture']?['data']?['url'] ?? user.photoURL;
 
-          // Nếu email vẫn là null, kiểm tra xem có phải do Apple không cung cấp không
-          if (email == null && user.providerData.any((p) => p.providerId == 'apple.com')) {
-            print("AuthService: Email từ Apple là null (có thể do máy ảo). Tạo email tạm thời.");
-            // Tạo một email tạm thời để vượt qua bước này
-            email = '${user.uid}@appleid.placeholder.com';
+            if (email == null && user.providerData.any((p) => p.providerId == 'apple.com')) {
+              email = '${user.uid}@appleid.placeholder.com';
+            }
+
+            if (email == null) {
+              throw Exception("Không thể lấy được địa chỉ email. Vui lòng thử lại.");
+            }
+
+            transaction.set(userDocRef, {
+              'uid': user.uid,
+              'email': email,
+              'displayName': displayName,
+              'photoURL': photoURL,
+              'createdAt': Timestamp.now(),
+              'subscriptionTier': 'free',
+              'role': 'user',
+              'isSuspended': false,
+            });
           }
-
-          // Bây giờ mới kiểm tra lần cuối, nếu vẫn null thì mới là lỗi thực sự
-          if (email == null) {
-            throw Exception("Không thể lấy được địa chỉ email. Vui lòng thử lại.");
-          }
-          // ▲▲▲ KẾT THÚC THAY ĐỔI ▲▲▲
-
-          transaction.set(userDocRef, {
-            'uid': user.uid,
-            'email': email,
-            'displayName': displayName,
-            'photoURL': photoURL,
-            'createdAt': Timestamp.now(),
-            'subscriptionTier': 'free',
-            'role': 'user',
-            'isSuspended': false,
-          });
         } else {
           if (userDoc.data()?['isSuspended'] == true) {
             throw SuspendedAccountException(userDoc.data()?['suspensionReason'] ?? 'Vui lòng liên hệ quản trị viên.');
@@ -96,9 +107,13 @@ class AuthService {
       rethrow;
     }
 
-    await _updateUserSession();
+    // Người dùng ẩn danh không cần token FCM hay session phức tạp
+    if (!isAnonymous) {
+      await _updateUserSession();
+    }
     return user;
   }
+
 
   Future<void> _updateUserSession() async {
     if (kIsWeb) return;
@@ -115,13 +130,25 @@ class AuthService {
       final deviceId = await DeviceInfoService.getDeviceId();
       if (fcmToken == null) return;
 
-      final callable = FirebaseFunctions.instanceFor(region: "asia-southeast1").httpsCallable('manageUserSession');
+      final callable = _functions.httpsCallable('manageUserSession');
       await callable.call({'deviceId': deviceId, 'fcmToken': fcmToken});
       print('AuthService: Cập nhật session thành công!');
     } catch (e) {
       print('AuthService: Lỗi khi cập nhật session: $e');
     }
   }
+
+  // MỚI BẮT ĐẦU: Phương thức đăng nhập ẩn danh
+  Future<User?> signInAnonymously() async {
+    try {
+      final userCredential = await _firebaseAuth.signInAnonymously();
+      return await _handleSuccessfulSignIn(userCredential, isAnonymous: true);
+    } catch (e) {
+      print('Lỗi đăng nhập ẩn danh: $e');
+      rethrow;
+    }
+  }
+  // MỚI KẾT THÚC
 
   Future<User?> signInWithGoogle() async {
     try {
@@ -210,4 +237,23 @@ class AuthService {
       print("Đã đăng xuất khỏi Firebase");
     }
   }
+
+  // MỚI BẮT ĐẦU: Phương thức xóa tài khoản và dữ liệu
+  Future<void> deleteAccountAndData() async {
+    try {
+      final callable = _functions.httpsCallable('deleteUserAccount');
+      final result = await callable.call();
+      print('Cloud function deleteUserAccount được gọi thành công: ${result.data}');
+      // Sau khi function thực thi, user sẽ tự động bị đăng xuất do auth state thay đổi
+      // Nhưng chúng ta vẫn gọi signOut ở client để đảm bảo dọn dẹp ngay lập tức
+      await signOut();
+    } on FirebaseFunctionsException catch (e) {
+      print('Lỗi khi gọi cloud function: ${e.code} - ${e.message}');
+      rethrow;
+    } catch (e) {
+      print('Lỗi không xác định khi xóa tài khoản: $e');
+      rethrow;
+    }
+  }
+// MỚI KẾT THÚC
 }
