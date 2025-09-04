@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -18,6 +18,7 @@
 		ADC4692B00D748B5E1BEACAC /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C80516956BA5261EEF72F7B5 /* Pods_Runner.framework */; };
 		BC06FA1E2E67F3D900EA94BD /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC06FA1D2E67F3C700EA94BD /* SceneDelegate.swift */; };
 		BC33281D2E65C35500501D61 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BC33281C2E65C35500501D61 /* GoogleService-Info.plist */; };
+		BCDF10922E692BA7006F1A97 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BCDF10912E692BA7006F1A97 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 		BC86F7712E680596002DD216 /* FBSDKCoreKit.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:V9WTTPBFK9:Meta Platforms, Inc."; lastKnownFileType = wrapper.xcframework; path = FBSDKCoreKit.xcframework; sourceTree = "<group>"; };
 		BC9182DE2E680CA200ECFD4A /* FBSDKCoreKit_Basics.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:V9WTTPBFK9:Meta Platforms, Inc."; lastKnownFileType = wrapper.xcframework; name = FBSDKCoreKit_Basics.xcframework; path = Pods/FBSDKCoreKit_Basics/XCFrameworks/FBSDKCoreKit_Basics.xcframework; sourceTree = "<group>"; };
 		BC9182DF2E680CA200ECFD4A /* FBSDKLoginKit.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:V9WTTPBFK9:Meta Platforms, Inc."; lastKnownFileType = wrapper.xcframework; name = FBSDKLoginKit.xcframework; path = Pods/FBSDKLoginKit/XCFrameworks/FBSDKLoginKit.xcframework; sourceTree = "<group>"; };
+		BCDF10912E692BA7006F1A97 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		C80516956BA5261EEF72F7B5 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E7270D2E60D749E30F1DDF35 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		FFC854634472FFE10C0D964D /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -76,6 +78,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ADC4692B00D748B5E1BEACAC /* Pods_Runner.framework in Frameworks */,
+				BCDF10922E692BA7006F1A97 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,6 +176,7 @@
 		E9F812E924F2B5E368B8C659 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BCDF10912E692BA7006F1A97 /* StoreKit.framework */,
 				BC9182DE2E680CA200ECFD4A /* FBSDKCoreKit_Basics.xcframework */,
 				BC9182DF2E680CA200ECFD4A /* FBSDKLoginKit.xcframework */,
 				BC86F7732E680596002DD216 /* FBSDKCoreKit */,

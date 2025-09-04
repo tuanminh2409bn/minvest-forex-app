@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
-import '../../notifications/providers/notification_provider.dart';
+import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});

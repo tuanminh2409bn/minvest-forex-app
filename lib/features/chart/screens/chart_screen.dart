@@ -40,7 +40,7 @@ Page resource error:
           },
         ),
       )
-      ..loadRequest(Uri.parse('https://s.tradingview.com/widgetembed/?frameElementId=tradingview_76d87&symbol=FX%3AEURUSD&interval=D&hidesidetoolbar=0&hidetoptoolbar=1&symboledit=1&saveimage=1&toolbarbg=F1F3F6&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en&utm_source=www.tradingview.com&utm_medium=widget_new&utm_campaign=chart&utm_term=FX%3AEURUSD'));
+      ..loadRequest(Uri.parse('https://vn.tradingview.com/chart/?symbol=OANDA%3AXAUUSD'));
   }
 
   @override
