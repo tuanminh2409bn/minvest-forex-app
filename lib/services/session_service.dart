@@ -1,3 +1,5 @@
+//lib/services/session_service.dart
+
 import 'dart:io' show Platform;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';

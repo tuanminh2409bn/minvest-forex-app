@@ -343,7 +343,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profile => 'Hồ sơ';
 
   @override
-  String get upgradeNow => 'NÂNG CẤP NGAY';
+  String get upgradeNow => 'Nâng cấp ngay';
 
   @override
   String get followMinvest => 'Theo dõi MInvest';
@@ -432,6 +432,48 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get termsOfService => 'Điều khoản dịch vụ';
+
+  @override
+  String get signalStatusMatched => 'ĐÃ KHỚP';
+
+  @override
+  String get signalStatusNotMatched => 'CHƯA KHỚP';
+
+  @override
+  String get signalStatusCancelled => 'ĐÃ HỦY';
+
+  @override
+  String get signalStatusSlHit => 'TRÚNG SL';
+
+  @override
+  String get signalStatusTp1Hit => 'TRÚNG TP1';
+
+  @override
+  String get signalStatusTp2Hit => 'TRÚNG TP2';
+
+  @override
+  String get signalStatusTp3Hit => 'TRÚNG TP3';
+
+  @override
+  String get signalStatusRunning => 'ĐANG CHẠY';
+
+  @override
+  String get signalStatusClosed => 'ĐÃ ĐÓNG';
+
+  @override
+  String get signalEntry => 'Vùng vào lệnh';
+
+  @override
+  String get signalSl => 'Dừng lỗ';
+
+  @override
+  String get upgradeToSeeDetails => 'Nâng cấp để xem chi tiết tín hiệu...';
+
+  @override
+  String get buy => 'MUA';
+
+  @override
+  String get sell => 'BÁN';
 
   @override
   String get noNotificationsYet => 'Chưa có thông báo nào.';

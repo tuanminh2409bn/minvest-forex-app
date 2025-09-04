@@ -1,3 +1,5 @@
+// lib/features/admin/screens/admin_panel_screen_web.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,13 +18,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final Set<String> _selectedUserIds = {};
   final TextEditingController _reasonController = TextEditingController();
 
-  void _handleSuspendUsers() {
+  // THAY ĐỔI 1: Đổi tên hàm
+  void _handleDowngradeUsers() {
     if (_selectedUserIds.isEmpty) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Nhập lý do khóa tài khoản'),
-        content: TextField(controller: _reasonController, decoration: const InputDecoration(hintText: 'Lý do...'), autofocus: true),
+        // THAY ĐỔI 2: Cập nhật văn bản
+        title: const Text('Hạ cấp tài khoản về Free'),
+        content: TextField(controller: _reasonController, decoration: const InputDecoration(hintText: 'Nhập lý do hạ cấp (bắt buộc)...'), autofocus: true),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Hủy')),
           FilledButton(
@@ -30,27 +34,33 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               final reason = _reasonController.text.trim();
               if (reason.isEmpty) return;
               Navigator.of(context).pop();
-              _executeAction(status: 'suspended', reason: reason);
+              // THAY ĐỔI 3: Gọi hàm thực thi mới
+              _executeDowngradeAction(reason: reason);
             },
-            child: const Text('Xác nhận khóa'),
+            child: const Text('Xác nhận hạ cấp'),
           ),
         ],
       ),
     );
   }
 
-  void _handleActivateUsers() {
-    if (_selectedUserIds.isEmpty) return;
-    _executeAction(status: 'active');
-  }
-
-  Future<void> _executeAction({required String status, String? reason}) async {
-    final message = await _adminService.manageUserStatus(userIds: _selectedUserIds.toList(), newStatus: status, reason: reason);
+  // THAY ĐỔI 4: Hàm thực thi mới
+  Future<void> _executeDowngradeAction({required String reason}) async {
+    final message = await _adminService.downgradeUsersToFree(
+        userIds: _selectedUserIds.toList(),
+        reason: reason
+    );
     setState(() => _selectedUserIds.clear());
     _reasonController.clear();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
   }
 
   @override
@@ -84,6 +94,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   DataColumn(label: Text('Tên & Email')),
                   DataColumn(label: Text('Group')),
                   DataColumn(label: Text('Trạng thái')),
+                  DataColumn(label: Text('Lý do hạ cấp')),
                   DataColumn(label: Text('Mobile UID')),
                   DataColumn(label: Text('Exness Client UID')),
                   DataColumn(label: Text('Exness Account')),
@@ -122,12 +133,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: (userData['isSuspended'] ?? false) ? Colors.red.withOpacity(0.5) : Colors.green.withOpacity(0.5),
+                            color: Colors.green.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text((userData['isSuspended'] ?? false) ? 'Bị khóa' : 'Active'),
+                          child: const Text('Active'),
                         ),
                       ),
+                      DataCell(Text(userData['downgradeReason'] ?? '')),
                       DataCell(_buildCopyableCell(userData['activeSession']?['deviceId'])),
                       DataCell(_buildCopyableCell(userData['exnessClientUid'])),
                       DataCell(Text(userData['exnessClientAccount']?.toString() ?? 'N/A')),
@@ -142,14 +154,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           );
         },
       ),
+      // THAY ĐỔI 5: Cập nhật giao diện nút hành động
       floatingActionButton: _selectedUserIds.isNotEmpty
-          ? Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.extended(onPressed: _handleActivateUsers, label: const Text('Mở khóa'), icon: const Icon(Icons.lock_open), backgroundColor: Colors.green),
-          const SizedBox(width: 16),
-          FloatingActionButton.extended(onPressed: _handleSuspendUsers, label: const Text('Khóa'), icon: const Icon(Icons.lock), backgroundColor: Colors.red),
-        ],
+          ? FloatingActionButton.extended(
+        onPressed: _handleDowngradeUsers,
+        label: const Text('Hạ cấp về Free'),
+        icon: const Icon(Icons.arrow_downward),
+        backgroundColor: Colors.orange.shade800,
       )
           : null,
     );

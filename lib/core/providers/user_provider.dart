@@ -13,28 +13,34 @@ enum UserDataStatus {
 }
 
 class UserProvider with ChangeNotifier {
+  String? _uid; // THÊM MỚI: Lưu UID của user hiện tại
   String? _userTier;
   String? _verificationStatus;
   String? _verificationError;
   String? _role;
-  bool _isSuspended = false;
-  String? _suspensionReason;
   UserDataStatus _status = UserDataStatus.initial;
+
+  // THAY ĐỔI 1: Xóa các trường cũ và thêm các trường mới
+  bool _requiresDowngradeAcknowledgement = false;
+  String? _downgradeReason;
 
   String? get userTier => _userTier;
   String? get verificationStatus => _verificationStatus;
   String? get verificationError => _verificationError;
   String? get role => _role;
-  bool get isSuspended => _isSuspended;
-  String? get suspensionReason => _suspensionReason;
   UserDataStatus get status => _status;
+
+  // THAY ĐỔI 2: Thêm getters cho các trường mới
+  bool get requiresDowngradeAcknowledgement => _requiresDowngradeAcknowledgement;
+  String? get downgradeReason => _downgradeReason;
+
 
   StreamSubscription<DocumentSnapshot>? _userSubscription;
 
   void listenToUserData(User firebaseUser) {
+    _uid = firebaseUser.uid; // THÊM MỚI: Lưu lại UID
     _userSubscription?.cancel();
     _status = UserDataStatus.loading;
-    // Không cần notifyListeners() ngay đây, để tránh rebuild không cần thiết
 
     _userSubscription = FirebaseFirestore.instance
         .collection('users')
@@ -49,8 +55,11 @@ class UserProvider with ChangeNotifier {
         _verificationStatus = data['verificationStatus'];
         _verificationError = data['verificationError'];
         _role = data['role'] ?? 'user';
-        _isSuspended = data['isSuspended'] ?? false;
-        _suspensionReason = data['suspensionReason'];
+
+        // THAY ĐỔI 3: Đọc dữ liệu từ các trường mới
+        _requiresDowngradeAcknowledgement = data['requiresDowngradeAcknowledgement'] ?? false;
+        _downgradeReason = data['downgradeReason'];
+
         _status = isFromCache ? UserDataStatus.fromCache : UserDataStatus.fromServer;
       } else {
         _resetState();
@@ -65,9 +74,23 @@ class UserProvider with ChangeNotifier {
     });
   }
 
-  // ▼▼▼ HÀM ĐÃ ĐƯỢC SỬA LỖI ▼▼▼
+  // THAY ĐỔI 4: Hàm mới để người dùng xác nhận
+  /// Cập nhật Firestore để xóa cờ yêu cầu xác nhận.
+  Future<void> acknowledgeDowngrade() async {
+    if (_uid != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(_uid!).update({
+          'requiresDowngradeAcknowledgement': FieldValue.delete(),
+        });
+        _requiresDowngradeAcknowledgement = false;
+        notifyListeners();
+      } catch (e) {
+        print("Lỗi khi xác nhận hạ cấp: $e");
+      }
+    }
+  }
+
   Future<void> stopListeningAndReset() async {
-    // Chờ cho stream được hủy hoàn toàn
     await _userSubscription?.cancel();
     _userSubscription = null;
     _resetState();
@@ -76,12 +99,15 @@ class UserProvider with ChangeNotifier {
   }
 
   void _resetState() {
+    _uid = null;
     _userTier = null;
     _verificationStatus = null;
     _verificationError = null;
     _role = null;
-    _isSuspended = false;
-    _suspensionReason = null;
+
+    // Reset các trường mới
+    _requiresDowngradeAcknowledgement = false;
+    _downgradeReason = null;
   }
 
   void clearVerificationStatus() {

@@ -1,8 +1,11 @@
+// lib/features/signals/widgets/signal_card_web.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart'; // THÊM IMPORT
 
 class SignalCard extends StatelessWidget {
   final Signal signal;
@@ -18,7 +21,6 @@ class SignalCard extends StatelessWidget {
     this.textScaleFactor = 1.0,
   });
 
-  // --- CÁC HÀM LOGIC CỦA BẠN GIỮ NGUYÊN ---
   static const Map<String, String> _currencyFlags = {
     'AUD': 'assets/images/aud_flag.png', 'CHF': 'assets/images/chf_flag.png',
     'EUR': 'assets/images/eur_flag.png', 'GBP': 'assets/images/gbp_flag.png',
@@ -35,10 +37,33 @@ class SignalCard extends StatelessWidget {
     }
     return [];
   }
-  // --- KẾT THÚC HÀM LOGIC ---
+
+  // === HÀM HELPER MỚI ĐỂ DỊCH TRẠNG THÁI ===
+  String _getTranslatedStatus(Signal signal, AppLocalizations l10n) {
+    if (signal.status == 'running') {
+      if (signal.result?.contains("TP1 Hit") ?? false) return l10n.signalStatusTp1Hit;
+      if (signal.result?.contains("TP2 Hit") ?? false) return l10n.signalStatusTp2Hit;
+      if (signal.result?.contains("TP3 Hit") ?? false) return l10n.signalStatusTp3Hit;
+      if (signal.isMatched) return l10n.signalStatusMatched;
+      return l10n.signalStatusNotMatched;
+    } else {
+      final result = signal.result?.toUpperCase() ?? 'CLOSED';
+      switch (result) {
+        case 'SL HIT': return l10n.signalStatusSlHit;
+        case 'CANCELLED (NEW SIGNAL)':
+        case 'CANCELLED':
+          return l10n.signalStatusCancelled;
+        default:
+          return l10n.signalStatusClosed;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Lấy đối tượng l10n
+    final l10n = AppLocalizations.of(context)!;
+
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaleFactor: textScaleFactor),
       child: GestureDetector(
@@ -67,9 +92,9 @@ class SignalCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildCardHeader(),
+              _buildCardHeader(l10n),
               const Divider(height: 16, color: Colors.blueGrey),
-              isLocked ? _buildUpgradeView() : _buildSignalData(),
+              isLocked ? _buildUpgradeView(l10n) : _buildSignalData(l10n),
             ],
           ),
         ),
@@ -77,39 +102,22 @@ class SignalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCardHeader() {
+  Widget _buildCardHeader(AppLocalizations l10n) {
     final bool isBuy = signal.type.toLowerCase() == 'buy';
     final Color signalColor = isBuy ? const Color(0xFF238636) : const Color(0xFFDA3633);
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
-    String statusText;
+
     Color statusColor;
+    String statusText = _getTranslatedStatus(signal, l10n);
 
     if (signal.status == 'running') {
-      statusText = signal.result ?? 'RUNNING';
-      if (statusText.contains("Hit")) {
-        statusColor = Colors.tealAccent.shade400;
-      } else if (signal.isMatched) {
-        statusText = 'MATCHED';
-        statusColor = Colors.greenAccent.shade400;
-      } else {
-        statusText = 'NOT MATCHED';
-        statusColor = Colors.amber.shade400;
-      }
+      if (statusText == l10n.signalStatusMatched) statusColor = Colors.greenAccent.shade400;
+      else if (statusText == l10n.signalStatusNotMatched) statusColor = Colors.amber.shade400;
+      else statusColor = Colors.tealAccent.shade400; // TP Hit
     } else {
-      statusText = signal.result?.toUpperCase() ?? 'CLOSED';
-      switch (statusText) {
-        case 'SL HIT':
-          statusColor = Colors.redAccent;
-          break;
-        case 'CANCELLED (NEW SIGNAL)':
-        case 'CANCELLED':
-          statusText = 'CANCELLED';
-          statusColor = Colors.grey;
-          break;
-        default:
-          statusColor = Colors.blueGrey.shade200;
-          break;
-      }
+      if (statusText == l10n.signalStatusSlHit) statusColor = Colors.redAccent;
+      else if (statusText == l10n.signalStatusCancelled) statusColor = Colors.grey;
+      else statusColor = Colors.blueGrey.shade200; // Closed
     }
 
     return Row(
@@ -117,8 +125,7 @@ class SignalCard extends StatelessWidget {
       children: [
         if (flagPaths.isNotEmpty)
           SizedBox(
-            width: 42,
-            height: 28,
+            width: 42, height: 28,
             child: Stack(
               children: List.generate(flagPaths.length, (index) {
                 return Positioned(
@@ -134,7 +141,7 @@ class SignalCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(color: signalColor, borderRadius: BorderRadius.circular(20)),
-          child: Text(signal.type.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.white)),
+          child: Text(isBuy ? l10n.buy : l10n.sell, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.white)),
         ),
         const Spacer(),
         Text(statusText, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -142,16 +149,16 @@ class SignalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSignalData() {
+  Widget _buildSignalData(AppLocalizations l10n) {
     const int decimalPlaces = 2;
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildInfoColumn("Entry", signal.entryPrice.toStringAsFixed(decimalPlaces)),
+            _buildInfoColumn(l10n.signalEntry, signal.entryPrice.toStringAsFixed(decimalPlaces)),
             _buildInfoColumn(
-              "SL",
+              l10n.signalSl,
               signal.stopLoss.toStringAsFixed(decimalPlaces),
               valueColor: Colors.redAccent,
               icon: _getStatusIcon('SL', signal.result),
@@ -172,10 +179,10 @@ class SignalCard extends StatelessWidget {
           children: [
             Text(DateFormat('HH:mm dd/MM/yyyy').format(signal.createdAt.toDate()), style: const TextStyle(color: Colors.white70, fontSize: 11)),
             const Spacer(),
-            const Row(
+            Row(
               children: [
-                Text("see details", style: TextStyle(color: Color(0xFF5865F2), fontSize: 11)),
-                Icon(Icons.arrow_forward_ios, size: 11, color: Color(0xFF5865F2)),
+                Text(l10n.seeDetails, style: const TextStyle(color: Color(0xFF5865F2), fontSize: 11)),
+                const Icon(Icons.arrow_forward_ios, size: 11, color: Color(0xFF5865F2)),
               ],
             ),
           ],
@@ -184,16 +191,11 @@ class SignalCard extends StatelessWidget {
     );
   }
 
-  // ▼▼▼ HÀM ĐÃ ĐƯỢC TỐI ƯU VỚI `hitTps` ĐỂ ĐẢM BẢO CHÍNH XÁC TUYỆT ĐỐI ▼▼▼
   Widget? _getStatusIcon(String title, String? result) {
     final lowerTitle = title.toLowerCase();
-
-    // Logic cho SL: Vẫn dùng result nhưng kiểm tra an toàn hơn
     if (lowerTitle == 'sl' && result?.toLowerCase() == 'sl hit') {
       return const Icon(Icons.cancel, color: Colors.redAccent, size: 16);
     }
-
-    // Logic cho TP: Dùng 'hitTps' để có độ chính xác 100%
     if (lowerTitle.startsWith('tp')) {
       final tpNumber = int.tryParse(lowerTitle.replaceAll('tp', ''));
       if (tpNumber != null && signal.hitTps.contains(tpNumber)) {
@@ -203,22 +205,21 @@ class SignalCard extends StatelessWidget {
     return null;
   }
 
-  Widget _buildUpgradeView() {
+  Widget _buildUpgradeView(AppLocalizations l10n) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_buildUpgradeItem("Entry"), _buildUpgradeItem("SL")]),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_buildUpgradeItem(l10n.signalEntry, l10n), _buildUpgradeItem(l10n.signalSl, l10n)]),
         const SizedBox(height: 8),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_buildUpgradeItem("TP1"), _buildUpgradeItem("TP2"), _buildUpgradeItem("TP3")]),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [_buildUpgradeItem("TP1", l10n), _buildUpgradeItem("TP2", l10n), _buildUpgradeItem("TP3", l10n)]),
         const SizedBox(height: 8),
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Flexible(child: Text("Upgrade to see signal details...", style: TextStyle(color: Colors.grey, fontSize: 11), overflow: TextOverflow.ellipsis)),
+            Flexible(child: Text(l10n.upgradeToSeeDetails, style: const TextStyle(color: Colors.grey, fontSize: 11), overflow: TextOverflow.ellipsis)),
             Row(
               children: [
-                Text("Upgrade Now", style: TextStyle(color: Color(0xFF5865F2), fontSize: 11, fontWeight: FontWeight.bold)),
-                Icon(Icons.arrow_forward_ios, size: 11, color: Color(0xFF5865F2)),
+                Text(l10n.upgradeNow, style: const TextStyle(color: Color(0xFF5865F2), fontSize: 11, fontWeight: FontWeight.bold)),
+                const Icon(Icons.arrow_forward_ios, size: 11, color: Color(0xFF5865F2)),
               ],
             ),
           ],
@@ -227,7 +228,7 @@ class SignalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildUpgradeItem(String title) {
+  Widget _buildUpgradeItem(String title, AppLocalizations l10n) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -239,7 +240,7 @@ class SignalCard extends StatelessWidget {
             children: [
               Image.asset('assets/images/crown_icon.png', height: 30, width: 30),
               const SizedBox(width: 4),
-              const Flexible(child: Text("Upgrade", style: TextStyle(color: Colors.white, fontSize: 17), overflow: TextOverflow.ellipsis)),
+              Flexible(child: Text(l10n.upgrade, style: const TextStyle(color: Colors.white, fontSize: 17), overflow: TextOverflow.ellipsis)),
             ],
           )
         ],
@@ -248,6 +249,7 @@ class SignalCard extends StatelessWidget {
   }
 
   Widget _buildInfoColumn(String title, String value, {Color? valueColor, Widget? icon}) {
+    // ... không có thay đổi ở đây ...
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,

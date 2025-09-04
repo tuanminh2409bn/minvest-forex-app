@@ -1,6 +1,7 @@
 // lib/features/notifications/screens/notification_screen_mobile.dart
 
 import 'package:flutter/material.dart';
+import 'package:minvest_forex_app/core/providers/language_provider.dart'; // THÊM IMPORT
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/notifications/models/notification_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -46,7 +47,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // === LOGIC MỚI: SAO CHÉP TỪ PHIÊN BẢN WEB ===
   static const Map<String, String> _currencyFlags = {
     'AUD': 'assets/images/aud_flag.png',
     'CHF': 'assets/images/chf_flag.png',
@@ -77,19 +77,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
     return [];
   }
-  // === KẾT THÚC LOGIC MỚI ===
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Lấy mã ngôn ngữ hiện tại từ provider
+    final langCode = context.watch<LanguageProvider>().locale?.languageCode ?? 'vi';
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
-        // Sử dụng l10n cho tiêu đề
         title: Text(l10n.notifications, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: const Color(0xFF161B22),
         elevation: 0,
-        centerTitle: true, // Thêm để căn giữa tiêu đề cho đồng bộ
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
@@ -100,7 +101,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           if (provider.notifications.isEmpty) {
             return Center(
               child: Text(
-                l10n.noNotificationsYet, // Sử dụng l10n
+                l10n.noNotificationsYet,
                 style: const TextStyle(color: Colors.grey),
               ),
             );
@@ -114,17 +115,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
               return ListTile(
                 onTap: () => _onNotificationTap(notification),
-                // === THAY ĐỔI CỐT LÕI: SỬ DỤNG WIDGET MỚI ĐỂ HIỂN THỊ CỜ ===
                 leading: _buildLeadingIcon(notification),
+                // --- THAY ĐỔI 1: SỬ DỤNG HÀM getTitle() ---
                 title: Text(
-                  notification.title,
+                  notification.getTitle(langCode),
                   style: TextStyle(
                     fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
+                // --- THAY ĐỔI 2: SỬ DỤNG HÀM getBody() ---
                 subtitle: Text(
-                  '${notification.body}\n$timeAgo',
+                  '${notification.getBody(langCode)}\n$timeAgo',
                   style: TextStyle(
                     color: notification.isRead ? Colors.grey.shade500 : Colors.grey.shade300,
                   ),
@@ -138,13 +140,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // === WIDGET MỚI: TẠO ICON/CỜ ĐỂ HIỂN THỊ ===
   Widget _buildLeadingIcon(NotificationModel notification) {
-    final symbol = _extractSymbolFromTitle(notification.title);
+    // --- THAY ĐỔI 3: Lấy symbol từ title tiếng Anh để đảm bảo nhất quán ---
+    final symbol = _extractSymbolFromTitle(notification.getTitle('en'));
     final flagPaths = _getFlagPathsFromSymbol(symbol);
 
     if (flagPaths.isNotEmpty) {
-      // Nếu tìm thấy cờ, hiển thị cờ
       return SizedBox(
         width: 42,
         height: 28,
@@ -154,7 +155,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               left: index * 14.0,
               child: CircleAvatar(
                 radius: 14,
-                backgroundColor: const Color(0xFF161B22), // Màu nền cho đẹp hơn
+                backgroundColor: const Color(0xFF161B22),
                 backgroundImage: AssetImage(flagPaths[index]),
               ),
             );
@@ -162,7 +163,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
       );
     }
-    // Nếu không, hiển thị icon mặc định
     return CircleAvatar(
       backgroundColor: notification.isRead
           ? Colors.blueGrey.withOpacity(0.3)
@@ -172,6 +172,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Icon _getIconForType(String type) {
+    // ... không có thay đổi ở đây ...
     switch (type) {
       case 'new_signal':
         return const Icon(Icons.new_releases, color: Colors.white, size: 20);
@@ -188,8 +189,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // Cập nhật hàm format thời gian để dùng l10n
   String _formatTimestamp(Timestamp timestamp, AppLocalizations l10n) {
+    // ... không có thay đổi ở đây ...
     final DateTime date = timestamp.toDate();
     final Duration diff = DateTime.now().difference(date);
     if (diff.inDays > 1) {

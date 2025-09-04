@@ -860,39 +860,77 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
   }
 });
 
-export const manageUserStatus = onCall({ region: "asia-southeast1" }, async (request) => {
+export const downgradeUsersToFree = onCall({ region: "asia-southeast1" }, async (request) => {
     const adminUid = request.auth?.uid;
-    if (!adminUid) throw new functions.https.HttpsError("unauthenticated", "Bạn phải đăng nhập để thực hiện hành động này.");
+    if (!adminUid) {
+        throw new functions.https.HttpsError("unauthenticated", "Bạn phải đăng nhập để thực hiện hành động này.");
+    }
     const adminUserDoc = await firestore.collection("users").doc(adminUid).get();
-    if (adminUserDoc.data()?.role !== "admin") throw new functions.https.HttpsError("permission-denied", "Bạn không có quyền thực hiện hành động này.");
-    const { userIds, newStatus, reason } = request.data;
-    if (!userIds || !Array.isArray(userIds) || !newStatus) throw new functions.https.HttpsError("invalid-argument", "Dữ liệu gửi lên không hợp lệ.");
+    if (adminUserDoc.data()?.role !== "admin") {
+        throw new functions.https.HttpsError("permission-denied", "Bạn không có quyền thực hiện hành động này.");
+    }
+
+    const { userIds, reason } = request.data;
+    if (!userIds || !Array.isArray(userIds)) {
+        throw new functions.https.HttpsError("invalid-argument", "Dữ liệu 'userIds' gửi lên không hợp lệ.");
+    }
+
+    const hasCustomReason = reason && typeof reason === 'string' && reason.trim().length > 0;
+
+    const reasonForNotification = {
+        vi: hasCustomReason ? reason : "Tài khoản của bạn đã được chuyển về gói Free do vi phạm chính sách. Vui lòng đăng nhập lại.",
+        en: hasCustomReason ? reason : "Your account has been downgraded to the Free plan due to a policy violation. Please log in again.",
+    };
+
     const batch = firestore.batch();
-    const fcmTokensToNotify: string[] = [];
+    const usersToNotify: { token: string; lang: string }[] = [];
+
     for (const userId of userIds) {
         if (userId === adminUid) continue;
+
         const userRef = firestore.collection("users").doc(userId);
-        if (newStatus === "suspended") {
-            batch.update(userRef, { isSuspended: true, suspensionReason: reason || "Tài khoản của bạn đã bị tạm ngưng. Vui lòng liên hệ quản trị viên." });
-            const userDoc = await userRef.get();
-            const fcmToken = userDoc.data()?.activeSession?.fcmToken;
-            if (fcmToken) fcmTokensToNotify.push(fcmToken);
-        } else if (newStatus === "active") {
-            batch.update(userRef, { isSuspended: false, suspensionReason: admin.firestore.FieldValue.delete() });
-        }
-    }
-    await batch.commit();
-    if (newStatus === "suspended" && fcmTokensToNotify.length > 0) {
-        const message = {
-            data: { action: "FORCE_LOGOUT", reason: reason || "Tài khoản của bạn đã bị tạm ngưng bởi quản trị viên." },
-            apns: { headers: { "apns-priority": "10" }, payload: { aps: { "content-available": 1 } } },
-            android: { priority: "high" as const },
+
+        const updateData = {
+            subscriptionTier: 'free',
+            requiresDowngradeAcknowledgement: true,
+            downgradeReason: hasCustomReason ? reason : "Tài khoản của bạn đã được quản trị viên chuyển về gói Free.",
+            isSuspended: admin.firestore.FieldValue.delete(),
+            suspensionReason: admin.firestore.FieldValue.delete()
         };
-        for (const token of fcmTokensToNotify) {
-            try { await admin.messaging().send({ ...message, token }); } catch (error) { functions.logger.error(`Error sending notification to ${token}`, error); }
+        batch.update(userRef, updateData);
+
+        const userDoc = await userRef.get();
+        const userData = userDoc.data();
+        const fcmToken = userData?.activeSession?.fcmToken;
+        if (fcmToken) {
+            usersToNotify.push({
+                token: fcmToken,
+                lang: userData?.languageCode === 'en' ? 'en' : 'vi'
+            });
         }
     }
-    return { status: "success", message: `Đã cập nhật thành công ${userIds.length} tài khoản.` };
+
+    await batch.commit();
+
+    if (usersToNotify.length > 0) {
+        const promises = usersToNotify.map(user => {
+            const message = {
+                token: user.token,
+                data: {
+                    action: "FORCE_LOGOUT",
+                    reason: user.lang === 'en' ? reasonForNotification.en : reasonForNotification.vi
+                },
+                apns: { headers: { "apns-priority": "10" }, payload: { aps: { "content-available": 1 } } },
+                android: { priority: "high" as const },
+            };
+            return admin.messaging().send(message).catch(err => {
+                functions.logger.error(`Lỗi gửi thông báo hạ cấp tới ${user.token}`, err);
+            });
+        });
+        await Promise.all(promises);
+    }
+
+    return { status: "success", message: `Đã hạ cấp thành công ${userIds.length} tài khoản về Free.` };
 });
 
 export const resetDemoNotificationCounters = onSchedule({ schedule: "1 0 * * *", timeZone: "Asia/Ho_Chi_Minh", region: "asia-southeast1" }, async () => {

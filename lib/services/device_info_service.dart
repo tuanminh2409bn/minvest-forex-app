@@ -1,5 +1,6 @@
-import 'dart:io';
+//lib/services/device_info_service.dart
 
+import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';

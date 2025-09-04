@@ -713,7 +713,7 @@ abstract class AppLocalizations {
   /// No description provided for @upgradeNow.
   ///
   /// In en, this message translates to:
-  /// **'UPGRADE NOW'**
+  /// **'Upgrade Now'**
   String get upgradeNow;
 
   /// No description provided for @followMinvest.
@@ -883,6 +883,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Terms of Service'**
   String get termsOfService;
+
+  /// No description provided for @signalStatusMatched.
+  ///
+  /// In en, this message translates to:
+  /// **'MATCHED'**
+  String get signalStatusMatched;
+
+  /// No description provided for @signalStatusNotMatched.
+  ///
+  /// In en, this message translates to:
+  /// **'NOT MATCHED'**
+  String get signalStatusNotMatched;
+
+  /// No description provided for @signalStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'CANCELLED'**
+  String get signalStatusCancelled;
+
+  /// No description provided for @signalStatusSlHit.
+  ///
+  /// In en, this message translates to:
+  /// **'SL HIT'**
+  String get signalStatusSlHit;
+
+  /// No description provided for @signalStatusTp1Hit.
+  ///
+  /// In en, this message translates to:
+  /// **'TP1 HIT'**
+  String get signalStatusTp1Hit;
+
+  /// No description provided for @signalStatusTp2Hit.
+  ///
+  /// In en, this message translates to:
+  /// **'TP2 HIT'**
+  String get signalStatusTp2Hit;
+
+  /// No description provided for @signalStatusTp3Hit.
+  ///
+  /// In en, this message translates to:
+  /// **'TP3 HIT'**
+  String get signalStatusTp3Hit;
+
+  /// No description provided for @signalStatusRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'RUNNING'**
+  String get signalStatusRunning;
+
+  /// No description provided for @signalStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'CLOSED'**
+  String get signalStatusClosed;
+
+  /// No description provided for @signalEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Entry'**
+  String get signalEntry;
+
+  /// No description provided for @signalSl.
+  ///
+  /// In en, this message translates to:
+  /// **'SL'**
+  String get signalSl;
+
+  /// No description provided for @upgradeToSeeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to see signal details...'**
+  String get upgradeToSeeDetails;
+
+  /// No description provided for @buy.
+  ///
+  /// In en, this message translates to:
+  /// **'BUY'**
+  String get buy;
+
+  /// No description provided for @sell.
+  ///
+  /// In en, this message translates to:
+  /// **'SELL'**
+  String get sell;
 
   /// No description provided for @noNotificationsYet.
   ///

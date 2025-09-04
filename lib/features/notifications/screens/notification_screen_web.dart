@@ -1,6 +1,7 @@
 // lib/features/notifications/screens/notification_screen_web.dart
 
 import 'package:flutter/material.dart';
+import 'package:minvest_forex_app/core/providers/language_provider.dart'; // THÊM IMPORT
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/notifications/models/notification_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -8,7 +9,7 @@ import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart'; // Import l10n
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -83,6 +84,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Lấy mã ngôn ngữ hiện tại từ provider
+    final langCode = context.watch<LanguageProvider>().locale?.languageCode ?? 'vi';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -119,8 +122,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   itemCount: provider.notifications.length,
                   itemBuilder: (context, index) {
                     final notification = provider.notifications[index];
-                    // Truyền l10n vào hàm build
-                    return _buildNotificationTile(notification, l10n);
+                    // Truyền l10n và langCode vào hàm build
+                    return _buildNotificationTile(notification, l10n, langCode);
                   },
                 );
               },
@@ -131,9 +134,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // === THAY ĐỔI BẮT ĐẦU TỪ ĐÂY ===
-  Widget _buildNotificationTile(NotificationModel notification, AppLocalizations l10n) {
-    // 1. Gọi hàm format thời gian
+  Widget _buildNotificationTile(NotificationModel notification, AppLocalizations l10n, String langCode) {
     final timeAgo = _formatTimestamp(notification.timestamp, l10n);
 
     return Container(
@@ -145,10 +146,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ),
       child: ListTile(
         leading: _buildLeadingIcon(notification),
-        title: Text(notification.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        // 2. Cập nhật subtitle để hiển thị cả body và timeAgo
+        // --- THAY ĐỔI 1: SỬ DỤNG HÀM getTitle() ---
+        title: Text(notification.getTitle(langCode), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        // --- THAY ĐỔI 2: SỬ DỤNG HÀM getBody() ---
         subtitle: Text(
-            '${notification.body} - $timeAgo',
+            '${notification.getBody(langCode)} - $timeAgo',
             style: const TextStyle(color: Colors.white70),
             maxLines: 2,
             overflow: TextOverflow.ellipsis
@@ -159,7 +161,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Widget _buildLeadingIcon(NotificationModel notification) {
-    final symbol = _extractSymbolFromTitle(notification.title);
+    // --- THAY ĐỔI 3: Lấy symbol từ title tiếng Anh để đảm bảo nhất quán ---
+    final symbol = _extractSymbolFromTitle(notification.getTitle('en'));
     final flagPaths = _getFlagPathsFromSymbol(symbol);
 
     if (flagPaths.isNotEmpty) {
@@ -187,24 +190,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Icon _getIconForType(String type) {
+    // ... không có thay đổi ở đây ...
     switch (type) {
       case 'new_signal':
-        return const Icon(Icons.new_releases, color: Colors.blueAccent);
+        return const Icon(Icons.new_releases, color: Colors.white);
       case 'signal_matched':
-        return const Icon(Icons.check_circle, color: Colors.blueAccent);
+        return const Icon(Icons.check_circle, color: Colors.white);
       case 'tp1_hit':
       case 'tp2_hit':
       case 'tp3_hit':
-        return const Icon(Icons.flag_circle, color: Colors.blueAccent);
+        return const Icon(Icons.flag_circle, color: Colors.white);
       case 'sl_hit':
-        return const Icon(Icons.cancel, color: Colors.blueAccent);
+        return const Icon(Icons.cancel, color: Colors.white);
       default:
-        return const Icon(Icons.notifications, color: Colors.blueAccent);
+        return const Icon(Icons.notifications, color: Colors.white);
     }
   }
 
-  // 3. Cập nhật hàm format thời gian để dùng l10n
   String _formatTimestamp(Timestamp timestamp, AppLocalizations l10n) {
+    // ... không có thay đổi ở đây ...
     final DateTime date = timestamp.toDate();
     final Duration diff = DateTime.now().difference(date);
     if (diff.inDays > 1) {

@@ -1,3 +1,5 @@
+// lib/features/admin/screens/admin_panel_screen_mobile.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,7 +18,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final Set<String> _selectedUserIds = {};
   final TextEditingController _reasonController = TextEditingController();
 
-  void _handleSuspendUsers() {
+  // Đổi tên hàm và logic cho đúng nghiệp vụ "Hạ cấp"
+  void _handleDowngradeUsers() {
     if (_selectedUserIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')));
       return;
@@ -24,10 +27,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Nhập lý do khóa tài khoản'),
+        title: const Text('Hạ cấp tài khoản về Free'),
         content: TextField(
           controller: _reasonController,
-          decoration: const InputDecoration(hintText: 'Lý do...'),
+          decoration: const InputDecoration(hintText: 'Nhập lý do hạ cấp (bắt buộc)...'),
           autofocus: true,
         ),
         actions: [
@@ -40,27 +43,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 return;
               }
               Navigator.of(context).pop();
-              _executeAction(status: 'suspended', reason: reason);
+              _executeDowngradeAction(reason: reason);
             },
-            child: const Text('Xác nhận khóa'),
+            child: const Text('Xác nhận hạ cấp'),
           ),
         ],
       ),
     );
   }
 
-  void _handleActivateUsers() {
-    if (_selectedUserIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')));
-      return;
-    }
-    _executeAction(status: 'active');
-  }
-
-  Future<void> _executeAction({required String status, String? reason}) async {
-    final message = await _adminService.manageUserStatus(
+  // Hàm thực thi mới, gọi đúng service đã cập nhật
+  Future<void> _executeDowngradeAction({required String reason}) async {
+    final message = await _adminService.downgradeUsersToFree(
       userIds: _selectedUserIds.toList(),
-      newStatus: status,
       reason: reason,
     );
     setState(() => _selectedUserIds.clear());
@@ -68,6 +63,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
   }
 
   @override
@@ -126,17 +127,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           );
         },
       ),
+      // Cập nhật thanh công cụ dưới cùng, chỉ còn nút "Hạ cấp"
       bottomNavigationBar: _selectedUserIds.isNotEmpty
           ? BottomAppBar(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Expanded(child: ElevatedButton.icon(onPressed: _handleActivateUsers, icon: const Icon(Icons.lock_open), label: const Text('Mở khóa'), style: ElevatedButton.styleFrom(backgroundColor: Colors.green))),
-              const SizedBox(width: 10),
-              Expanded(child: ElevatedButton.icon(onPressed: _handleSuspendUsers, icon: const Icon(Icons.lock), label: const Text('Khóa'), style: ElevatedButton.styleFrom(backgroundColor: Colors.red))),
-            ],
+          child: ElevatedButton.icon(
+            onPressed: _handleDowngradeUsers,
+            icon: const Icon(Icons.arrow_downward),
+            label: const Text('Hạ cấp về Free'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade800,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
+            ),
           ),
         ),
       )
@@ -146,14 +150,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Widget _buildUserTitle(Map<String, dynamic> userData) {
     final displayName = userData['displayName'] ?? 'N/A';
-    final isSuspended = userData['isSuspended'] ?? false;
     final role = userData['role'] ?? 'user';
+    // Xóa logic hiển thị gạch chân khi bị khóa
     return Text(
       displayName,
       style: TextStyle(
-        color: isSuspended ? Colors.red.shade300 : (role == 'admin' ? Colors.amber : null),
+        color: role == 'admin' ? Colors.amber : null,
         fontWeight: role == 'admin' ? FontWeight.bold : FontWeight.normal,
-        decoration: isSuspended ? TextDecoration.lineThrough : TextDecoration.none,
       ),
     );
   }
@@ -178,6 +181,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           _buildDetailRow(Icons.payment, 'Payment:', userData['totalPaidAmount']?.toString() ?? 'N/A'),
           _buildDetailRow(Icons.date_range, 'Ngày tạo:', createdDateString),
           _buildDetailRow(Icons.timer_off_outlined, 'Ngày hết hạn:', expiryDateString),
+          // Thêm hiển thị lý do hạ cấp
+          if(userData['downgradeReason'] != null && (userData['downgradeReason'] as String).isNotEmpty)
+            _buildDetailRow(Icons.info_outline, 'Lý do hạ cấp:', userData['downgradeReason']),
         ],
       ),
     );

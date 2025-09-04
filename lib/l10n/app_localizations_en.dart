@@ -340,7 +340,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profile => 'Profile';
 
   @override
-  String get upgradeNow => 'UPGRADE NOW';
+  String get upgradeNow => 'Upgrade Now';
 
   @override
   String get followMinvest => 'Follow MInvest';
@@ -429,6 +429,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get termsOfService => 'Terms of Service';
+
+  @override
+  String get signalStatusMatched => 'MATCHED';
+
+  @override
+  String get signalStatusNotMatched => 'NOT MATCHED';
+
+  @override
+  String get signalStatusCancelled => 'CANCELLED';
+
+  @override
+  String get signalStatusSlHit => 'SL HIT';
+
+  @override
+  String get signalStatusTp1Hit => 'TP1 HIT';
+
+  @override
+  String get signalStatusTp2Hit => 'TP2 HIT';
+
+  @override
+  String get signalStatusTp3Hit => 'TP3 HIT';
+
+  @override
+  String get signalStatusRunning => 'RUNNING';
+
+  @override
+  String get signalStatusClosed => 'CLOSED';
+
+  @override
+  String get signalEntry => 'Entry';
+
+  @override
+  String get signalSl => 'SL';
+
+  @override
+  String get upgradeToSeeDetails => 'Upgrade to see signal details...';
+
+  @override
+  String get buy => 'BUY';
+
+  @override
+  String get sell => 'SELL';
 
   @override
   String get noNotificationsYet => 'No notifications yet.';

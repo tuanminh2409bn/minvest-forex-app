@@ -5,10 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:minvest_forex_app/services/session_service.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:minvest_forex_app/services/device_info_service.dart';
 import 'package:minvest_forex_app/core/exceptions/auth_exceptions.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'dart:convert';
@@ -44,7 +43,7 @@ class AuthService {
   }
 
   Future<User?> _handleSuccessfulSignIn(UserCredential userCredential, {
-    bool isAnonymous = false, // MỚI: Thêm cờ để nhận biết đăng nhập ẩn danh
+    bool isAnonymous = false,
     Map<String, dynamic>? facebookUserData,
     String? appleEmail,
     String? appleFullName,
@@ -60,7 +59,6 @@ class AuthService {
 
         if (!userDoc.exists) {
           if (isAnonymous) {
-            // MỚI: Xử lý cho người dùng ẩn danh
             transaction.set(userDocRef, {
               'uid': user.uid,
               'email': 'guest_${user.uid}@minvest.com',
@@ -68,11 +66,10 @@ class AuthService {
               'photoURL': null,
               'createdAt': Timestamp.now(),
               'subscriptionTier': 'free',
-              'role': 'guest', // Gán vai trò là 'guest'
+              'role': 'guest',
               'isSuspended': false,
             });
           } else {
-            // Logic cũ cho người dùng đăng nhập qua mạng xã hội
             String? email = googleEmail ?? appleEmail ?? facebookUserData?['email'] ?? user.email;
             final displayName = appleFullName ?? facebookUserData?['name'] ?? user.displayName;
             final photoURL = facebookUserData?['picture']?['data']?['url'] ?? user.photoURL;
@@ -107,38 +104,12 @@ class AuthService {
       rethrow;
     }
 
-    // Người dùng ẩn danh không cần token FCM hay session phức tạp
     if (!isAnonymous) {
-      await _updateUserSession();
+      await SessionService().updateUserSession();
     }
     return user;
   }
 
-
-  Future<void> _updateUserSession() async {
-    if (kIsWeb) return;
-    try {
-      String? fcmToken;
-      if (Platform.isIOS) {
-        final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
-        if (apnsToken == null) {
-          print('AuthService: Không thể lấy APNS token (máy ảo), bỏ qua cập nhật session.');
-          return;
-        }
-      }
-      fcmToken = await FirebaseMessaging.instance.getToken();
-      final deviceId = await DeviceInfoService.getDeviceId();
-      if (fcmToken == null) return;
-
-      final callable = _functions.httpsCallable('manageUserSession');
-      await callable.call({'deviceId': deviceId, 'fcmToken': fcmToken});
-      print('AuthService: Cập nhật session thành công!');
-    } catch (e) {
-      print('AuthService: Lỗi khi cập nhật session: $e');
-    }
-  }
-
-  // MỚI BẮT ĐẦU: Phương thức đăng nhập ẩn danh
   Future<User?> signInAnonymously() async {
     try {
       final userCredential = await _firebaseAuth.signInAnonymously();
@@ -148,7 +119,6 @@ class AuthService {
       rethrow;
     }
   }
-  // MỚI KẾT THÚC
 
   Future<User?> signInWithGoogle() async {
     try {
@@ -238,14 +208,11 @@ class AuthService {
     }
   }
 
-  // MỚI BẮT ĐẦU: Phương thức xóa tài khoản và dữ liệu
   Future<void> deleteAccountAndData() async {
     try {
       final callable = _functions.httpsCallable('deleteUserAccount');
       final result = await callable.call();
       print('Cloud function deleteUserAccount được gọi thành công: ${result.data}');
-      // Sau khi function thực thi, user sẽ tự động bị đăng xuất do auth state thay đổi
-      // Nhưng chúng ta vẫn gọi signOut ở client để đảm bảo dọn dẹp ngay lập tức
       await signOut();
     } on FirebaseFunctionsException catch (e) {
       print('Lỗi khi gọi cloud function: ${e.code} - ${e.message}');
@@ -255,5 +222,4 @@ class AuthService {
       rethrow;
     }
   }
-// MỚI KẾT THÚC
 }
