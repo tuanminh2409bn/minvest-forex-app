@@ -11,6 +11,7 @@ import axios from "axios";
 import { GoogleAuth } from "google-auth-library";
 import { Response, Request } from "express";
 import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
+import { getLocalizedPayload } from "./localization";
 
 // =================================================================
 // === KHỞI TẠO CÁC DỊCH VỤ CƠ BẢN ===
@@ -531,6 +532,9 @@ async function upgradeUserAccount(
 // =================================================================
 // === HỆ THỐNG GỬI THÔNG BÁO ===
 // =================================================================
+/**
+ * Kiểm tra xem có phải "giờ vàng" (8h - 17h VN) để gửi thông báo cho user VIP/Demo.
+ */
 function isGoldenHour(): boolean {
   const now = new Date();
   const vietnamTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
@@ -538,82 +542,205 @@ function isGoldenHour(): boolean {
   return hour >= 8 && hour < 17;
 }
 
-const sendAndStoreNotifications = async (userIds: string[], tokens: string[], payload: {[key: string]: string}) => {
-    if (userIds.length === 0) return;
-    if (tokens.length > 0) {
-        const messages = tokens.map(token => ({
-            token: token, data: payload, android: { priority: "high" as const },
-            apns: { headers: { "apns-priority": "10" }, payload: { aps: { "content-available": 1 } } },
-        }));
+/**
+ * Lưu trữ thông báo đa ngôn ngữ vào Firestore và gửi Push Notification
+ * với ngôn ngữ phù hợp cho từng người dùng.
+ */
+const sendAndStoreNotifications = async (
+    usersData: { id: string; token?: string; lang: string }[],
+    payload: any // Payload này giờ chứa title_loc và body_loc
+) => {
+    if (usersData.length === 0) return;
+
+    // --- 1. LƯU VÀO FIRESTORE (với đầy đủ các ngôn ngữ) ---
+    const batchStore = firestore.batch();
+    const notificationData = {
+        ...payload, // Chứa title_loc, body_loc, type, signalId
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        isRead: false,
+    };
+    usersData.forEach((user) => {
+        const notificationRef = firestore.collection("users").doc(user.id).collection("notifications").doc();
+        batchStore.set(notificationRef, notificationData);
+    });
+
+    // --- 2. GỬI PUSH NOTIFICATION (với ngôn ngữ tương ứng) ---
+    const messages: admin.messaging.Message[] = [];
+
+    usersData.forEach((user) => {
+        if (user.token) {
+            const lang = user.lang as "vi" | "en";
+            // Lấy title và body theo ngôn ngữ của user
+            const title = payload.title_loc[lang];
+            const body = payload.body_loc[lang];
+
+            messages.push({
+                token: user.token,
+                // Dữ liệu gửi đi bao gồm cả title/body đã dịch và payload gốc
+                data: {
+                    ...payload, // Gửi cả title_loc, body_loc
+                    title,     // Gửi title đã dịch
+                    body,      // Gửi body đã dịch
+                },
+                // Cấu hình để bật ứng dụng nền trên cả 2 nền tảng
+                android: { priority: "high" },
+                apns: {
+                    headers: { "apns-priority": "10" },
+                    payload: { aps: { "content-available": 1 } },
+                },
+            });
+        }
+    });
+
+    // Gửi tất cả các tin nhắn đã chuẩn bị
+    if (messages.length > 0) {
         await admin.messaging().sendEach(messages);
     }
-    const batch = firestore.batch();
-    const notificationData = { ...payload, timestamp: admin.firestore.FieldValue.serverTimestamp(), isRead: false };
-    userIds.forEach(userId => {
-        const notificationRef = firestore.collection('users').doc(userId).collection('notifications').doc();
-        batch.set(notificationRef, notificationData);
-    });
-    await batch.commit();
+
+    // Commit batch lưu trữ sau khi đã gửi thông báo
+    await batchStore.commit();
 };
 
-async function triggerNotifications(payload: {[key: string]: string}) {
+
+/**
+ * Tập hợp các user đủ điều kiện nhận thông báo và kích hoạt gửi đi.
+ */
+async function triggerNotifications(payload: any) {
     const isGolden = isGoldenHour();
     const allEligibleUsersDocs: admin.firestore.DocumentSnapshot[] = [];
+
     const eliteQuery = firestore.collection("users").where("subscriptionTier", "==", "elite").get();
     const timeRestrictedPromises: Promise<admin.firestore.QuerySnapshot>[] = [];
+
     if (isGolden) {
         const vipQuery = firestore.collection("users").where("subscriptionTier", "==", "vip").get();
         const demoQuery = firestore.collection("users").where("subscriptionTier", "==", "demo").where("notificationCount", "<", 8).get();
         timeRestrictedPromises.push(vipQuery, demoQuery);
     }
+
     const [eliteSnapshot, ...timeRestrictedSnapshots] = await Promise.all([eliteQuery, ...timeRestrictedPromises]);
-    eliteSnapshot.forEach(doc => allEligibleUsersDocs.push(doc));
-    timeRestrictedSnapshots.forEach(snapshot => snapshot.forEach(doc => allEligibleUsersDocs.push(doc)));
-    if (allEligibleUsersDocs.length === 0) return;
-    const userIds = allEligibleUsersDocs.map(doc => doc.id);
-    const tokens = allEligibleUsersDocs.map(doc => doc.data()?.activeSession?.fcmToken).filter(token => token);
-    await sendAndStoreNotifications(userIds, tokens, payload);
-    const demoUsersToUpdate = allEligibleUsersDocs.filter(doc => doc.data()?.subscriptionTier === 'demo').map(doc => doc.id);
+    eliteSnapshot.forEach((doc) => allEligibleUsersDocs.push(doc));
+    timeRestrictedSnapshots.forEach((snapshot) => snapshot.forEach((doc) => allEligibleUsersDocs.push(doc)));
+
+    if (allEligibleUsersDocs.length === 0) {
+        functions.logger.log("Không có người dùng nào đủ điều kiện nhận thông báo.");
+        return;
+    }
+
+    // --- PHẦN SỬA LỖI NẰM Ở ĐÂY ---
+    // Định nghĩa một kiểu dữ liệu rõ ràng cho người dùng
+    type UserNotificationData = {
+        id: string;
+        token?: string;
+        lang: "vi" | "en";
+        tier: string;
+    };
+
+    // Lọc và chuyển đổi dữ liệu một cách an toàn về kiểu
+    const usersData = allEligibleUsersDocs
+        .map((doc): UserNotificationData | null => {
+            const data = doc.data();
+            if (!data) {
+                return null; // Bỏ qua nếu không có dữ liệu
+            }
+            return {
+                id: doc.id,
+                token: data.activeSession?.fcmToken,
+                lang: data.languageCode === "en" ? "en" : "vi",
+                tier: data.subscriptionTier,
+            };
+        })
+        // Lọc ra tất cả các giá trị null
+        .filter((user): user is UserNotificationData => user !== null);
+    // --- KẾT THÚC PHẦN SỬA LỖI ---
+
+
+    // Code từ đây trở đi không thay đổi
+    await sendAndStoreNotifications(usersData, payload);
+
+    // Cập nhật bộ đếm cho user demo
+    const demoUsersToUpdate = usersData
+        .filter((user) => user.tier === "demo")
+        .map((user) => user.id);
+
     if (demoUsersToUpdate.length > 0) {
-        const batch = firestore.batch();
-        demoUsersToUpdate.forEach(userId => {
-            const userRef = firestore.collection('users').doc(userId);
-            batch.update(userRef, { notificationCount: admin.firestore.FieldValue.increment(1) });
+        const batchUpdate = firestore.batch();
+        demoUsersToUpdate.forEach((userId) => {
+            const userRef = firestore.collection("users").doc(userId);
+            batchUpdate.update(userRef, { notificationCount: admin.firestore.FieldValue.increment(1) });
         });
-        await batch.commit();
+        await batchUpdate.commit();
     }
 }
 
 export const onNewSignalCreated = onDocumentCreated({ document: "signals/{signalId}", region: "asia-southeast1", memory: "256MiB" }, async (event) => {
     const signalData = event.data?.data();
     if (!signalData) return;
-    const payload = {
-      type: "new_signal", signalId: event.params.signalId,
-      title: `⚡️ Tín hiệu mới: ${signalData.type.toUpperCase()} ${signalData.symbol}`,
-      body: `Entry: ${signalData.entryPrice} | SL: ${signalData.stopLoss}`,
+
+    // THAY ĐỔI LỚN: Gọi hàm getLocalizedPayload để dịch
+    const localizedPayload = await getLocalizedPayload(
+        "new_signal", // Đây là key trong file localization.ts
+        signalData.type.toUpperCase(),
+        signalData.symbol,
+        signalData.entryPrice,
+        signalData.stopLoss
+    );
+
+    const finalPayload = {
+      type: "new_signal",
+      signalId: event.params.signalId,
+      ...localizedPayload, // Kết hợp payload đã dịch vào
     };
-    await triggerNotifications(payload);
+
+    await triggerNotifications(finalPayload);
 });
 
 export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}", region: "asia-southeast1", memory: "256MiB" }, async (event) => {
     const beforeData = event.data?.before.data();
     const afterData = event.data?.after.data();
     if (!beforeData || !afterData) return;
-    let payload: {[key: string]: string} | null = null;
+
+    let notificationType: string | null = null;
+    let payloadArgs: (string | number)[] = [];
     const { symbol, type, entryPrice } = afterData;
+
+    // Xác định loại thông báo và các tham số cần thiết
     if (beforeData.isMatched === false && afterData.isMatched === true) {
-        payload = { type: "signal_matched", title: `✅ ${type.toUpperCase()} ${symbol} Đã khớp lệnh!`, body: `Tín hiệu đã khớp entry tại giá ${entryPrice}.`};
+        notificationType = "signal_matched";
+        payloadArgs = [type.toUpperCase(), symbol, entryPrice];
     } else if (beforeData.result !== afterData.result) {
         switch(afterData.result) {
-            case "TP1 Hit": payload = { type: "tp1_hit", title: `🎯 ${type.toUpperCase()} ${symbol} đã đạt TP1!`, body: `Chúc mừng! Tín hiệu đã chốt lời ở mức TP1.`}; break;
-            case "TP2 Hit": payload = { type: "tp2_hit", title: `🎯🎯 ${type.toUpperCase()} ${symbol} đã đạt TP2!`, body: `Xuất sắc! Tín hiệu tiếp tục chốt lời ở mức TP2.`}; break;
-            case "TP3 Hit": payload = { type: "tp3_hit", title: `🏆 ${type.toUpperCase()} ${symbol} đã đạt TP3!`, body: `Mục tiêu cuối cùng đã hoàn thành!`}; break;
-            case "SL Hit": payload = { type: "sl_hit", title: `❌ ${type.toUpperCase()} ${symbol} đã chạm Stop Loss.`, body: `Rất tiếc, tín hiệu đã chạm điểm dừng lỗ.`}; break;
+            case "TP1 Hit":
+                notificationType = "tp1_hit";
+                payloadArgs = [type.toUpperCase(), symbol];
+                break;
+            case "TP2 Hit":
+                notificationType = "tp2_hit";
+                payloadArgs = [type.toUpperCase(), symbol];
+                break;
+            case "TP3 Hit":
+                notificationType = "tp3_hit";
+                payloadArgs = [type.toUpperCase(), symbol];
+                break;
+            case "SL Hit":
+                notificationType = "sl_hit";
+                payloadArgs = [type.toUpperCase(), symbol];
+                break;
         }
     }
-    if (payload) {
-        payload.signalId = event.params.signalId;
-        await triggerNotifications(payload);
+
+    // Nếu có loại thông báo hợp lệ, tiến hành dịch và gửi
+    if (notificationType) {
+        const localizedPayload = await getLocalizedPayload(
+            notificationType as any, // ép kiểu vì TypeScript
+            ...payloadArgs
+        );
+        const finalPayload = {
+            type: notificationType,
+            signalId: event.params.signalId,
+            ...localizedPayload
+        };
+        await triggerNotifications(finalPayload);
     }
 });
 

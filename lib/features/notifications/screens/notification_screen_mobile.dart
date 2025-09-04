@@ -8,7 +8,7 @@ import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.
 import 'package:provider/provider.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart'; // Import l10n
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});

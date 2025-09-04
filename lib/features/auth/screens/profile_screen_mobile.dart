@@ -202,14 +202,12 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // MỚI BẮT ĐẦU: Thêm nút xóa tài khoản
                   _buildActionButton(
-                    text: l10n.deleteAccount, // Giả sử có key 'deleteAccount'
+                    text: l10n.deleteAccount,
                     onPressed: () => _handleDeleteAccount(context),
-                    isDestructive: true, // Thêm cờ để có thể tùy chỉnh style nếu cần
+                    isDestructive: true,
                   ),
                   const SizedBox(height: 16),
-                  // MỚI KẾT THÚC
 
                   _buildActionButton(
                     text: l10n.logout,
@@ -233,11 +231,9 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
 
-                  // MỚI BẮT ĐẦU: Thêm liên kết chính sách và điều khoản
                   const SizedBox(height: 30),
                   _buildInfoLinks(context),
                   const SizedBox(height: 20),
-                  // MỚI KẾT THÚC
                 ],
               ),
             ),
@@ -247,24 +243,23 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // MỚI BẮT ĐẦU: Widget cho các liên kết thông tin
   Widget _buildInfoLinks(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         TextButton(
-          onPressed: () => _launchURL('https://tuanminh2409bn.github.io/minvest-privacy/'), // THAY THẾ URL CỦA BẠN
+          onPressed: () => _launchURL('https://tuanminh2409bn.github.io/minvest-privacy/'),
           child: Text(
-            l10n.privacyPolicy, // Giả sử có key 'privacyPolicy'
+            l10n.privacyPolicy,
             style: const TextStyle(color: Colors.white70, decoration: TextDecoration.underline, decorationColor: Colors.white70),
           ),
         ),
         const Text("•", style: TextStyle(color: Colors.white70)),
         TextButton(
-          onPressed: () => _launchURL('https://tuanminh2409bn.github.io/minvest-terms/'), // THAY THẾ URL CỦA BẠN
+          onPressed: () => _launchURL('https://tuanminh2409bn.github.io/minvest-terms/'),
           child: Text(
-            l10n.termsOfService, // Giả sử có key 'termsOfService'
+            l10n.termsOfService,
             style: const TextStyle(color: Colors.white70, decoration: TextDecoration.underline, decorationColor: Colors.white70),
           ),
         ),
