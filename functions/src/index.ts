@@ -171,7 +171,7 @@ const TMN_CODE = "EZTRTEST"; // Sẽ đổi khi lên Production
 const HASH_SECRET = "DGTXQMK0DF9NZTZBH63RV3AM3E53K8AX"; // Sẽ đổi khi lên Production
 const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"; // Sẽ đổi khi lên Production
 const RETURN_URL = "https://minvest.vn/";
-const USD_TO_VND_RATE = 25500;
+const USD_TO_VND_RATE = 26000;
 
 export const createVnpayOrder = onCall({ region: "asia-southeast1", secrets: ["VNPAY_HASH_SECRET"] }, async (request) => {
     const userId = request.auth?.uid;
@@ -774,4 +774,85 @@ export const resetDemoNotificationCounters = onSchedule({ schedule: "1 0 * * *",
     const batch = firestore.batch();
     demoUsersSnapshot.forEach(doc => batch.update(doc.ref, { notificationCount: 0 }));
     await batch.commit();
+});
+
+// =================================================================
+// === FUNCTION XÓA TÀI KHOẢN VÀ DỮ LIỆU NGƯỜI DÙNG ===
+// =================================================================
+
+/**
+ * Xóa một collection theo path, bao gồm tất cả document và sub-collection.
+ * @param {admin.firestore.Firestore} db - Thể hiện của Firestore admin.
+ * @param {string} collectionPath - Đường dẫn đến collection cần xóa.
+ * @param {number} batchSize - Số lượng document xóa trong một lần.
+ */
+async function deleteCollection(db: admin.firestore.Firestore, collectionPath: string, batchSize: number) {
+    const collectionRef = db.collection(collectionPath);
+    const query = collectionRef.orderBy('__name__').limit(batchSize);
+
+    return new Promise((resolve, reject) => {
+        deleteQueryBatch(db, query, resolve).catch(reject);
+    });
+}
+
+async function deleteQueryBatch(db: admin.firestore.Firestore, query: admin.firestore.Query, resolve: (value: unknown) => void) {
+    const snapshot = await query.get();
+
+    // Khi không còn document nào, quá trình hoàn tất.
+    if (snapshot.size === 0) {
+        resolve(true);
+        return;
+    }
+
+    // Xóa document theo batch
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+
+    // Đệ quy gọi lại để xóa batch tiếp theo
+    process.nextTick(() => {
+        deleteQueryBatch(db, query, resolve);
+    });
+}
+
+export const deleteUserAccount = onCall({ region: "asia-southeast1" }, async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+        // Đảm bảo người dùng đã đăng nhập
+        throw new HttpsError("unauthenticated", "Yêu cầu phải được xác thực.");
+    }
+
+    functions.logger.log(`Bắt đầu quá trình xóa cho người dùng: ${uid}`);
+
+    try {
+        // Xóa các sub-collection trước
+        await deleteCollection(firestore, `users/${uid}/notifications`, 50);
+        functions.logger.log(`Đã xóa subcollection 'notifications' cho user ${uid}`);
+
+        await deleteCollection(firestore, `users/${uid}/transactions`, 50);
+        functions.logger.log(`Đã xóa subcollection 'transactions' cho user ${uid}`);
+
+        // Xóa document chính của user
+        await firestore.collection("users").doc(uid).delete();
+        functions.logger.log(`Đã xóa document chính của user ${uid}`);
+
+        // Dọn dẹp collection verifiedExnessIds
+        const exnessIdQuery = await firestore.collection("verifiedExnessIds").where("userId", "==", uid).limit(1).get();
+        if (!exnessIdQuery.empty) {
+            await exnessIdQuery.docs[0].ref.delete();
+            functions.logger.log(`Đã xóa 'verifiedExnessIds' cho user ${uid}`);
+        }
+
+        // Bước cuối cùng: Xóa người dùng khỏi Authentication
+        await admin.auth().deleteUser(uid);
+        functions.logger.log(`Hoàn tất: Đã xóa người dùng khỏi Firebase Auth: ${uid}`);
+
+        return { success: true, message: "Tài khoản và dữ liệu đã được xóa thành công." };
+
+    } catch (error) {
+        functions.logger.error(`Lỗi khi xóa người dùng ${uid}:`, error);
+        throw new HttpsError("internal", "Không thể xóa tài khoản, vui lòng thử lại sau.", error);
+    }
 });

@@ -46,7 +46,6 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // Handle error
     }
   }
 
@@ -82,8 +81,6 @@ class ProfileScreen extends StatelessWidget {
       );
     }
   }
-
-  // MỚI BẮT ĐẦU: Hàm xử lý xóa tài khoản
   Future<void> _handleDeleteAccount(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final bool? confirmDelete = await showDialog<bool>(
@@ -92,15 +89,15 @@ class ProfileScreen extends StatelessWidget {
         return AlertDialog(
           backgroundColor: const Color(0xFF161B22),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(l10n.deleteAccount, style: const TextStyle(color: Colors.redAccent)), // Giả sử có key 'deleteAccount'
-          content: Text(l10n.deleteAccountWarning, style: const TextStyle(color: Colors.white70)), // Giả sử có key 'deleteAccountWarning'
+          title: Text(l10n.deleteAccount, style: const TextStyle(color: Colors.redAccent)),
+          content: Text(l10n.deleteAccountWarning, style: const TextStyle(color: Colors.white70)),
           actions: <Widget>[
             TextButton(
               child: Text(l10n.cancel, style: const TextStyle(color: Colors.white)),
               onPressed: () => Navigator.of(dialogContext).pop(false),
             ),
             TextButton(
-              child: Text(l10n.delete, style: const TextStyle(color: Colors.red)), // Giả sử có key 'delete'
+              child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
               onPressed: () => Navigator.of(dialogContext).pop(true),
             ),
           ],
@@ -109,13 +106,10 @@ class ProfileScreen extends StatelessWidget {
     );
 
     if (confirmDelete == true && context.mounted) {
-      // TODO: Gọi sự kiện xóa tài khoản
-      // context.read<AuthBloc>().add(DeleteAccountRequested());
+     context.read<AuthBloc>().add(DeleteAccountRequested());
       print('Delete account confirmed');
     }
   }
-  // MỚI KẾT THÚC
-
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);

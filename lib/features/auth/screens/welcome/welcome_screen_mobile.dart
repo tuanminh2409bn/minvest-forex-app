@@ -102,24 +102,21 @@ class WelcomeScreen extends StatelessWidget {
                           SignInWithFacebookRequested()),
                 ),
                 const SizedBox(height: 16),
-                if (Platform.isIOS) // MỚI: Chỉ hiển thị nút Apple trên iOS
+                if (Platform.isIOS)
                   _SocialSignInButton(
                     icon: const Icon(Icons.apple, color: Colors.white, size: 28),
                     text: l10n.continueByApple,
                     onPressed: () =>
                         context.read<AuthBloc>().add(SignInWithAppleRequested()),
                   ),
-
-                // MỚI BẮT ĐẦU: Thêm nút để người dùng trải nghiệm không cần đăng nhập
                 const SizedBox(height: 24),
                 TextButton(
                   onPressed: () {
-                    // TODO: Gọi sự kiện đăng nhập ẩn danh
-                    // context.read<AuthBloc>().add(SignInAnonymouslyRequested());
+                    context.read<AuthBloc>().add(SignInAnonymouslyRequested());
                     print('Guest login pressed');
                   },
                   child: Text(
-                    l10n.continueAsGuest, // Giả sử bạn đã thêm key này vào file .arb
+                    l10n.continueAsGuest,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -128,8 +125,6 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                // MỚI KẾT THÚC
-
                 const Spacer(flex: 2),
               ],
             ),
