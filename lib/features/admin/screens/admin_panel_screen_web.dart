@@ -18,13 +18,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final Set<String> _selectedUserIds = {};
   final TextEditingController _reasonController = TextEditingController();
 
-  // THAY ĐỔI 1: Đổi tên hàm
+  // Đổi tên hàm và logic cho đúng nghiệp vụ "Hạ cấp"
   void _handleDowngradeUsers() {
     if (_selectedUserIds.isEmpty) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        // THAY ĐỔI 2: Cập nhật văn bản
         title: const Text('Hạ cấp tài khoản về Free'),
         content: TextField(controller: _reasonController, decoration: const InputDecoration(hintText: 'Nhập lý do hạ cấp (bắt buộc)...'), autofocus: true),
         actions: [
@@ -34,7 +33,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               final reason = _reasonController.text.trim();
               if (reason.isEmpty) return;
               Navigator.of(context).pop();
-              // THAY ĐỔI 3: Gọi hàm thực thi mới
               _executeDowngradeAction(reason: reason);
             },
             child: const Text('Xác nhận hạ cấp'),
@@ -44,7 +42,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  // THAY ĐỔI 4: Hàm thực thi mới
+  // Hàm thực thi hành động hạ cấp
   Future<void> _executeDowngradeAction({required String reason}) async {
     final message = await _adminService.downgradeUsersToFree(
         userIds: _selectedUserIds.toList(),
@@ -54,6 +52,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _reasonController.clear();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  // Hàm helper định dạng tiền tệ
+  String _formatPayment(dynamic amount) {
+    if (amount == null || amount is! num) {
+      return 'N/A';
+    }
+    // Quy tắc: Nếu số tiền > 2000, coi là VNĐ. Ngược lại là USD.
+    if (amount > 2000) {
+      final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'VNĐ', decimalDigits: 0);
+      return format.format(amount);
+    } else {
+      final format = NumberFormat.currency(locale: 'en_US', symbol: '\$');
+      return format.format(amount);
     }
   }
 
@@ -95,10 +108,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   DataColumn(label: Text('Group')),
                   DataColumn(label: Text('Trạng thái')),
                   DataColumn(label: Text('Lý do hạ cấp')),
+                  DataColumn(label: Text('Payment')),
                   DataColumn(label: Text('Mobile UID')),
                   DataColumn(label: Text('Exness Client UID')),
                   DataColumn(label: Text('Exness Account')),
-                  DataColumn(label: Text('Payment')),
                   DataColumn(label: Text('Ngày tạo')),
                   DataColumn(label: Text('Ngày hết hạn')),
                 ],
@@ -140,10 +153,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         ),
                       ),
                       DataCell(Text(userData['downgradeReason'] ?? '')),
+                      DataCell(Text(_formatPayment(userData['totalPaidAmount']))),
                       DataCell(_buildCopyableCell(userData['activeSession']?['deviceId'])),
                       DataCell(_buildCopyableCell(userData['exnessClientUid'])),
                       DataCell(Text(userData['exnessClientAccount']?.toString() ?? 'N/A')),
-                      DataCell(Text(userData['totalPaidAmount']?.toString() ?? 'N/A')),
                       DataCell(Text(createdAt != null ? DateFormat('dd/MM/yy').format(createdAt.toDate()) : 'N/A')),
                       DataCell(Text(expiryDate != null ? DateFormat('dd/MM/yy').format(expiryDate.toDate()) : 'N/A')),
                     ],
@@ -154,7 +167,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           );
         },
       ),
-      // THAY ĐỔI 5: Cập nhật giao diện nút hành động
+      // Chỉ còn duy nhất nút "Hạ cấp về Free"
       floatingActionButton: _selectedUserIds.isNotEmpty
           ? FloatingActionButton.extended(
         onPressed: _handleDowngradeUsers,

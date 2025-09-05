@@ -18,7 +18,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final Set<String> _selectedUserIds = {};
   final TextEditingController _reasonController = TextEditingController();
 
-  // Đổi tên hàm và logic cho đúng nghiệp vụ "Hạ cấp"
+  // Hàm xử lý nghiệp vụ "Hạ cấp"
   void _handleDowngradeUsers() {
     if (_selectedUserIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')));
@@ -52,7 +52,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  // Hàm thực thi mới, gọi đúng service đã cập nhật
+  // Hàm thực thi hành động hạ cấp
   Future<void> _executeDowngradeAction({required String reason}) async {
     final message = await _adminService.downgradeUsersToFree(
       userIds: _selectedUserIds.toList(),
@@ -62,6 +62,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _reasonController.clear();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  // Hàm helper định dạng tiền tệ
+  String _formatPayment(dynamic amount) {
+    if (amount == null || amount is! num) {
+      return 'N/A';
+    }
+    // Quy tắc: Nếu số tiền > 2000, coi là VNĐ. Ngược lại là USD.
+    if (amount > 2000) {
+      final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'VNĐ', decimalDigits: 0);
+      return format.format(amount);
+    } else {
+      final format = NumberFormat.currency(locale: 'en_US', symbol: '\$');
+      return format.format(amount);
     }
   }
 
@@ -110,11 +125,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     value: isSelected,
                     onChanged: (bool? value) {
                       setState(() {
-                        if (value == true) {
-                          _selectedUserIds.add(userId);
-                        } else {
-                          _selectedUserIds.remove(userId);
-                        }
+                        if (value == true) _selectedUserIds.add(userId);
+                        else _selectedUserIds.remove(userId);
                       });
                     },
                   ),
@@ -127,7 +139,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           );
         },
       ),
-      // Cập nhật thanh công cụ dưới cùng, chỉ còn nút "Hạ cấp"
+      // Chỉ còn duy nhất nút "Hạ cấp về Free"
       bottomNavigationBar: _selectedUserIds.isNotEmpty
           ? BottomAppBar(
         child: Padding(
@@ -151,7 +163,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Widget _buildUserTitle(Map<String, dynamic> userData) {
     final displayName = userData['displayName'] ?? 'N/A';
     final role = userData['role'] ?? 'user';
-    // Xóa logic hiển thị gạch chân khi bị khóa
     return Text(
       displayName,
       style: TextStyle(
@@ -178,10 +189,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           _buildDetailRow(Icons.phone_android, 'Mobile UID:', userData['activeSession']?['deviceId'] ?? 'N/A', canCopy: true),
           _buildDetailRow(Icons.person_pin_outlined, 'Exness Client UID:', userData['exnessClientUid'] ?? 'N/A', canCopy: true),
           _buildDetailRow(Icons.account_balance_wallet_outlined, 'Exness Account:', userData['exnessClientAccount']?.toString() ?? 'N/A'),
-          _buildDetailRow(Icons.payment, 'Payment:', userData['totalPaidAmount']?.toString() ?? 'N/A'),
+          // SỬ DỤNG HÀM ĐỊNH DẠNG TIỀN TỆ
+          _buildDetailRow(Icons.payment, 'Payment:', _formatPayment(userData['totalPaidAmount'])),
           _buildDetailRow(Icons.date_range, 'Ngày tạo:', createdDateString),
           _buildDetailRow(Icons.timer_off_outlined, 'Ngày hết hạn:', expiryDateString),
-          // Thêm hiển thị lý do hạ cấp
           if(userData['downgradeReason'] != null && (userData['downgradeReason'] as String).isNotEmpty)
             _buildDetailRow(Icons.info_outline, 'Lý do hạ cấp:', userData['downgradeReason']),
         ],
@@ -190,6 +201,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Widget _buildDetailRow(IconData icon, String title, String value, {bool canCopy = false}) {
+    // ... không đổi ...
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -200,12 +212,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           Text(title, style: TextStyle(color: Colors.grey.shade400)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+              child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
           if (canCopy && value != 'N/A')
             InkWell(
               onTap: () {
