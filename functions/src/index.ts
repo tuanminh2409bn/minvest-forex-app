@@ -825,11 +825,20 @@ export const vnpayIpnListener = onRequest({ region: "asia-southeast1" }, async (
 // === FUNCTION QUẢN LÝ TIỆN ÍCH KHÁC ===
 // =================================================================
 export const manageUserSession = onCall({ region: "asia-southeast1" }, async (request) => {
-  if (!request.auth) throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+  if (!request.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+  }
+
   const uid = request.auth.uid;
   const newDeviceId = request.data.deviceId;
-  const newFcmToken = request.data.fcmToken;
-  if (!newDeviceId || !newFcmToken) throw new functions.https.HttpsError("invalid-argument", "The function must be called with 'deviceId' and 'fcmToken' arguments.");
+  const newFcmToken = request.data.fcmToken; // Chấp nhận giá trị này có thể là null
+
+  // === THAY ĐỔI QUAN TRỌNG ===
+  // Chỉ yêu cầu 'deviceId' là bắt buộc. 'fcmToken' là tùy chọn.
+  if (!newDeviceId) {
+    throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'deviceId' argument.");
+  }
+
   const userDocRef = firestore.collection("users").doc(uid);
   try {
     await firestore.runTransaction(async (transaction) => {
@@ -842,15 +851,28 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
 
       const userData = userDoc.data();
       const currentSession = userData?.activeSession;
+
+      // Chỉ gửi thông báo FORCE_LOGOUT nếu session cũ có fcmToken
       if (currentSession && currentSession.deviceId && currentSession.deviceId !== newDeviceId && currentSession.fcmToken) {
         const message = {
-          token: currentSession.fcmToken, data: { action: "FORCE_LOGOUT" },
+          token: currentSession.fcmToken,
+          data: { action: "FORCE_LOGOUT" },
           apns: { headers: { "apns-priority": "10" }, payload: { aps: { "content-available": 1 } } },
           android: { priority: "high" as const },
         };
-        try { await admin.messaging().send(message); } catch (error) { functions.logger.error(`Error sending FORCE_LOGOUT to ${currentSession.fcmToken}:`, error); }
+        try {
+          await admin.messaging().send(message);
+        } catch (error) {
+          functions.logger.error(`Error sending FORCE_LOGOUT to ${currentSession.fcmToken}:`, error);
+        }
       }
-      const newSessionData = { deviceId: newDeviceId, fcmToken: newFcmToken, loginAt: admin.firestore.FieldValue.serverTimestamp() };
+
+      // Luôn cập nhật session mới, kể cả khi fcmToken là null
+      const newSessionData = {
+        deviceId: newDeviceId,
+        fcmToken: newFcmToken,
+        loginAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
       transaction.update(userDocRef, { activeSession: newSessionData });
     });
     return { status: "success", message: "Session managed successfully." };

@@ -476,6 +476,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get sell => 'BÁN';
 
   @override
+  String get logoutDialogTitle => 'Phiên đăng nhập hết hạn';
+
+  @override
+  String get logoutDialogDefaultReason =>
+      'Tài khoản của bạn đã được đăng nhập trên một thiết bị khác.';
+
+  @override
+  String get ok => 'OK';
+
+  @override
   String get noNotificationsYet => 'Chưa có thông báo nào.';
 
   @override

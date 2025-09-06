@@ -1,5 +1,6 @@
 //lib/main.dart
 
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -17,7 +18,7 @@ import 'package:minvest_forex_app/features/signals/services/signal_service.dart'
 import 'package:minvest_forex_app/firebase_options.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-
+import 'package:minvest_forex_app/services/session_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -42,9 +43,11 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
+        Provider<SessionService>(create: (_) => SessionService()),
         BlocProvider<AuthBloc>(
           create: (context) => AuthBloc(
             authService: context.read<AuthService>(),
+            sessionService: context.read<SessionService>(),
           ),
         ),
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
@@ -64,10 +67,31 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  StreamSubscription<String>? _forceLogoutSubscription;
+  bool _isLogoutDialogShowing = false;
+
   @override
   void initState() {
     super.initState();
     _initializeServices();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final authService = context.read<AuthService>();
+        _forceLogoutSubscription = authService.forceLogoutStream.listen((reason) {
+          if (mounted && !_isLogoutDialogShowing) {
+            _isLogoutDialogShowing = true;
+            _showLogoutDialog(reason);
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _forceLogoutSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _initializeServices() async {
@@ -190,25 +214,40 @@ class _MyAppState extends State<MyApp> {
   void _showLogoutDialog(String? reason) {
     final context = navigatorKey.currentContext;
     if (context != null) {
+      final l10n = AppLocalizations.of(context)!;
+      bool isDialogShowing = ModalRoute.of(context)?.isCurrent != true;
+      if(isDialogShowing) return;
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
+        builder: (BuildContext dialogContext) {
           return AlertDialog(
-            title: const Text('Phiên đăng nhập hết hạn'),
-            content: Text(reason ?? 'Tài khoản của bạn đã được đăng nhập trên một thiết bị khác.'),
+            title: Text(l10n.logoutDialogTitle),
+            content: Text(reason ?? l10n.logoutDialogDefaultReason),
             actions: <Widget>[
               TextButton(
-                child: const Text('OK'),
+                child: Text(l10n.ok),
                 onPressed: () async {
-                  Navigator.of(context).pop();
-                  await AuthService().signOut();
+                  Navigator.of(dialogContext).pop();
+                  await this.context.read<AuthService>().signOut();
                 },
               ),
             ],
           );
         },
-      );
+      ).then((_) {
+        if(mounted) {
+          setState(() {
+            _isLogoutDialogShowing = false;
+          });
+        }
+      });
+    } else {
+      if(mounted) {
+        setState(() {
+          _isLogoutDialogShowing = false;
+        });
+      }
     }
   }
 

@@ -8,16 +8,21 @@ import 'package:minvest_forex_app/core/exceptions/auth_exceptions.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
+import 'package:minvest_forex_app/services/session_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService _authService;
+  final SessionService _sessionService;
   StreamSubscription<User?>? _userSubscription;
 
-  AuthBloc({required AuthService authService})
-      : _authService = authService,
+  AuthBloc({
+    required AuthService authService,
+    required SessionService sessionService,
+  })  : _authService = authService,
+        _sessionService = sessionService,
         super(const AuthState.unknown()) {
     _userSubscription = _authService.authStateChanges.listen(
           (user) => add(AuthStateChanged(user)),
@@ -36,11 +41,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       DeleteAccountRequested event, Emitter<AuthState> emit) async {
     final currentUser = state.user;
     if (currentUser == null) {
-      // Trường hợp hiếm gặp: không có user nhưng vẫn gọi được hàm xóa
       emit(const AuthState.unauthenticated(errorMessage: 'Không tìm thấy người dùng để xóa.'));
       return;
     }
-
     try {
       emit(const AuthState.loggingOut()); // Hiển thị màn hình loading
       await _authService.deleteAccountAndData();
@@ -56,6 +59,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onSignOutRequested(SignOutRequested event, Emitter<AuthState> emit) async {
     print("AuthBloc: Yêu cầu đăng xuất. Bắt đầu dọn dẹp provider...");
+
+    _authService.stopListeningForSessionChanges();
 
     for (var provider in event.providersToReset) {
       if (provider is UserProvider) {
@@ -76,8 +81,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onAuthStateChanged(AuthStateChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
+      print("AuthBloc: User authenticated. Updating session and starting listener...");
+      _sessionService.updateUserSession().then((_) {
+        print("AuthBloc: Session updated. Now starting to listen for changes.");
+        _authService.listenForSessionChanges();
+      }).catchError((error) {
+        print("AuthBloc: Error during session update/listen setup: $error");
+      });
       emit(AuthState.authenticated(event.user!));
     } else {
+      print("AuthBloc: User is unauthenticated. Stopping session listener.");
+      _authService.stopListeningForSessionChanges();
       if (state.errorMessage == null) {
         emit(const AuthState.unauthenticated());
       }
@@ -118,6 +132,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   @override
   Future<void> close() {
     _userSubscription?.cancel();
+    _authService.stopListeningForSessionChanges();
     return super.close();
   }
 }

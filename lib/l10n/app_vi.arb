@@ -149,6 +149,9 @@
     "upgrade": "Nâng cấp",
     "buy": "MUA",
     "sell": "BÁN",
+    "logoutDialogTitle": "Phiên đăng nhập hết hạn",
+    "logoutDialogDefaultReason": "Tài khoản của bạn đã được đăng nhập trên một thiết bị khác.",
+    "ok": "OK",
         "noNotificationsYet": "Chưa có thông báo nào.",
         "daysAgo": "{count} ngày trước",
         "@daysAgo": {

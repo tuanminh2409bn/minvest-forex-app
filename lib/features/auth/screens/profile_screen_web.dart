@@ -76,19 +76,12 @@ class ProfileScreen extends StatelessWidget {
       },
     );
 
-    Future<void> _handleLogout(BuildContext context) async {
-      // ... code dialog của bạn giữ nguyên ...
-
-      if (confirmLogout == true && context.mounted) {
-        // Lấy cả 2 provider từ context
-        final userProvider = context.read<UserProvider>();
-        final notificationProvider = context.read<NotificationProvider>();
-
-        // Gửi event đăng xuất KÈM THEO DANH SÁCH provider cần dọn dẹp
-        context.read<AuthBloc>().add(
-            SignOutRequested(providersToReset: [userProvider, notificationProvider])
-        );
-      }
+    if (confirmLogout == true && context.mounted) {
+      final userProvider = context.read<UserProvider>();
+      final notificationProvider = context.read<NotificationProvider>();
+      context.read<AuthBloc>().add(
+          SignOutRequested(providersToReset: [userProvider, notificationProvider])
+      );
     }
   }
 

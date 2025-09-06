@@ -149,6 +149,9 @@
     "upgrade": "Upgrade",
     "buy": "BUY",
     "sell": "SELL",
+    "logoutDialogTitle": "Session Expired",
+    "logoutDialogDefaultReason": "Your account has been logged in on another device.",
+    "ok": "OK",
         "noNotificationsYet": "No notifications yet.",
         "daysAgo": "{count} days ago",
         "@daysAgo": {

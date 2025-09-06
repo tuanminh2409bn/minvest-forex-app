@@ -1,4 +1,5 @@
 // lib/features/auth/services/auth_service.dart
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +11,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:minvest_forex_app/core/exceptions/auth_exceptions.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:minvest_forex_app/services/device_info_service.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
@@ -18,8 +20,42 @@ class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: "asia-southeast1");
+  final _forceLogoutController = StreamController<String>.broadcast();
+  Stream<String> get forceLogoutStream => _forceLogoutController.stream;
+  StreamSubscription<DocumentSnapshot>? _sessionSubscription;
 
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+
+  Future<void> listenForSessionChanges() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return;
+
+    final currentDeviceId = await DeviceInfoService.getDeviceId();
+    stopListeningForSessionChanges(); // Hủy listener cũ nếu có
+
+    final userDocRef = _firestore.collection('users').doc(user.uid);
+    _sessionSubscription = userDocRef.snapshots().listen((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        final data = snapshot.data()!;
+        final activeSession = data['activeSession'] as Map<String, dynamic>?;
+
+        if (activeSession != null) {
+          final sessionDeviceIdOnServer = activeSession['deviceId'] as String?;
+          if (sessionDeviceIdOnServer != null && sessionDeviceIdOnServer != currentDeviceId) {
+            print('AuthService: Session mismatch detected! Forcing logout.');
+            if (!_forceLogoutController.isClosed) {
+              _forceLogoutController.add('Tài khoản của bạn đã được đăng nhập trên một thiết bị khác.');
+            }
+          }
+        }
+      }
+    });
+  }
+
+  void stopListeningForSessionChanges() {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = null;
+  }
 
   Future<void> _requestTrackingPermission() async {
     if (Platform.isIOS) {
@@ -106,6 +142,7 @@ class AuthService {
 
     if (!isAnonymous) {
       await SessionService().updateUserSession();
+      await listenForSessionChanges();
     }
     return user;
   }
@@ -197,6 +234,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    stopListeningForSessionChanges();
     try {
       await GoogleSignIn().signOut();
       await FacebookAuth.instance.logOut();

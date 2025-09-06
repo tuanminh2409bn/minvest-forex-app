@@ -1,6 +1,5 @@
-//lib/services/device_info_service.dart
-
 import 'dart:io';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +21,7 @@ class DeviceInfoService {
         }
         return deviceId;
       } else {
-        // Xử lý cho nền tảng Mobile (giữ nguyên logic của bạn)
+        // Xử lý cho nền tảng Mobile
         if (Platform.isAndroid) {
           final androidInfo = await _deviceInfoPlugin.androidInfo;
           return androidInfo.id; // Sử dụng androidId đã được xác minh

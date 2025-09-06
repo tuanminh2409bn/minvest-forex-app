@@ -968,6 +968,24 @@ abstract class AppLocalizations {
   /// **'SELL'**
   String get sell;
 
+  /// No description provided for @logoutDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Expired'**
+  String get logoutDialogTitle;
+
+  /// No description provided for @logoutDialogDefaultReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been logged in on another device.'**
+  String get logoutDialogDefaultReason;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
   /// No description provided for @noNotificationsYet.
   ///
   /// In en, this message translates to:

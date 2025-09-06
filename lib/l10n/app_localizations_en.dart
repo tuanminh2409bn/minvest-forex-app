@@ -473,6 +473,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sell => 'SELL';
 
   @override
+  String get logoutDialogTitle => 'Session Expired';
+
+  @override
+  String get logoutDialogDefaultReason =>
+      'Your account has been logged in on another device.';
+
+  @override
+  String get ok => 'OK';
+
+  @override
   String get noNotificationsYet => 'No notifications yet.';
 
   @override
