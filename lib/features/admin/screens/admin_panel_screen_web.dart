@@ -18,7 +18,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final Set<String> _selectedUserIds = {};
   final TextEditingController _reasonController = TextEditingController();
 
-  // Đổi tên hàm và logic cho đúng nghiệp vụ "Hạ cấp"
   void _handleDowngradeUsers() {
     if (_selectedUserIds.isEmpty) return;
     showDialog(
@@ -42,7 +41,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  // Hàm thực thi hành động hạ cấp
   Future<void> _executeDowngradeAction({required String reason}) async {
     final message = await _adminService.downgradeUsersToFree(
         userIds: _selectedUserIds.toList(),
@@ -55,19 +53,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  // Hàm helper định dạng tiền tệ
   String _formatPayment(dynamic amount) {
-    if (amount == null || amount is! num) {
+    if (amount == null || amount is! num || amount == 0) {
       return 'N/A';
     }
-    // Quy tắc: Nếu số tiền > 2000, coi là VNĐ. Ngược lại là USD.
-    if (amount > 2000) {
-      final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'VNĐ', decimalDigits: 0);
-      return format.format(amount);
-    } else {
-      final format = NumberFormat.currency(locale: 'en_US', symbol: '\$');
-      return format.format(amount);
-    }
+    final format = NumberFormat.currency(
+        locale: 'vi_VN',
+        symbol: '',
+        decimalDigits: 0
+    );
+    return '\$${format.format(amount)}'.trim();
   }
 
   @override
@@ -167,7 +162,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           );
         },
       ),
-      // Chỉ còn duy nhất nút "Hạ cấp về Free"
       floatingActionButton: _selectedUserIds.isNotEmpty
           ? FloatingActionButton.extended(
         onPressed: _handleDowngradeUsers,

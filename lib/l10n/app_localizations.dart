@@ -602,10 +602,10 @@ abstract class AppLocalizations {
   /// **'Pay in app to upgrade'**
   String get payInAppToUpgrade;
 
-  /// No description provided for @bankTransferToUpgrade.
+  /// Button text for upgrading via bank transfer
   ///
   /// In en, this message translates to:
-  /// **'Bank transfer to upgrade'**
+  /// **'Bank Transfer to Upgrade'**
   String get bankTransferToUpgrade;
 
   /// No description provided for @accountVerification.
@@ -985,6 +985,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'OK'**
   String get ok;
+
+  /// No description provided for @contactToUpgrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact to upgrade'**
+  String get contactToUpgrade;
 
   /// No description provided for @noNotificationsYet.
   ///

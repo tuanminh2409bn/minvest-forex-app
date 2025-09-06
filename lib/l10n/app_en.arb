@@ -152,6 +152,11 @@
     "logoutDialogTitle": "Session Expired",
     "logoutDialogDefaultReason": "Your account has been logged in on another device.",
     "ok": "OK",
+    "bankTransferToUpgrade": "Bank Transfer to Upgrade",
+        "@bankTransferToUpgrade": {
+            "description": "Button text for upgrading via bank transfer"
+        },
+        "contactToUpgrade": "Contact to upgrade",
         "noNotificationsYet": "No notifications yet.",
         "daysAgo": "{count} days ago",
         "@daysAgo": {

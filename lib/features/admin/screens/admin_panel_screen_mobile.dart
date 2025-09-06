@@ -18,7 +18,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final Set<String> _selectedUserIds = {};
   final TextEditingController _reasonController = TextEditingController();
 
-  // Hàm xử lý nghiệp vụ "Hạ cấp"
   void _handleDowngradeUsers() {
     if (_selectedUserIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')));
@@ -52,7 +51,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  // Hàm thực thi hành động hạ cấp
   Future<void> _executeDowngradeAction({required String reason}) async {
     final message = await _adminService.downgradeUsersToFree(
       userIds: _selectedUserIds.toList(),
@@ -65,19 +63,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  // Hàm helper định dạng tiền tệ
   String _formatPayment(dynamic amount) {
-    if (amount == null || amount is! num) {
+    if (amount == null || amount is! num || amount == 0) {
       return 'N/A';
     }
-    // Quy tắc: Nếu số tiền > 2000, coi là VNĐ. Ngược lại là USD.
-    if (amount > 2000) {
-      final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'VNĐ', decimalDigits: 0);
-      return format.format(amount);
-    } else {
-      final format = NumberFormat.currency(locale: 'en_US', symbol: '\$');
-      return format.format(amount);
-    }
+    final format = NumberFormat.currency(
+        locale: 'vi_VN',
+        symbol: '',
+        decimalDigits: 0
+    );
+    return '\$${format.format(amount)}'.trim();
   }
 
   @override
@@ -139,7 +134,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           );
         },
       ),
-      // Chỉ còn duy nhất nút "Hạ cấp về Free"
       bottomNavigationBar: _selectedUserIds.isNotEmpty
           ? BottomAppBar(
         child: Padding(
@@ -189,7 +183,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           _buildDetailRow(Icons.phone_android, 'Mobile UID:', userData['activeSession']?['deviceId'] ?? 'N/A', canCopy: true),
           _buildDetailRow(Icons.person_pin_outlined, 'Exness Client UID:', userData['exnessClientUid'] ?? 'N/A', canCopy: true),
           _buildDetailRow(Icons.account_balance_wallet_outlined, 'Exness Account:', userData['exnessClientAccount']?.toString() ?? 'N/A'),
-          // SỬ DỤNG HÀM ĐỊNH DẠNG TIỀN TỆ
           _buildDetailRow(Icons.payment, 'Payment:', _formatPayment(userData['totalPaidAmount'])),
           _buildDetailRow(Icons.date_range, 'Ngày tạo:', createdDateString),
           _buildDetailRow(Icons.timer_off_outlined, 'Ngày hết hạn:', expiryDateString),
@@ -201,7 +194,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Widget _buildDetailRow(IconData icon, String title, String value, {bool canCopy = false}) {
-    // ... không đổi ...
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(

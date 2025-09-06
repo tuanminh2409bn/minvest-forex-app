@@ -5,12 +5,10 @@ import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { v2 as translate } from '@google-cloud/translate';
-import * as crypto from "crypto";
-import * as querystring from "qs";
 import axios from "axios";
 import { GoogleAuth } from "google-auth-library";
-import { Response, Request } from "express";
-import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
+import { Response } from "express";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getLocalizedPayload } from "./localization";
 
 // =================================================================
@@ -23,8 +21,6 @@ const translateClient = new translate.Translate();
 const PRODUCT_PRICES: { [key: string]: number } = {
   'elite_1_month': 78,
   'elite_12_months': 460,
-  'elite_1_month_vnpay': 78,
-  'elite_12_months_vnpay': 460,
   'minvest.elite.1month': 78,
   'minvest.elite.12months': 460,
 };
@@ -38,6 +34,7 @@ const APPLE_VERIFY_RECEIPT_URL_SANDBOX = "https://sandbox.itunes.apple.com/verif
 export const processVerificationImage = onObjectFinalized(
   { region: "asia-southeast1", cpu: 2, memory: "1GiB" },
   async (event) => {
+    // ... (Toàn bộ logic xử lý ảnh không thay đổi)
     const visionClient = new ImageAnnotatorClient();
     const fileBucket = event.data.bucket;
     const filePath = event.data.name;
@@ -117,7 +114,6 @@ export const processVerificationImage = onObjectFinalized(
         functions.logger.log("Kiểm tra affiliate thành công, kết quả:", affiliateData);
       } catch (apiError) {
         functions.logger.error("Lỗi khi kiểm tra affiliate:", apiError);
-        // Ném lỗi rõ ràng hơn
         throw new Error(`Tài khoản ${exnessId} không thuộc affiliate của mInvest.`);
       }
 
@@ -166,80 +162,14 @@ export const processVerificationImage = onObjectFinalized(
   });
 
 // =================================================================
-// === FUNCTION TẠO LINK THANH TOÁN VNPAY ===
-// =================================================================
-const TMN_CODE = "EZTRTEST"; // Sẽ đổi khi lên Production
-const HASH_SECRET = "DGTXQMK0DF9NZTZBH63RV3AM3E53K8AX"; // Sẽ đổi khi lên Production
-const VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"; // Sẽ đổi khi lên Production
-const RETURN_URL = "https://minvest.vn/";
-const USD_TO_VND_RATE = 26000;
-
-export const createVnpayOrder = onCall({ region: "asia-southeast1", secrets: ["VNPAY_HASH_SECRET"] }, async (request) => {
-    const userId = request.auth?.uid;
-    if (!userId) {
-        throw new functions.https.HttpsError("unauthenticated", "Người dùng phải đăng nhập để tạo đơn hàng.");
-    }
-    const { amount, productId, orderInfo } = request.data;
-    if (!amount || !productId || !orderInfo) {
-        throw new functions.https.HttpsError("invalid-argument", "Function cần được gọi với 'amount', 'productId' và 'orderInfo'.");
-    }
-
-    const amountVND = Math.round(amount * USD_TO_VND_RATE) * 100;
-    const createDate = new Date().toISOString().replace(/T|Z|\..*$/g, "").replace(/[-:]/g, "");
-    const orderId = `${createDate}-${userId}-${productId}`;
-    const ipAddr = request.rawRequest.ip || "127.0.0.1";
-
-    const orderRef = firestore.collection('vnpayOrders').doc(orderId);
-    await orderRef.set({
-        userId: userId,
-        productId: productId,
-        amountVND: amountVND,
-        status: 'pending',
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    let vnpParams: any = {};
-    vnpParams["vnp_Version"] = "2.1.0";
-    vnpParams["vnp_Command"] = "pay";
-    vnpParams["vnp_TmnCode"] = TMN_CODE;
-    vnpParams["vnp_Locale"] = "vn";
-    vnpParams["vnp_CurrCode"] = "VND";
-    vnpParams["vnp_TxnRef"] = orderId;
-    vnpParams["vnp_OrderInfo"] = orderInfo;
-    vnpParams["vnp_OrderType"] = "other";
-    vnpParams["vnp_Amount"] = amountVND;
-    vnpParams["vnp_ReturnUrl"] = RETURN_URL;
-    vnpParams["vnp_IpAddr"] = ipAddr;
-    vnpParams["vnp_CreateDate"] = createDate;
-
-    vnpParams = Object.keys(vnpParams).sort().reduce((acc, key) => {
-        acc[key] = vnpParams[key];
-        return acc;
-    }, {} as any);
-
-    let signData = querystring.stringify(vnpParams, { encode: true });
-    signData = signData.replace(/%20/g, "+");
-
-    const hmac = crypto.createHmac("sha512", HASH_SECRET);
-    const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-    vnpParams["vnp_SecureHash"] = signed;
-
-    let paymentUrl = VNP_URL + "?" + querystring.stringify(vnpParams, { encode: true });
-    paymentUrl = paymentUrl.replace(/%20/g, "+");
-
-    functions.logger.info("URL thanh toán được tạo:", paymentUrl);
-    return { paymentUrl: paymentUrl };
-});
-
-
-// =================================================================
-// === FUNCTION WEBHOOK CHO TELEGRAM BOT (ĐÃ NÂNG CẤP DỊCH THUẬT) ===
+// === FUNCTION WEBHOOK CHO TELEGRAM BOT ===
 // =================================================================
 const TELEGRAM_CHAT_ID = "-1002785712406";
 
 export const telegramWebhook = functions.https.onRequest(
   { region: "asia-southeast1", timeoutSeconds: 30, memory: "512MiB" },
   async (req: functions.https.Request, res: Response) => {
+    // ... (Toàn bộ logic Telegram không thay đổi)
     if (req.method !== "POST") {
       res.status(403).send("Forbidden!");
       return;
@@ -343,7 +273,6 @@ export const telegramWebhook = functions.https.onRequest(
   }
 );
 
-
 function parseSignalMessage(text: string): any | null {
     const signal: any = { takeProfits: [] };
     const signalPart = text.split("=== GIẢI THÍCH ===")[0];
@@ -390,6 +319,7 @@ function parseSignalMessage(text: string): any | null {
 export const verifyPurchase = onCall(
     { region: "asia-southeast1", secrets: ["APPLE_SHARED_SECRET"] },
     async (request) => {
+        // ... (Logic xác thực IAP không thay đổi)
         const { productId, transactionData, platform } = request.data;
         const userId = request.auth?.uid;
 
@@ -495,7 +425,7 @@ async function upgradeUserAccount(
   productId: string,
   expiryDate: Date,
   transactionId: string,
-  platform: 'ios' | 'android' | 'vnpay'
+  platform: 'ios' | 'android'
 ) {
   const userRef = firestore.collection("users").doc(userId);
   const amountPaid = PRODUCT_PRICES[productId] ?? 0;
@@ -505,21 +435,16 @@ async function upgradeUserAccount(
   batch.set(userRef, {
       subscriptionTier: "elite",
       subscriptionExpiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-      // Cập nhật: Xử lý cả trường hợp VNPAY
-      totalPaidAmount: platform === 'vnpay'
-        ? admin.firestore.FieldValue.increment(amountPaid * USD_TO_VND_RATE) // Nếu là VNPAY thì cộng tiền VND
-        : admin.firestore.FieldValue.increment(amountPaid), // Nếu là IAP thì cộng tiền USD
+      totalPaidAmount: admin.firestore.FieldValue.increment(amountPaid),
   }, { merge: true });
 
   batch.set(transactionRef, {
       amount: amountPaid,
       productId: productId,
-      // Sửa đổi ở đây: Tạo paymentMethod linh hoạt hơn
-      paymentMethod: platform === 'vnpay' ? 'vnpay' : `in_app_purchase_${platform}`,
+      paymentMethod: `in_app_purchase_${platform}`,
       transactionDate: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Chỉ ghi vào processedTransactions cho IAP, VNPAY có bảng riêng
   if (platform === 'ios') {
       const processedTxRef = firestore.collection("processedTransactions").doc(transactionId);
       batch.set(processedTxRef, { userId, processedAt: admin.firestore.FieldValue.serverTimestamp() });
@@ -528,13 +453,9 @@ async function upgradeUserAccount(
   await batch.commit();
 }
 
-
 // =================================================================
 // === HỆ THỐNG GỬI THÔNG BÁO ===
 // =================================================================
-/**
- * Kiểm tra xem có phải "giờ vàng" (8h - 17h VN) để gửi thông báo cho user VIP/Demo.
- */
 function isGoldenHour(): boolean {
   const now = new Date();
   const vietnamTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
@@ -542,20 +463,15 @@ function isGoldenHour(): boolean {
   return hour >= 8 && hour < 17;
 }
 
-/**
- * Lưu trữ thông báo đa ngôn ngữ vào Firestore và gửi Push Notification
- * với ngôn ngữ phù hợp cho từng người dùng.
- */
 const sendAndStoreNotifications = async (
     usersData: { id: string; token?: string; lang: string }[],
-    payload: any // Payload này giờ chứa title_loc và body_loc
+    payload: any
 ) => {
     if (usersData.length === 0) return;
 
-    // --- 1. LƯU VÀO FIRESTORE (với đầy đủ các ngôn ngữ) ---
     const batchStore = firestore.batch();
     const notificationData = {
-        ...payload, // Chứa title_loc, body_loc, type, signalId
+        ...payload,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         isRead: false,
     };
@@ -564,25 +480,21 @@ const sendAndStoreNotifications = async (
         batchStore.set(notificationRef, notificationData);
     });
 
-    // --- 2. GỬI PUSH NOTIFICATION (với ngôn ngữ tương ứng) ---
     const messages: admin.messaging.Message[] = [];
 
     usersData.forEach((user) => {
         if (user.token) {
             const lang = user.lang as "vi" | "en";
-            // Lấy title và body theo ngôn ngữ của user
             const title = payload.title_loc[lang];
             const body = payload.body_loc[lang];
 
             messages.push({
                 token: user.token,
-                // Dữ liệu gửi đi bao gồm cả title/body đã dịch và payload gốc
                 data: {
-                    ...payload, // Gửi cả title_loc, body_loc
-                    title,     // Gửi title đã dịch
-                    body,      // Gửi body đã dịch
+                    ...payload,
+                    title,
+                    body,
                 },
-                // Cấu hình để bật ứng dụng nền trên cả 2 nền tảng
                 android: { priority: "high" },
                 apns: {
                     headers: { "apns-priority": "10" },
@@ -592,19 +504,13 @@ const sendAndStoreNotifications = async (
         }
     });
 
-    // Gửi tất cả các tin nhắn đã chuẩn bị
     if (messages.length > 0) {
         await admin.messaging().sendEach(messages);
     }
 
-    // Commit batch lưu trữ sau khi đã gửi thông báo
     await batchStore.commit();
 };
 
-
-/**
- * Tập hợp các user đủ điều kiện nhận thông báo và kích hoạt gửi đi.
- */
 async function triggerNotifications(payload: any) {
     const isGolden = isGoldenHour();
     const allEligibleUsersDocs: admin.firestore.DocumentSnapshot[] = [];
@@ -627,8 +533,6 @@ async function triggerNotifications(payload: any) {
         return;
     }
 
-    // --- PHẦN SỬA LỖI NẰM Ở ĐÂY ---
-    // Định nghĩa một kiểu dữ liệu rõ ràng cho người dùng
     type UserNotificationData = {
         id: string;
         token?: string;
@@ -636,12 +540,11 @@ async function triggerNotifications(payload: any) {
         tier: string;
     };
 
-    // Lọc và chuyển đổi dữ liệu một cách an toàn về kiểu
     const usersData = allEligibleUsersDocs
         .map((doc): UserNotificationData | null => {
             const data = doc.data();
             if (!data) {
-                return null; // Bỏ qua nếu không có dữ liệu
+                return null;
             }
             return {
                 id: doc.id,
@@ -650,15 +553,10 @@ async function triggerNotifications(payload: any) {
                 tier: data.subscriptionTier,
             };
         })
-        // Lọc ra tất cả các giá trị null
         .filter((user): user is UserNotificationData => user !== null);
-    // --- KẾT THÚC PHẦN SỬA LỖI ---
 
-
-    // Code từ đây trở đi không thay đổi
     await sendAndStoreNotifications(usersData, payload);
 
-    // Cập nhật bộ đếm cho user demo
     const demoUsersToUpdate = usersData
         .filter((user) => user.tier === "demo")
         .map((user) => user.id);
@@ -677,9 +575,8 @@ export const onNewSignalCreated = onDocumentCreated({ document: "signals/{signal
     const signalData = event.data?.data();
     if (!signalData) return;
 
-    // THAY ĐỔI LỚN: Gọi hàm getLocalizedPayload để dịch
     const localizedPayload = await getLocalizedPayload(
-        "new_signal", // Đây là key trong file localization.ts
+        "new_signal",
         signalData.type.toUpperCase(),
         signalData.symbol,
         signalData.entryPrice,
@@ -689,7 +586,7 @@ export const onNewSignalCreated = onDocumentCreated({ document: "signals/{signal
     const finalPayload = {
       type: "new_signal",
       signalId: event.params.signalId,
-      ...localizedPayload, // Kết hợp payload đã dịch vào
+      ...localizedPayload,
     };
 
     await triggerNotifications(finalPayload);
@@ -704,7 +601,6 @@ export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}
     let payloadArgs: (string | number)[] = [];
     const { symbol, type, entryPrice } = afterData;
 
-    // Xác định loại thông báo và các tham số cần thiết
     if (beforeData.isMatched === false && afterData.isMatched === true) {
         notificationType = "signal_matched";
         payloadArgs = [type.toUpperCase(), symbol, entryPrice];
@@ -729,10 +625,9 @@ export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}
         }
     }
 
-    // Nếu có loại thông báo hợp lệ, tiến hành dịch và gửi
     if (notificationType) {
         const localizedPayload = await getLocalizedPayload(
-            notificationType as any, // ép kiểu vì TypeScript
+            notificationType as any,
             ...payloadArgs
         );
         const finalPayload = {
@@ -741,83 +636,6 @@ export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}
             ...localizedPayload
         };
         await triggerNotifications(finalPayload);
-    }
-});
-
-// =================================================================
-// === FUNCTION LẮNG NGHE IPN TỪ VNPAY ===
-// =================================================================
-export const vnpayIpnListener = onRequest({ region: "asia-southeast1" }, async (req: Request, res: Response) => {
-    const vnpParams = { ...req.query, ...req.body };
-    const secureHash = vnpParams['vnp_SecureHash'];
-
-    if(vnpParams['vnp_SecureHash']){ delete vnpParams['vnp_SecureHash']; }
-    if(vnpParams['vnp_SecureHashType']){ delete vnpParams['vnp_SecureHashType']; }
-
-    const sortedParams = Object.keys(vnpParams).sort().reduce(
-        (acc: { [key: string]: any }, key: string) => { acc[key] = vnpParams[key]; return acc; }, {}
-    );
-
-    functions.logger.info("VNPAY IPN Received:", { params: sortedParams, secureHash: secureHash, ip: req.ip });
-
-    let signData = querystring.stringify(sortedParams, { encode: true });
-    signData = signData.replace(/%20/g, "+");
-
-    const hmac = crypto.createHmac("sha512", HASH_SECRET);
-    const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-
-    if (secureHash === signed) {
-        const orderId = sortedParams['vnp_TxnRef'] as string;
-        const rspCode = sortedParams['vnp_ResponseCode'] as string;
-        const amountFromIPN = Number(sortedParams['vnp_Amount']);
-
-        try {
-            const orderRef = firestore.collection("vnpayOrders").doc(orderId);
-            const orderDoc = await orderRef.get();
-
-            if (!orderDoc.exists) {
-                functions.logger.error(`IPN Error: Không tìm thấy đơn hàng với ID: ${orderId}`);
-                res.status(200).json({ "RspCode": "01", "Message": "Order not found" });
-                return;
-            }
-            const orderData = orderDoc.data();
-            if (orderData?.amountVND !== amountFromIPN) {
-                functions.logger.error(`IPN Error: Sai số tiền. Expected: ${orderData?.amountVND}, Received: ${amountFromIPN}`);
-                res.status(200).json({ "RspCode": "04", "Message": "Invalid amount" });
-                return;
-            }
-            const transactionNo = sortedParams['vnp_TransactionNo'] as string;
-            if (rspCode === '00') {
-                const processedTxRef = firestore.collection("processedVnpayTransactions").doc(transactionNo);
-                const txDoc = await processedTxRef.get();
-
-                if (txDoc.exists) {
-                    res.status(200).json({ "RspCode": "02", "Message": "Order already confirmed" });
-                } else {
-                    const { userId, productId } = orderData;
-                    let monthsToAdd = 0;
-                    if (productId.includes('1_month')) monthsToAdd = 1;
-                    if (productId.includes('12_months')) monthsToAdd = 12;
-
-                    const now = new Date();
-                    const expiryDate = new Date(now.setMonth(now.getMonth() + monthsToAdd));
-
-                    await upgradeUserAccount(userId, productId, expiryDate, transactionNo, 'vnpay');
-                    await processedTxRef.set({ userId, orderId, amount: amountFromIPN / 100, processedAt: admin.firestore.FieldValue.serverTimestamp() });
-                    await orderRef.update({ status: 'completed', transactionNo: transactionNo });
-
-                    res.status(200).json({ "RspCode": "00", "Message": "Confirm Success" });
-                }
-            } else {
-                await orderRef.update({ status: 'failed', errorCode: rspCode });
-                res.status(200).json({ "RspCode": "00", "Message": "Confirm Success" });
-            }
-        } catch (error) {
-            functions.logger.error("IPN Error: Lỗi xử lý nghiệp vụ:", error);
-            res.status(200).json({ "RspCode": "99", "Message": "Unknown error" });
-        }
-    } else {
-        res.status(200).json({ "RspCode": "97", "Message": "Invalid Signature" });
     }
 });
 
@@ -831,10 +649,8 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
 
   const uid = request.auth.uid;
   const newDeviceId = request.data.deviceId;
-  const newFcmToken = request.data.fcmToken; // Chấp nhận giá trị này có thể là null
+  const newFcmToken = request.data.fcmToken;
 
-  // === THAY ĐỔI QUAN TRỌNG ===
-  // Chỉ yêu cầu 'deviceId' là bắt buộc. 'fcmToken' là tùy chọn.
   if (!newDeviceId) {
     throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'deviceId' argument.");
   }
@@ -852,7 +668,6 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
       const userData = userDoc.data();
       const currentSession = userData?.activeSession;
 
-      // Chỉ gửi thông báo FORCE_LOGOUT nếu session cũ có fcmToken
       if (currentSession && currentSession.deviceId && currentSession.deviceId !== newDeviceId && currentSession.fcmToken) {
         const message = {
           token: currentSession.fcmToken,
@@ -867,7 +682,6 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
         }
       }
 
-      // Luôn cập nhật session mới, kể cả khi fcmToken là null
       const newSessionData = {
         deviceId: newDeviceId,
         fcmToken: newFcmToken,
@@ -963,16 +777,6 @@ export const resetDemoNotificationCounters = onSchedule({ schedule: "1 0 * * *",
     await batch.commit();
 });
 
-// =================================================================
-// === FUNCTION XÓA TÀI KHOẢN VÀ DỮ LIỆU NGƯỜI DÙNG ===
-// =================================================================
-
-/**
- * Xóa một collection theo path, bao gồm tất cả document và sub-collection.
- * @param {admin.firestore.Firestore} db - Thể hiện của Firestore admin.
- * @param {string} collectionPath - Đường dẫn đến collection cần xóa.
- * @param {number} batchSize - Số lượng document xóa trong một lần.
- */
 async function deleteCollection(db: admin.firestore.Firestore, collectionPath: string, batchSize: number) {
     const collectionRef = db.collection(collectionPath);
     const query = collectionRef.orderBy('__name__').limit(batchSize);
@@ -984,21 +788,15 @@ async function deleteCollection(db: admin.firestore.Firestore, collectionPath: s
 
 async function deleteQueryBatch(db: admin.firestore.Firestore, query: admin.firestore.Query, resolve: (value: unknown) => void) {
     const snapshot = await query.get();
-
-    // Khi không còn document nào, quá trình hoàn tất.
     if (snapshot.size === 0) {
         resolve(true);
         return;
     }
-
-    // Xóa document theo batch
     const batch = db.batch();
     snapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
     });
     await batch.commit();
-
-    // Đệ quy gọi lại để xóa batch tiếp theo
     process.nextTick(() => {
         deleteQueryBatch(db, query, resolve);
     });
@@ -1007,32 +805,25 @@ async function deleteQueryBatch(db: admin.firestore.Firestore, query: admin.fire
 export const deleteUserAccount = onCall({ region: "asia-southeast1" }, async (request) => {
     const uid = request.auth?.uid;
     if (!uid) {
-        // Đảm bảo người dùng đã đăng nhập
         throw new HttpsError("unauthenticated", "Yêu cầu phải được xác thực.");
     }
-
     functions.logger.log(`Bắt đầu quá trình xóa cho người dùng: ${uid}`);
-
     try {
-        // Xóa các sub-collection trước
         await deleteCollection(firestore, `users/${uid}/notifications`, 50);
         functions.logger.log(`Đã xóa subcollection 'notifications' cho user ${uid}`);
 
         await deleteCollection(firestore, `users/${uid}/transactions`, 50);
         functions.logger.log(`Đã xóa subcollection 'transactions' cho user ${uid}`);
 
-        // Xóa document chính của user
         await firestore.collection("users").doc(uid).delete();
         functions.logger.log(`Đã xóa document chính của user ${uid}`);
 
-        // Dọn dẹp collection verifiedExnessIds
         const exnessIdQuery = await firestore.collection("verifiedExnessIds").where("userId", "==", uid).limit(1).get();
         if (!exnessIdQuery.empty) {
             await exnessIdQuery.docs[0].ref.delete();
             functions.logger.log(`Đã xóa 'verifiedExnessIds' cho user ${uid}`);
         }
 
-        // Bước cuối cùng: Xóa người dùng khỏi Authentication
         await admin.auth().deleteUser(uid);
         functions.logger.log(`Hoàn tất: Đã xóa người dùng khỏi Firebase Auth: ${uid}`);
 

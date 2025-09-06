@@ -288,7 +288,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get payInAppToUpgrade => 'Thanh toán trong ứng dụng';
 
   @override
-  String get bankTransferToUpgrade => 'Chuyển khoản ngân hàng';
+  String get bankTransferToUpgrade => 'Chuyển khoản Ngân hàng để Nâng cấp';
 
   @override
   String get accountVerification => 'XÁC THỰC TÀI KHOẢN';
@@ -484,6 +484,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get ok => 'OK';
+
+  @override
+  String get contactToUpgrade => 'Liên hệ để nâng cấp';
 
   @override
   String get noNotificationsYet => 'Chưa có thông báo nào.';

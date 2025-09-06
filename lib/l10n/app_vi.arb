@@ -152,6 +152,11 @@
     "logoutDialogTitle": "Phiên đăng nhập hết hạn",
     "logoutDialogDefaultReason": "Tài khoản của bạn đã được đăng nhập trên một thiết bị khác.",
     "ok": "OK",
+    "bankTransferToUpgrade": "Chuyển khoản Ngân hàng để Nâng cấp",
+        "@bankTransferToUpgrade": {
+            "description": "Button text for upgrading via bank transfer"
+        },
+        "contactToUpgrade": "Liên hệ để nâng cấp",
         "noNotificationsYet": "Chưa có thông báo nào.",
         "daysAgo": "{count} ngày trước",
         "@daysAgo": {

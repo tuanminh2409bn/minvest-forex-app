@@ -285,7 +285,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get payInAppToUpgrade => 'Pay in app to upgrade';
 
   @override
-  String get bankTransferToUpgrade => 'Bank transfer to upgrade';
+  String get bankTransferToUpgrade => 'Bank Transfer to Upgrade';
 
   @override
   String get accountVerification => 'ACCOUNT VERIFICATION';
@@ -481,6 +481,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ok => 'OK';
+
+  @override
+  String get contactToUpgrade => 'Contact to upgrade';
 
   @override
   String get noNotificationsYet => 'No notifications yet.';

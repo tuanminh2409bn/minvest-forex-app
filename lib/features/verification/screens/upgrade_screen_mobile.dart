@@ -86,18 +86,7 @@ class UpgradeScreen extends StatelessWidget {
                   },
                   isPrimary: true,
                 ),
-                const SizedBox(height: 16),
-                _buildActionButton(
-                  context,
-                  text: l10n.bankTransferToUpgrade,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PackageScreen(paymentMethod: PaymentMethod.vnPay)),
-                    );
-                  },
-                  isPrimary: true,
-                ),
+                // --- ĐÃ XÓA NÚT CHUYỂN KHOẢN NGÂN HÀNG (VNPAY) TẠI ĐÂY ---
                 const SizedBox(height: 30),
               ],
             ),
@@ -148,7 +137,6 @@ class UpgradeScreen extends StatelessWidget {
           cellWidget = Text(
             cell,
             textAlign: isFirstCell ? TextAlign.left : TextAlign.center,
-            // TỐI ƯU OVERFLOW: Cho phép chữ tự xuống dòng
             softWrap: true,
             style: TextStyle(
               fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
@@ -206,7 +194,6 @@ class UpgradeScreen extends StatelessWidget {
           ),
           child: Container(
             alignment: Alignment.center,
-            // TỐI ƯU OVERFLOW: Thêm padding ngang
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Text(
               text,
