@@ -1,5 +1,4 @@
 // lib/app/auth_gate.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:minvest_forex_app/app/main_screen.dart';
@@ -10,7 +9,6 @@ import 'package:minvest_forex_app/l10n/app_localizations.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
 import 'package:provider/provider.dart';
 
-// THAY ĐỔI 1: Chuyển thành StatefulWidget
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -38,9 +36,8 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  // THAY ĐỔI 2: Hàm hiển thị dialog xác nhận hạ cấp
   void _showDowngradeDialog(BuildContext context, UserProvider userProvider) {
-    // Chỉ hiển thị dialog nếu nó chưa được hiển thị
+    // SỬA LỖI: Sử dụng đúng tên biến đã khai báo
     if (_isDowngradeDialogShowing) return;
 
     setState(() {
@@ -49,10 +46,8 @@ class _AuthGateState extends State<AuthGate> {
 
     showDialog(
       context: context,
-      // Ngăn người dùng tắt dialog bằng cách bấm ra ngoài
       barrierDismissible: false,
       builder: (dialogContext) => PopScope(
-        // Ngăn người dùng tắt dialog bằng nút back trên Android
         canPop: false,
         child: AlertDialog(
           title: const Text('Thông báo quan trọng'),
@@ -60,7 +55,6 @@ class _AuthGateState extends State<AuthGate> {
           actions: [
             TextButton(
               onPressed: () async {
-                // Gọi hàm xác nhận trong provider
                 await userProvider.acknowledgeDowngrade();
                 if (mounted) {
                   Navigator.of(dialogContext).pop();
@@ -81,14 +75,11 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
-        final userProvider = context.read<UserProvider>();
         final notificationProvider = context.read<NotificationProvider>();
 
-        if (state.status == AuthStatus.authenticated && state.user != null) {
-          userProvider.listenToUserData(state.user!);
+        if (state.status == AuthStatus.authenticated) {
           notificationProvider.startListening();
         } else if (state.status == AuthStatus.unauthenticated) {
-          userProvider.stopListeningAndReset();
           notificationProvider.stopListeningAndReset();
           if (state.errorMessage != null) {
             _showErrorDialog(context, state.errorMessage!);
@@ -96,10 +87,8 @@ class _AuthGateState extends State<AuthGate> {
         }
       },
       builder: (context, state) {
-        // THAY ĐỔI 3: Bọc Widget bằng Consumer<UserProvider>
         return Consumer<UserProvider>(
           builder: (context, userProvider, child) {
-            // Ngay sau khi build, kiểm tra xem có cần hiển thị dialog không
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (userProvider.requiresDowngradeAcknowledgement &&
                   state.status == AuthStatus.authenticated &&
@@ -108,7 +97,6 @@ class _AuthGateState extends State<AuthGate> {
               }
             });
 
-            // Logic điều hướng giữ nguyên
             if (state.status == AuthStatus.authenticated) {
               return const MainScreen();
             } else if (state.status == AuthStatus.loggingOut) {

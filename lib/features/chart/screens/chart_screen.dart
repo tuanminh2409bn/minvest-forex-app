@@ -28,12 +28,12 @@ class _ChartScreenState extends State<ChartScreen> {
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint('''
-Page resource error:
-  code: ${error.errorCode}
-  description: ${error.description}
-  errorType: ${error.errorType}
-  isForMainFrame: ${error.isForMainFrame}
-          ''');
+            Page resource error:
+            code: ${error.errorCode}
+            description: ${error.description}
+            errorType: ${error.errorType}
+            isForMainFrame: ${error.isForMainFrame}
+            ''');
             setState(() {
               _isLoading = false;
             });

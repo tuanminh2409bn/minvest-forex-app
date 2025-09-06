@@ -1,8 +1,11 @@
 // lib/core/providers/user_provider.dart
+
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+// THÊM IMPORT NÀY
+import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 
 enum UserDataStatus {
   initial,
@@ -13,14 +16,15 @@ enum UserDataStatus {
 }
 
 class UserProvider with ChangeNotifier {
-  String? _uid; // THÊM MỚI: Lưu UID của user hiện tại
+  // THÊM MỚI: AuthService là nguồn xác thực duy nhất
+  final AuthService _authService;
+
+  String? _uid;
   String? _userTier;
   String? _verificationStatus;
   String? _verificationError;
   String? _role;
   UserDataStatus _status = UserDataStatus.initial;
-
-  // THAY ĐỔI 1: Xóa các trường cũ và thêm các trường mới
   bool _requiresDowngradeAcknowledgement = false;
   String? _downgradeReason;
 
@@ -29,37 +33,51 @@ class UserProvider with ChangeNotifier {
   String? get verificationError => _verificationError;
   String? get role => _role;
   UserDataStatus get status => _status;
-
-  // THAY ĐỔI 2: Thêm getters cho các trường mới
   bool get requiresDowngradeAcknowledgement => _requiresDowngradeAcknowledgement;
   String? get downgradeReason => _downgradeReason;
 
-
   StreamSubscription<DocumentSnapshot>? _userSubscription;
+  // THÊM MỚI: Subscription để lắng nghe trạng thái đăng nhập
+  StreamSubscription<User?>? _authStateSubscription;
 
-  void listenToUserData(User firebaseUser) {
-    _uid = firebaseUser.uid; // THÊM MỚI: Lưu lại UID
+  // THAY ĐỔI LỚN: Constructor giờ đây nhận AuthService
+  UserProvider({required AuthService authService}) : _authService = authService {
+    // Tự động lắng nghe sự thay đổi trạng thái đăng nhập ngay khi được tạo
+    _authStateSubscription = _authService.authStateChanges.listen(_onAuthStateChanged);
+  }
+
+  // Hàm này sẽ được gọi tự động khi người dùng đăng nhập hoặc đăng xuất
+  void _onAuthStateChanged(User? firebaseUser) {
+    if (firebaseUser != null) {
+      // Nếu có user, bắt đầu lắng nghe document của họ
+      _listenToUserDocument(firebaseUser.uid);
+    } else {
+      // Nếu không có user (đã đăng xuất), dọn dẹp
+      stopListeningAndReset();
+    }
+  }
+
+  // Đổi tên hàm `listenToUserData` thành `_listenToUserDocument` để rõ ràng hơn
+  void _listenToUserDocument(String uid) {
+    _uid = uid;
     _userSubscription?.cancel();
     _status = UserDataStatus.loading;
+    notifyListeners(); // Thông báo trạng thái loading
 
     _userSubscription = FirebaseFirestore.instance
         .collection('users')
-        .doc(firebaseUser.uid)
+        .doc(uid)
         .snapshots(includeMetadataChanges: true)
         .listen((snapshot) {
       final bool isFromCache = snapshot.metadata.isFromCache;
-
       if (snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>;
         _userTier = data['subscriptionTier'];
         _verificationStatus = data['verificationStatus'];
         _verificationError = data['verificationError'];
         _role = data['role'] ?? 'user';
-
-        // THAY ĐỔI 3: Đọc dữ liệu từ các trường mới
         _requiresDowngradeAcknowledgement = data['requiresDowngradeAcknowledgement'] ?? false;
         _downgradeReason = data['downgradeReason'];
-
         _status = isFromCache ? UserDataStatus.fromCache : UserDataStatus.fromServer;
       } else {
         _resetState();
@@ -74,8 +92,6 @@ class UserProvider with ChangeNotifier {
     });
   }
 
-  // THAY ĐỔI 4: Hàm mới để người dùng xác nhận
-  /// Cập nhật Firestore để xóa cờ yêu cầu xác nhận.
   Future<void> acknowledgeDowngrade() async {
     if (_uid != null) {
       try {
@@ -104,8 +120,6 @@ class UserProvider with ChangeNotifier {
     _verificationStatus = null;
     _verificationError = null;
     _role = null;
-
-    // Reset các trường mới
     _requiresDowngradeAcknowledgement = false;
     _downgradeReason = null;
   }
@@ -120,6 +134,7 @@ class UserProvider with ChangeNotifier {
   @override
   void dispose() {
     _userSubscription?.cancel();
+    _authStateSubscription?.cancel(); // Dọn dẹp subscription mới
     super.dispose();
   }
 }

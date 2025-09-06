@@ -51,7 +51,11 @@ Future<void> main() async {
           ),
         ),
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
-        ChangeNotifierProvider(create: (context) => UserProvider()),
+        ChangeNotifierProvider(
+          create: (context) => UserProvider(
+            authService: context.read<AuthService>(),
+          ),
+        ),
         ChangeNotifierProvider(create: (context) => NotificationProvider()),
       ],
       child: const MyApp(),
@@ -76,67 +80,70 @@ class _MyAppState extends State<MyApp> {
     _initializeServices();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print("[DEBUG_LOGOUT] initState: Bắt đầu đăng ký listener...");
       if (mounted) {
         final authService = context.read<AuthService>();
         _forceLogoutSubscription = authService.forceLogoutStream.listen((reason) {
+          print("[DEBUG_LOGOUT] LISTENER: Đã nhận được tín hiệu logout! Lý do: $reason");
+
           if (mounted && !_isLogoutDialogShowing) {
-            _isLogoutDialogShowing = true;
+            print("[DEBUG_LOGOUT] LISTENER: Điều kiện hợp lệ. Chuẩn bị hiển thị dialog.");
+            setState(() {
+              _isLogoutDialogShowing = true;
+            });
             _showLogoutDialog(reason);
+          } else {
+            print("[DEBUG_LOGOUT] LISTENER: Bỏ qua vì không hợp lệ (mounted: $mounted, isShowing: $_isLogoutDialogShowing)");
           }
         });
+        print("[DEBUG_LOGOUT] initState: Đã đăng ký listener thành công.");
+      } else {
+        print("[DEBUG_LOGOUT] initState: Hủy đăng ký vì widget unmounted.");
       }
     });
   }
 
   @override
   void dispose() {
+    print("[DEBUG_LOGOUT] dispose: Hủy đăng ký listener.");
     _forceLogoutSubscription?.cancel();
     super.dispose();
   }
 
   Future<void> _initializeServices() async {
-    // Chỉ thực hiện thiết lập này cho mobile, không phải web
     if (!kIsWeb) {
-      // 1. Thêm cấu hình cho iOS (và macOS)
-      // DarwinInitializationSettings được dùng cho cả iOS và macOS.
       const DarwinInitializationSettings initializationSettingsIOS =
       DarwinInitializationSettings(
-        requestAlertPermission: true, // Yêu cầu quyền hiển thị thông báo
-        requestBadgePermission: true, // Yêu cầu quyền hiển thị số trên icon
-        requestSoundPermission: true, // Yêu cầu quyền phát âm thanh
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
       );
 
-      // Cấu hình cho Android vẫn giữ nguyên
       const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
-      // 2. Kết hợp các cấu hình cho các nền tảng khác nhau
       const InitializationSettings initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid,
-        iOS: initializationSettingsIOS, // Thêm cấu hình cho iOS
+        iOS: initializationSettingsIOS,
       );
 
-      // 3. Khởi tạo plugin với đầy đủ cấu hình và thêm callback khi người dùng nhấn vào thông báo
       await flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
-        // Callback này sẽ được gọi khi người dùng nhấn vào một thông báo cục bộ
         onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) async {
           if (notificationResponse.payload != null) {
             print('Local notification tapped with payload: ${notificationResponse.payload}');
-            // Tái sử dụng hàm điều hướng bạn đã viết
             _handleNotificationNavigation({'signalId': notificationResponse.payload});
           }
         },
       );
 
       await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-        alert: true, // Hiển thị banner
-        badge: true, // Cập nhật số trên icon
-        sound: true, // Phát âm thanh
+        alert: true,
+        badge: true,
+        sound: true,
       );
     }
 
-    // Thiết lập các listener của Firebase Messaging vẫn được gọi sau khi khởi tạo xong
     await _setupNotificationListeners();
   }
 
@@ -212,43 +219,42 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _showLogoutDialog(String? reason) {
+    print("[DEBUG_LOGOUT] SHOW_DIALOG: Bắt đầu thực thi.");
     final context = navigatorKey.currentContext;
-    if (context != null) {
-      final l10n = AppLocalizations.of(context)!;
-      bool isDialogShowing = ModalRoute.of(context)?.isCurrent != true;
-      if(isDialogShowing) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext dialogContext) {
-          return AlertDialog(
-            title: Text(l10n.logoutDialogTitle),
-            content: Text(reason ?? l10n.logoutDialogDefaultReason),
-            actions: <Widget>[
-              TextButton(
-                child: Text(l10n.ok),
-                onPressed: () async {
-                  Navigator.of(dialogContext).pop();
-                  await this.context.read<AuthService>().signOut();
-                },
-              ),
-            ],
-          );
-        },
-      ).then((_) {
-        if(mounted) {
-          setState(() {
-            _isLogoutDialogShowing = false;
-          });
-        }
-      });
-    } else {
-      if(mounted) {
+    print("[DEBUG_LOGOUT] SHOW_DIALOG: navigatorKey.currentContext có giá trị là: ${context != null ? 'HỢP LỆ' : 'NULL'}");
+
+    if (context == null) {
+      if (mounted) setState(() => _isLogoutDialogShowing = false);
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.logoutDialogTitle),
+          content: Text(reason ?? l10n.logoutDialogDefaultReason),
+          actions: <Widget>[
+            TextButton(
+              child: Text(l10n.ok),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await this.context.read<AuthService>().signOut();
+              },
+            ),
+          ],
+        );
+      },
+    ).then((_) {
+      if (mounted) {
         setState(() {
           _isLogoutDialogShowing = false;
         });
       }
-    }
+    });
   }
 
   @override
