@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
-import 'package:minvest_forex_app/features/verification/screens/package_screen.dart';
+import 'package:minvest_forex_app/features/verification/screens/package_screen_mobile.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 

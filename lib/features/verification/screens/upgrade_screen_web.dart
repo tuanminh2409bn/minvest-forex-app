@@ -84,6 +84,7 @@ class UpgradeScreen extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
+                          // Đoạn này đã đúng, nó gọi đến PackageScreen từ tệp điều hướng
                           MaterialPageRoute(builder: (context) => const PackageScreen()),
                         );
                       },
@@ -100,6 +101,7 @@ class UpgradeScreen extends StatelessWidget {
     );
   }
 
+  // ... (Các hàm _buildTiersTable, _buildTableRow, _buildActionButton không thay đổi)
   Widget _buildTiersTable(AppLocalizations l10n) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
