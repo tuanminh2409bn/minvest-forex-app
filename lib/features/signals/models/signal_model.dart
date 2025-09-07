@@ -56,50 +56,50 @@ class Signal {
   }
 
   String getTranslatedResult(AppLocalizations l10n) {
-    // Ưu tiên xử lý trạng thái `result` trước
-    switch (result) {
-      case 'TP1 Hit':
-        return l10n.tp1Hit;
-      case 'TP2 Hit':
-        return l10n.tp2Hit;
-      case 'TP3 Hit':
-        return l10n.tp3Hit;
-      case 'SL Hit':
+    // --- ƯU TIÊN 1: Hiển thị thành tích TP cao nhất đã đạt được ---
+    if (hitTps.contains(3)) return l10n.tp3Hit;
+    if (hitTps.contains(2)) return l10n.tp2Hit;
+    if (hitTps.contains(1)) return l10n.tp1Hit;
+
+    // --- ƯU TIÊN 2: Nếu chưa có TP, hiển thị các trạng thái khác ---
+    final lowercasedResult = result?.toLowerCase() ?? '';
+    switch (lowercasedResult) {
+    // (Không cần case cho TP nữa vì đã xử lý ở trên)
+      case 'sl hit':
         return l10n.slHit;
-      case 'Cancelled':
-      case 'Cancelled (new signal)':
+      case 'cancelled':
+      case 'cancelled (new signal)':
         return l10n.cancelled;
-      case 'Exited by Admin':
+      case 'exited by admin':
         return l10n.exitedByAdmin;
     }
 
-    // Nếu result không khớp các case trên, xét đến trạng thái chung
+    // --- ƯU TIÊN 3: Xử lý các tín hiệu đang chạy ---
     if (status == 'running') {
       return isMatched ? l10n.matched : l10n.notMatched;
     }
 
-    // Trường hợp dự phòng cuối cùng
+    // --- DỰ PHÒNG: Trả về trạng thái gốc nếu không khớp ---
     return result ?? l10n.signalClosed;
   }
 
   Color getStatusColor() {
-    // Ưu tiên xử lý màu theo `result` trước
-    switch (result) {
-      case 'TP1 Hit':
-      case 'TP2 Hit':
-      case 'TP3 Hit':
-        return Colors.greenAccent.shade400;
-      case 'SL Hit':
+    // --- ƯU TIÊN 1: Màu cho thành tích TP ---
+    if (hitTps.isNotEmpty) return Colors.greenAccent.shade400;
+
+    // --- ƯU TIÊN 2: Màu cho các trạng thái khác ---
+    final lowercasedResult = result?.toLowerCase() ?? '';
+    switch (lowercasedResult) {
+      case 'sl hit':
         return Colors.redAccent;
-      case 'Cancelled':
-      case 'Cancelled (new signal)':
-      case 'Exited by Admin':
+      case 'cancelled':
+      case 'cancelled (new signal)':
+      case 'exited by admin':
         return Colors.grey;
     }
 
-    // Nếu result không khớp, xét màu theo trạng thái chung
+    // --- ƯU TIÊN 3: Màu cho các tín hiệu đang chạy ---
     if (status == 'running') {
-      if (result != null && result!.contains("Hit")) return Colors.tealAccent.shade400;
       return isMatched ? Colors.greenAccent.shade400 : Colors.amber.shade400;
     }
 

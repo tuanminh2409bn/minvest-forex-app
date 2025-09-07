@@ -1,11 +1,9 @@
-// lib/features/signals/widgets/signal_card_web.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/screens/signal_detail_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/upgrade_screen.dart';
-import 'package:minvest_forex_app/l10n/app_localizations.dart'; // THÊM IMPORT
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class SignalCard extends StatelessWidget {
   final Signal signal;
@@ -38,30 +36,10 @@ class SignalCard extends StatelessWidget {
     return [];
   }
 
-  // === HÀM HELPER MỚI ĐỂ DỊCH TRẠNG THÁI ===
-  String _getTranslatedStatus(Signal signal, AppLocalizations l10n) {
-    if (signal.status == 'running') {
-      if (signal.result?.contains("TP1 Hit") ?? false) return l10n.signalStatusTp1Hit;
-      if (signal.result?.contains("TP2 Hit") ?? false) return l10n.signalStatusTp2Hit;
-      if (signal.result?.contains("TP3 Hit") ?? false) return l10n.signalStatusTp3Hit;
-      if (signal.isMatched) return l10n.signalStatusMatched;
-      return l10n.signalStatusNotMatched;
-    } else {
-      final result = signal.result?.toUpperCase() ?? 'CLOSED';
-      switch (result) {
-        case 'SL HIT': return l10n.signalStatusSlHit;
-        case 'CANCELLED (NEW SIGNAL)':
-        case 'CANCELLED':
-          return l10n.signalStatusCancelled;
-        default:
-          return l10n.signalStatusClosed;
-      }
-    }
-  }
+  // === HÀM HELPER CŨ (_getTranslatedStatus) ĐÃ ĐƯỢC XÓA BỎ HOÀN TOÀN ===
 
   @override
   Widget build(BuildContext context) {
-    // Lấy đối tượng l10n
     final l10n = AppLocalizations.of(context)!;
 
     return MediaQuery(
@@ -107,18 +85,11 @@ class SignalCard extends StatelessWidget {
     final Color signalColor = isBuy ? const Color(0xFF238636) : const Color(0xFFDA3633);
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
 
-    Color statusColor;
-    String statusText = _getTranslatedStatus(signal, l10n);
-
-    if (signal.status == 'running') {
-      if (statusText == l10n.signalStatusMatched) statusColor = Colors.greenAccent.shade400;
-      else if (statusText == l10n.signalStatusNotMatched) statusColor = Colors.amber.shade400;
-      else statusColor = Colors.tealAccent.shade400; // TP Hit
-    } else {
-      if (statusText == l10n.signalStatusSlHit) statusColor = Colors.redAccent;
-      else if (statusText == l10n.signalStatusCancelled) statusColor = Colors.grey;
-      else statusColor = Colors.blueGrey.shade200; // Closed
-    }
+    // ▼▼▼ THAY ĐỔI LOGIC Ở ĐÂY ▼▼▼
+    // Gọi trực tiếp các hàm chuẩn từ signal_model.dart
+    final String statusText = signal.getTranslatedResult(l10n);
+    final Color statusColor = signal.getStatusColor();
+    // ▲▲▲ KẾT THÚC THAY ĐỔI ▲▲▲
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -149,6 +120,7 @@ class SignalCard extends StatelessWidget {
     );
   }
 
+  // ... các hàm còn lại không thay đổi
   Widget _buildSignalData(AppLocalizations l10n) {
     const int decimalPlaces = 2;
     return Column(
@@ -249,7 +221,6 @@ class SignalCard extends StatelessWidget {
   }
 
   Widget _buildInfoColumn(String title, String value, {Color? valueColor, Widget? icon}) {
-    // ... không có thay đổi ở đây ...
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
