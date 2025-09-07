@@ -36,8 +36,6 @@ class SignalCard extends StatelessWidget {
     return [];
   }
 
-  // === HÀM HELPER CŨ (_getTranslatedStatus) ĐÃ ĐƯỢC XÓA BỎ HOÀN TOÀN ===
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -84,13 +82,8 @@ class SignalCard extends StatelessWidget {
     final bool isBuy = signal.type.toLowerCase() == 'buy';
     final Color signalColor = isBuy ? const Color(0xFF238636) : const Color(0xFFDA3633);
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
-
-    // ▼▼▼ THAY ĐỔI LOGIC Ở ĐÂY ▼▼▼
-    // Gọi trực tiếp các hàm chuẩn từ signal_model.dart
     final String statusText = signal.getTranslatedResult(l10n);
     final Color statusColor = signal.getStatusColor();
-    // ▲▲▲ KẾT THÚC THAY ĐỔI ▲▲▲
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [

@@ -6,7 +6,7 @@ import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
-import 'dart:typed_data'; // Import thư viện typed_data
+import 'dart:typed_data';
 
 enum VerificationState { initial, imageSelected, loading, success, failure }
 

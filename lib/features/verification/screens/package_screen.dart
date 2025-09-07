@@ -1,54 +1,46 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
-import 'package:minvest_forex_app/features/verification/screens/bank_transfer_screen.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PackageScreen extends StatefulWidget {
-  final PaymentMethod paymentMethod;
-  const PackageScreen({super.key, required this.paymentMethod});
+  const PackageScreen({super.key});
   @override
   State<PackageScreen> createState() => _PackageScreenState();
 }
 
 class _PackageScreenState extends State<PackageScreen> {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
-  late StreamSubscription<List<PurchaseDetails>> _subscription;
+  StreamSubscription<List<PurchaseDetails>>? _subscription;
   Map<String, ProductDetails> _products = {};
   bool _isAvailable = false;
   bool _isLoading = true;
   bool _isPurchasing = false;
   String _loadingError = '';
-  final Set<String> _kIds = {'minvest.elite.1month', 'minvest.elite.12months'};
+  final Set<String> _kIds = Platform.isIOS
+      ? {'minvest.elite.1month', 'minvest.elite.12months'}
+      : {'elite_1_month', 'elite_12_months'};
 
-  // === SỬA LỖI BẮT ĐẦU ===
   bool _isInitialized = false;
-  late AppLocalizations l10n; // Biến l10n được đưa ra làm biến thành viên
-
-  @override
-  void initState() {
-    super.initState();
-    // initState() bây giờ sẽ trống, logic được chuyển đi
-  }
+  late AppLocalizations l10n;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Logic khởi tạo được chuyển hết vào đây và chỉ chạy một lần duy nhất
     if (!_isInitialized) {
-      l10n = AppLocalizations.of(context)!; // Khởi tạo l10n an toàn ở đây
+      l10n = AppLocalizations.of(context)!;
 
-      if (widget.paymentMethod == PaymentMethod.inAppPurchase) {
-        final Stream<List<PurchaseDetails>> purchaseUpdated =
-            _inAppPurchase.purchaseStream;
+      if (!kIsWeb) {
+        final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase.purchaseStream;
         _subscription = purchaseUpdated.listen((purchaseDetailsList) {
           _listenToPurchaseUpdated(purchaseDetailsList);
         }, onDone: () {
-          _subscription.cancel();
+          _subscription?.cancel();
         }, onError: (error) {
           if (mounted) setState(() => _isPurchasing = false);
         });
@@ -56,13 +48,17 @@ class _PackageScreenState extends State<PackageScreen> {
       } else {
         setState(() => _isLoading = false);
       }
-      _isInitialized = true; // Đánh dấu là đã khởi tạo
+      _isInitialized = true;
     }
   }
-  // === SỬA LỖI KẾT THÚC ===
+
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    }
+  }
 
   Future<void> _initStoreInfo() async {
-    // Không cần khai báo l10n ở đây nữa
     final bool isAvailable = await _inAppPurchase.isAvailable();
     if (!isAvailable) {
       if (mounted) {
@@ -96,14 +92,11 @@ class _PackageScreenState extends State<PackageScreen> {
 
   @override
   void dispose() {
-    if (widget.paymentMethod == PaymentMethod.inAppPurchase) {
-      _subscription.cancel();
-    }
+    _subscription?.cancel();
     super.dispose();
   }
 
   void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
-    // Không cần khai báo l10n ở đây nữa
     for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
         if (mounted) setState(() => _isPurchasing = true);
@@ -127,7 +120,6 @@ class _PackageScreenState extends State<PackageScreen> {
   }
 
   Future<void> _verifyPurchase(PurchaseDetails purchaseDetails) async {
-    // Không cần khai báo l10n ở đây nữa
     if (mounted) setState(() => _isPurchasing = true);
 
     try {
@@ -136,7 +128,7 @@ class _PackageScreenState extends State<PackageScreen> {
       Map<String, dynamic> transactionData = {};
       if (platform == 'ios') {
         transactionData['receiptData'] = purchaseDetails.verificationData.serverVerificationData;
-      } else { // Android
+      } else {
         transactionData['purchaseToken'] = purchaseDetails.verificationData.serverVerificationData;
       }
       final HttpsCallableResult result = await callable.call<dynamic>({
@@ -182,7 +174,6 @@ class _PackageScreenState extends State<PackageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lấy l10n ở đây là hoàn toàn an toàn
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -212,10 +203,7 @@ class _PackageScreenState extends State<PackageScreen> {
                 end: Alignment.bottomCenter,
               ),
             ),
-            // build method sử dụng l10n từ context, nên không cần thay đổi
-            child: widget.paymentMethod == PaymentMethod.inAppPurchase
-                ? _buildIapContent(l10n)
-                : _buildVnPayContent(l10n),
+            child: _buildPackageContent(l10n),
           ),
           if (_isPurchasing)
             Container(
@@ -237,65 +225,12 @@ class _PackageScreenState extends State<PackageScreen> {
     );
   }
 
-  // Các hàm buildVnPayContent và buildIapContent không thay đổi
-  Widget _buildVnPayContent(AppLocalizations l10n) {
-    final features = [
-      l10n.featureReceiveAllSignals,
-      l10n.featureAnalyzeReason,
-      l10n.featureHighPrecisionAI,
-    ];
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-      child: Column(
-        children: [
-          _PackageCard(
-            tier: l10n.tierElite,
-            duration: l10n.duration1Month,
-            price: '\$78',
-            features: features,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => BankTransferScreen(
-                    amountUSD: 78,
-                    orderInfo: l10n.orderInfo1Month,
-                    productId: 'elite_1_month_vnpay',
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _PackageCard(
-            tier: l10n.tierElite,
-            duration: l10n.duration12Months,
-            price: '\$460',
-            features: features,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => BankTransferScreen(
-                    amountUSD: 460,
-                    orderInfo: l10n.orderInfo12Months,
-                    productId: 'elite_12_months_vnpay',
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIapContent(AppLocalizations l10n) {
+  Widget _buildPackageContent(AppLocalizations l10n) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (!_isAvailable || _loadingError.isNotEmpty) {
+    if (!kIsWeb && (!_isAvailable || _loadingError.isNotEmpty)) {
       return Center(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -304,8 +239,10 @@ class _PackageScreenState extends State<PackageScreen> {
                 textAlign: TextAlign.center),
           ));
     }
-    final product1Month = _products['minvest.elite.1month'];
-    final product12Months = _products['minvest.elite.12months'];
+
+    final product1Month = !kIsWeb ? _products[Platform.isIOS ? 'minvest.elite.1month' : 'elite_1_month'] : null;
+    final product12Months = !kIsWeb ? _products[Platform.isIOS ? 'minvest.elite.12months' : 'elite_12_months'] : null;
+
     final features = [
       l10n.featureReceiveAllSignals,
       l10n.featureAnalyzeReason,
@@ -319,20 +256,29 @@ class _PackageScreenState extends State<PackageScreen> {
           _PackageCard(
             tier: l10n.tierElite,
             duration: l10n.duration1Month,
-            price: product1Month?.price ?? '\$78',
+            price: kIsWeb ? '\$78' : (product1Month?.price ?? '...'),
             features: features,
-            onPressed:
-            product1Month != null ? () => _handlePurchase(product1Month) : null,
+            onPressed: () {
+              if (kIsWeb) {
+                _launchURL('https://zalo.me/0969156969');
+              } else if (product1Month != null) {
+                _handlePurchase(product1Month);
+              }
+            },
           ),
           const SizedBox(height: 24),
           _PackageCard(
             tier: l10n.tierElite,
             duration: l10n.duration12Months,
-            price: product12Months?.price ?? '\$460',
+            price: kIsWeb ? '\$460' : (product12Months?.price ?? '...'),
             features: features,
-            onPressed: product12Months != null
-                ? () => _handlePurchase(product12Months)
-                : null,
+            onPressed: () {
+              if (kIsWeb) {
+                _launchURL('https://zalo.me/0969156969');
+              } else if (product12Months != null) {
+                _handlePurchase(product12Months);
+              }
+            },
           ),
         ],
       ),
@@ -340,7 +286,6 @@ class _PackageScreenState extends State<PackageScreen> {
   }
 }
 
-// Các widget con không thay đổi và được giữ nguyên
 class _PackageCard extends StatelessWidget {
   final String tier;
   final String duration;
@@ -353,7 +298,7 @@ class _PackageCard extends StatelessWidget {
     required this.duration,
     required this.price,
     required this.features,
-    required this.onPressed,
+    this.onPressed,
   });
 
   @override

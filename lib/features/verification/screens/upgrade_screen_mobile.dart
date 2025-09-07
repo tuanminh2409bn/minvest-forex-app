@@ -1,7 +1,8 @@
+//lib/features/verification/screens/upgrade_screen_mobile.dart
+
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/package_screen.dart';
-import 'package:minvest_forex_app/features/verification/models/payment_method.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
@@ -81,12 +82,11 @@ class UpgradeScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const PackageScreen(paymentMethod: PaymentMethod.inAppPurchase)),
+                      MaterialPageRoute(builder: (context) => const PackageScreen()),
                     );
                   },
                   isPrimary: true,
                 ),
-                // --- ĐÃ XÓA NÚT CHUYỂN KHOẢN NGÂN HÀNG (VNPAY) TẠI ĐÂY ---
                 const SizedBox(height: 30),
               ],
             ),

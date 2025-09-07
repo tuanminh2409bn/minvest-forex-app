@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
+import 'package:minvest_forex_app/features/verification/screens/package_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
@@ -9,7 +10,6 @@ class UpgradeScreen extends StatelessWidget {
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // Xử lý lỗi nếu không thể mở URL
     }
   }
 
@@ -80,9 +80,12 @@ class UpgradeScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildActionButton(
                       context,
-                      text: l10n.contactToUpgrade,
+                      text: l10n.payInAppToUpgrade,
                       onPressed: () {
-                        _launchURL('https://zalo.me/0969156969');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PackageScreen()),
+                        );
                       },
                       isPrimary: true,
                     ),
@@ -96,6 +99,7 @@ class UpgradeScreen extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildTiersTable(AppLocalizations l10n) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
