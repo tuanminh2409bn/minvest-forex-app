@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
 class Signal {
   final String id;
@@ -51,5 +53,57 @@ class Signal {
       hitTps: List<int>.from(data['hitTps'] ?? []),
       isMatched: data['isMatched'] ?? false,
     );
+  }
+
+  String getTranslatedResult(AppLocalizations l10n) {
+    // Ưu tiên xử lý trạng thái `result` trước
+    switch (result) {
+      case 'TP1 Hit':
+        return l10n.tp1Hit;
+      case 'TP2 Hit':
+        return l10n.tp2Hit;
+      case 'TP3 Hit':
+        return l10n.tp3Hit;
+      case 'SL Hit':
+        return l10n.slHit;
+      case 'Cancelled':
+      case 'Cancelled (new signal)':
+        return l10n.cancelled;
+      case 'Exited by Admin':
+        return l10n.exitedByAdmin;
+    }
+
+    // Nếu result không khớp các case trên, xét đến trạng thái chung
+    if (status == 'running') {
+      return isMatched ? l10n.matched : l10n.notMatched;
+    }
+
+    // Trường hợp dự phòng cuối cùng
+    return result ?? l10n.signalClosed;
+  }
+
+  Color getStatusColor() {
+    // Ưu tiên xử lý màu theo `result` trước
+    switch (result) {
+      case 'TP1 Hit':
+      case 'TP2 Hit':
+      case 'TP3 Hit':
+        return Colors.greenAccent.shade400;
+      case 'SL Hit':
+        return Colors.redAccent;
+      case 'Cancelled':
+      case 'Cancelled (new signal)':
+      case 'Exited by Admin':
+        return Colors.grey;
+    }
+
+    // Nếu result không khớp, xét màu theo trạng thái chung
+    if (status == 'running') {
+      if (result != null && result!.contains("Hit")) return Colors.tealAccent.shade400;
+      return isMatched ? Colors.greenAccent.shade400 : Colors.amber.shade400;
+    }
+
+    // Màu dự phòng
+    return Colors.blueGrey.shade200;
   }
 }

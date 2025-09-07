@@ -1,3 +1,5 @@
+//localization.ts
+
 import { v2 as translate } from '@google-cloud/translate';
 
 // Khởi tạo Google Translate client một lần duy nhất

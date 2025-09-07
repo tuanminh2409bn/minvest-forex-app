@@ -1,3 +1,5 @@
+//lib/features/signals/screens/signal_detail_screen_web.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
@@ -71,37 +73,8 @@ class SignalDetailScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final bool canViewReason = userTier == 'elite';
     final List<String> flagPaths = _getFlagPathsFromSymbol(signal.symbol);
-
-    String statusText;
-    Color statusColor;
-
-    if (signal.status == 'running') {
-      statusText = signal.result ?? 'RUNNING';
-      if (statusText.contains("Hit")) {
-        statusColor = Colors.tealAccent.shade400;
-      } else if (signal.isMatched) {
-        statusText = l10n.matched;
-        statusColor = Colors.greenAccent.shade400;
-      } else {
-        statusText = l10n.notMatched;
-        statusColor = Colors.amber.shade400;
-      }
-    } else {
-      statusText = signal.result?.toUpperCase() ?? 'CLOSED';
-      switch (statusText) {
-        case 'SL HIT':
-          statusColor = Colors.redAccent;
-          break;
-        case 'CANCELLED (NEW SIGNAL)':
-        case 'CANCELLED':
-          statusText = 'CANCELLED';
-          statusColor = Colors.grey;
-          break;
-        default:
-          statusColor = Colors.blueGrey.shade200;
-          break;
-      }
-    }
+    final String statusText = signal.getTranslatedResult(l10n);
+    final Color statusColor = signal.getStatusColor();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117),

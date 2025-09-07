@@ -486,6 +486,27 @@ class AppLocalizationsVi extends AppLocalizations {
   String get ok => 'OK';
 
   @override
+  String get tp1Hit => 'Chốt lời 1';
+
+  @override
+  String get tp2Hit => 'Chốt lời 2';
+
+  @override
+  String get tp3Hit => 'Chốt lời 3';
+
+  @override
+  String get slHit => 'Dừng lỗ';
+
+  @override
+  String get cancelled => 'Đã hủy';
+
+  @override
+  String get exitedByAdmin => 'Admin đóng lệnh';
+
+  @override
+  String get signalClosed => 'Đã đóng';
+
+  @override
   String get contactToUpgrade => 'Liên hệ để nâng cấp';
 
   @override

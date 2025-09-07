@@ -152,6 +152,13 @@
     "logoutDialogTitle": "Session Expired",
     "logoutDialogDefaultReason": "Your account has been logged in on another device.",
     "ok": "OK",
+    "tp1Hit": "TP1 Hit",
+    "tp2Hit": "TP2 Hit",
+    "tp3Hit": "TP3 Hit",
+    "slHit": "SL Hit",
+    "cancelled": "Cancelled",
+    "exitedByAdmin": "Exited by Admin",
+    "signalClosed": "Closed",
     "bankTransferToUpgrade": "Bank Transfer to Upgrade",
         "@bankTransferToUpgrade": {
             "description": "Button text for upgrading via bank transfer"

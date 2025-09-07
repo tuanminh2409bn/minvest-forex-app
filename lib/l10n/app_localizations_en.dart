@@ -483,6 +483,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ok => 'OK';
 
   @override
+  String get tp1Hit => 'TP1 Hit';
+
+  @override
+  String get tp2Hit => 'TP2 Hit';
+
+  @override
+  String get tp3Hit => 'TP3 Hit';
+
+  @override
+  String get slHit => 'SL Hit';
+
+  @override
+  String get cancelled => 'Cancelled';
+
+  @override
+  String get exitedByAdmin => 'Exited by Admin';
+
+  @override
+  String get signalClosed => 'Closed';
+
+  @override
   String get contactToUpgrade => 'Contact to upgrade';
 
   @override

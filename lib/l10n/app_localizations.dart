@@ -986,6 +986,48 @@ abstract class AppLocalizations {
   /// **'OK'**
   String get ok;
 
+  /// No description provided for @tp1Hit.
+  ///
+  /// In en, this message translates to:
+  /// **'TP1 Hit'**
+  String get tp1Hit;
+
+  /// No description provided for @tp2Hit.
+  ///
+  /// In en, this message translates to:
+  /// **'TP2 Hit'**
+  String get tp2Hit;
+
+  /// No description provided for @tp3Hit.
+  ///
+  /// In en, this message translates to:
+  /// **'TP3 Hit'**
+  String get tp3Hit;
+
+  /// No description provided for @slHit.
+  ///
+  /// In en, this message translates to:
+  /// **'SL Hit'**
+  String get slHit;
+
+  /// No description provided for @cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get cancelled;
+
+  /// No description provided for @exitedByAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Exited by Admin'**
+  String get exitedByAdmin;
+
+  /// No description provided for @signalClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get signalClosed;
+
   /// No description provided for @contactToUpgrade.
   ///
   /// In en, this message translates to:
