@@ -281,6 +281,7 @@ class _SignalScreenState extends State<SignalScreen> {
 
   Widget _buildTabs(AppLocalizations l10n) {
     return Container(
+      height: 32, // Giữ nguyên chiều cao 32 ở đây
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
         borderRadius: BorderRadius.circular(8),
@@ -288,16 +289,9 @@ class _SignalScreenState extends State<SignalScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-              width: 80,
-              height: 32,
-              child: _buildTabItem(l10n.live, _isLive, () => setState(() => _isLive = true))
-          ),
-          SizedBox(
-              width: 80,
-              height: 32,
-              child: _buildTabItem(l10n.end, !_isLive, () => setState(() => _isLive = false))
-          ),
+          // Đã loại bỏ SizedBox để nút tự co dãn
+          _buildTabItem(l10n.live, _isLive, () => setState(() => _isLive = true)),
+          _buildTabItem(l10n.end, !_isLive, () => setState(() => _isLive = false)),
         ],
       ),
     );
@@ -307,6 +301,8 @@ class _SignalScreenState extends State<SignalScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        // Thêm padding ngang để tạo không gian cho chữ
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
@@ -325,6 +321,7 @@ class _SignalScreenState extends State<SignalScreen> {
             child: Text(
               text,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              softWrap: false,
             )),
       ),
     );

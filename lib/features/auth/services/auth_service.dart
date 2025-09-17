@@ -1,4 +1,3 @@
-// lib/features/auth/services/auth_service.dart
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
@@ -31,7 +30,7 @@ class AuthService {
     if (user == null) return;
 
     final currentDeviceId = await DeviceInfoService.getDeviceId();
-    stopListeningForSessionChanges(); // Hủy listener cũ nếu có
+    stopListeningForSessionChanges();
 
     final userDocRef = _firestore.collection('users').doc(user.uid);
     _sessionSubscription = userDocRef.snapshots().listen((snapshot) {
@@ -177,12 +176,13 @@ class AuthService {
 
   Future<User?> signInWithFacebook() async {
     try {
-      await _requestTrackingPermission();
       UserCredential userCredential;
       Map<String, dynamic>? facebookUserData;
+
       if (kIsWeb) {
         userCredential = await _firebaseAuth.signInWithPopup(FacebookAuthProvider());
       } else {
+        await _requestTrackingPermission();
         final LoginResult result = await FacebookAuth.instance.login(
           loginTracking: LoginTracking.enabled,
           permissions: ['public_profile', 'email'],
@@ -236,8 +236,10 @@ class AuthService {
   Future<void> signOut() async {
     stopListeningForSessionChanges();
     try {
+      if (!kIsWeb) {
+        await FacebookAuth.instance.logOut();
+      }
       await GoogleSignIn().signOut();
-      await FacebookAuth.instance.logOut();
     } catch (e) {
       print("Lỗi khi đăng xuất khỏi các nhà cung cấp: $e");
     } finally {

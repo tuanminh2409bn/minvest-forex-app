@@ -138,7 +138,7 @@ export const processVerificationImage = onObjectFinalized(
         subscriptionTier: tier,
         verificationStatus: "success",
         exnessClientUid: affiliateData.client_uid,
-        exnessClientAccount: affiliateData.client_account,
+        exnessClientAccount: exnessId,
         notificationCount: 0,
       };
 
