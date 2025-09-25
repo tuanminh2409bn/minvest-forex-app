@@ -486,6 +486,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get ok => 'OK';
 
   @override
+  String get errorLoadingPackages => 'Lỗi Tải Gói Nâng Cấp';
+
+  @override
   String get tp1Hit => 'Chốt lời 1';
 
   @override

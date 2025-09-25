@@ -142,6 +142,8 @@
     "signalStatusRunning": "ĐANG CHẠY",
     "signalStatusClosed": "ĐÃ ĐÓNG",
     "signalEntry": "Vùng vào lệnh",
+    "errorLoadingPackages": "Lỗi Tải Gói Nâng Cấp",
+    "retry": "Thử lại",
     "signalSl": "Dừng lỗ",
     "tp1Hit": "Chốt lời 1",
     "tp2Hit": "Chốt lời 2",

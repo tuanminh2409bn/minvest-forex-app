@@ -986,6 +986,12 @@ abstract class AppLocalizations {
   /// **'OK'**
   String get ok;
 
+  /// No description provided for @errorLoadingPackages.
+  ///
+  /// In en, this message translates to:
+  /// **'Error Loading Packages'**
+  String get errorLoadingPackages;
+
   /// No description provided for @tp1Hit.
   ///
   /// In en, this message translates to:

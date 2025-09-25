@@ -152,6 +152,8 @@
     "logoutDialogTitle": "Session Expired",
     "logoutDialogDefaultReason": "Your account has been logged in on another device.",
     "ok": "OK",
+    "errorLoadingPackages": "Error Loading Packages",
+    "retry": "Retry",
     "tp1Hit": "TP1 Hit",
     "tp2Hit": "TP2 Hit",
     "tp3Hit": "TP3 Hit",

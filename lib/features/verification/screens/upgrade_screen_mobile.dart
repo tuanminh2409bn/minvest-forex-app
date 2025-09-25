@@ -1,7 +1,6 @@
 // lib/features/verification/screens/upgrade_screen_mobile.dart
 
-import 'dart:io'; // <<< THÊM MỚI để kiểm tra hệ điều hành
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/verification/screens/account_verification_screen.dart';
 import 'package:minvest_forex_app/features/verification/screens/package_screen_mobile.dart';
@@ -14,14 +13,13 @@ class UpgradeScreen extends StatelessWidget {
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      // Handle error
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final bool isIos = Platform.isIOS; // <<< KIỂM TRA HỆ ĐIỀU HÀNH
+    final bool isIos = Platform.isIOS;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -60,10 +58,6 @@ class UpgradeScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 _buildTiersTable(l10n),
                 const SizedBox(height: 30),
-
-                // ▼▼▼ KHU VỰC ĐÃ SỬA ĐỔI ▼▼▼
-
-                // Chỉ hiển thị các nút này trên Android (hoặc bất kỳ nền tảng nào không phải iOS)
                 if (!isIos) ...[
                   _buildActionButton(
                     context,
@@ -87,8 +81,6 @@ class UpgradeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
-
-                // Nút In-App Purchase hiển thị trên cả hai nền tảng
                 _buildActionButton(
                   context,
                   text: l10n.payInAppToUpgrade,
@@ -101,8 +93,6 @@ class UpgradeScreen extends StatelessWidget {
                   isPrimary: true,
                 ),
                 const SizedBox(height: 30),
-
-                // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
               ],
             ),
           ),
@@ -112,7 +102,6 @@ class UpgradeScreen extends StatelessWidget {
   }
 
   Widget _buildTiersTable(AppLocalizations l10n) {
-    // ... (Giữ nguyên không thay đổi)
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Table(
@@ -139,7 +128,6 @@ class UpgradeScreen extends StatelessWidget {
   }
 
   TableRow _buildTableRow(List<String> cells, {bool isHeader = false}) {
-    // ... (Giữ nguyên không thay đổi)
     return TableRow(
       decoration: isHeader ? const BoxDecoration(color: Color(0xFF151a2e)) : null,
       children: cells.map((cell) {
@@ -188,7 +176,6 @@ class UpgradeScreen extends StatelessWidget {
   }
 
   Widget _buildActionButton(BuildContext context, {required String text, required VoidCallback onPressed, required bool isPrimary}) {
-    // ... (Giữ nguyên không thay đổi)
     return SizedBox(
       height: 50,
       child: ElevatedButton(

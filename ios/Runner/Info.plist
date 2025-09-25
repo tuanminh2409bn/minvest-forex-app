@@ -50,16 +50,18 @@
 	<key>FacebookDisplayName</key>
 	<string>Minvest</string>
 	<key>LSApplicationQueriesSchemes</key>
-    <array>
-      <string>fbapi</string>
-      <string>fb-messenger-share-api</string>
-    </array>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Chúng tôi cần truy cập camera để bạn có thể chụp ảnh màn hình tài khoản trực tiếp để xác thực.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Chúng tôi cần truy cập thư viện ảnh để bạn có thể chọn ảnh chụp màn hình tài khoản để xác thực.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Chúng tôi cần quyền này để cá nhân hóa trải nghiệm của bạn và phục vụ cho việc đăng nhập.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
@@ -83,7 +85,5 @@
 	</array>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
-	<key>NSUserTrackingUsageDescription</key>
-    <string>Chúng tôi cần quyền này để cá nhân hóa trải nghiệm của bạn và phục vụ cho việc đăng nhập.</string>
 </dict>
 </plist>

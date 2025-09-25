@@ -483,6 +483,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ok => 'OK';
 
   @override
+  String get errorLoadingPackages => 'Error Loading Packages';
+
+  @override
   String get tp1Hit => 'TP1 Hit';
 
   @override

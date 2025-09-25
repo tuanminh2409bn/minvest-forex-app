@@ -196,11 +196,7 @@ class _PackageScreenState extends State<PackageScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (!_isAvailable || _loadingError.isNotEmpty) {
-      return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(_loadingError, style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
-          ));
+      return _buildErrorWidget(context, _loadingError);
     }
     final product1Month = _products[Platform.isIOS ? 'minvest.elite.1month' : 'elite_1_month'];
     final product12Months = _products[Platform.isIOS ? 'minvest.elite.12months' : 'elite_12_months'];
@@ -229,6 +225,47 @@ class _PackageScreenState extends State<PackageScreen> {
             onPressed: product12Months != null ? () => _handlePurchase(product12Months) : null,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(BuildContext context, String errorMessage) {
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 60),
+            const SizedBox(height: 20),
+            Text(
+              l10n.errorLoadingPackages, // "Lỗi Tải Gói Nâng Cấp"
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              errorMessage, // Hiển thị chi tiết lỗi mà bạn đã có
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Colors.white70),
+            ),
+            const SizedBox(height: 30),
+            // NÚT "THỬ LẠI" QUYỀN LỰC
+            ElevatedButton.icon(
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry), // "Thử lại"
+              onPressed: () {
+                // Gọi lại hàm initStoreInfo để tải lại sản phẩm
+                _initStoreInfo();
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                textStyle: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
