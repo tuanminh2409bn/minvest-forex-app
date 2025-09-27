@@ -12,7 +12,7 @@ class PurchaseService extends ChangeNotifier {
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
   final Set<String> _androidIds = {'elite_1_month', 'elite_12_months'};
-  final Set<String> _iosIds = {'minvest.elite.1month', 'minvest.elite.12months'};
+  final Set<String> _iosIds = {'minvest.1month', 'minvest.12month'};
 
   List<ProductDetails> _products = [];
   List<ProductDetails> get products => _products;
@@ -84,11 +84,18 @@ class PurchaseService extends ChangeNotifier {
   }
 
   Future<void> _handleSuccessfulPurchase(PurchaseDetails purchaseDetails) async {
-    debugPrint('Giao dịch thành công cho sản phẩm: ${purchaseDetails.productID}. Đang xác thực với server...');
+    debugPrint('✅ Giao dịch thành công cho sản phẩm: ${purchaseDetails.productID}.');
+
+    // --- LOGGING NÂNG CAO ---
+    final String verificationData = purchaseDetails.verificationData.serverVerificationData;
+    debugPrint('🧾 Dữ liệu biên lai (độ dài): ${verificationData.length} ký tự.');
+    debugPrint('🧾 300 ký tự đầu của biên lai: ${verificationData.substring(0, verificationData.length > 300 ? 300 : verificationData.length)}...');
+    // --- KẾT THÚC LOGGING ---
+
+    _setPurchasePending(true); // Báo cho UI biết đang xác thực với server
 
     try {
       final String platform = Platform.isIOS ? 'ios' : 'android';
-      final String verificationData = purchaseDetails.verificationData.serverVerificationData;
 
       final payload = {
         'platform': platform,
@@ -98,23 +105,28 @@ class PurchaseService extends ChangeNotifier {
         },
       };
 
-      debugPrint("Đang gửi payload xác thực: $payload");
+      debugPrint("🚀 Đang gửi payload lên Cloud Function 'verifyPurchase': $payload");
       final HttpsCallable callable = _functions.httpsCallable('verifyPurchase');
       final HttpsCallableResult result = await callable.call(payload);
 
       if (result.data['success'] == true) {
-        debugPrint("Xác thực thành công! Server đã nâng cấp tài khoản.");
+        debugPrint("🎉 XÁC THỰC THÀNH CÔNG! Server đã nâng cấp tài khoản.");
       } else {
-        debugPrint("Server từ chối xác thực: ${result.data['message']}");
+        debugPrint("❌ SERVER TỪ CHỐI XÁC THỰC: ${result.data['message']}");
       }
     } catch (e) {
-      debugPrint("Lỗi nghiêm trọng khi gọi hàm verifyPurchase: $e");
+      debugPrint("🔥 LỖI NGHIÊM TRỌNG KHI GỌI HÀM VERIFYPURCHASE 🔥");
       if (e is FirebaseFunctionsException) {
-        debugPrint("Chi tiết lỗi Firebase: ${e.code} - ${e.message}");
+        debugPrint("   - MÃ LỖI FIREBASE: ${e.code}");
+        debugPrint("   - THÔNG ĐIỆP: ${e.message}");
+        debugPrint("   - CHI TIẾT: ${e.details}");
+      } else {
+        debugPrint("   - LỖI KHÔNG XÁC ĐỊNH: $e");
       }
     } finally {
       if (purchaseDetails.pendingCompletePurchase) {
         await _inAppPurchase.completePurchase(purchaseDetails);
+        debugPrint("✅ Đã gọi completePurchase() cho giao dịch.");
       }
       _setPurchasePending(false);
     }

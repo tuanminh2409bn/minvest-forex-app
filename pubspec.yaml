@@ -1,7 +1,7 @@
 name: minvest_forex_app
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.0+7
+version: 1.0.3+1
 
 environment:
   sdk: '>=3.2.6 <4.0.0'
@@ -21,20 +21,20 @@ dependencies:
   cloud_functions:
 
   # Authentication
-  google_sign_in: ^6.3.0
+  google_sign_in: 6.3.0
   flutter_facebook_auth:
   sign_in_with_apple:
 
   # State Management & Core Utilities
   flutter_bloc:
-  equatable: ^2.0.5
+  equatable:
   provider:
   shared_preferences:
   intl:
 
   # Other packages
   app_tracking_transparency:
-  cupertino_icons: ^1.0.8
+  cupertino_icons:
   url_launcher:
   image_picker:
   webview_flutter:

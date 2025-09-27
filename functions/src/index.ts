@@ -21,8 +21,8 @@ const translateClient = new translate.Translate();
 const PRODUCT_PRICES: { [key: string]: number } = {
   'elite_1_month': 78,
   'elite_12_months': 460,
-  'minvest.elite.1month': 78,
-  'minvest.elite.12months': 460,
+  'minvest.1month': 78,
+  'minvest.12month': 460,
 };
 
 const APPLE_VERIFY_RECEIPT_URL_PRODUCTION = "https://buy.itunes.apple.com/verifyReceipt";
@@ -398,26 +398,48 @@ export const verifyPurchase = onCall(
     });
 
 async function verifyAppleReceipt(receiptData: string, sharedSecret: string): Promise<any> {
-    const body = {
-        "receipt-data": receiptData,
-        "password": sharedSecret,
-        "exclude-old-transactions": true
-    };
-    try {
-        const response = await axios.post(APPLE_VERIFY_RECEIPT_URL_PRODUCTION, body);
-        const data = response.data;
-        if (data.status === 21007) {
-            const sandboxResponse = await axios.post(APPLE_VERIFY_RECEIPT_URL_SANDBOX, body);
-            return sandboxResponse.data;
-        }
-        if (data.status !== 0) {
-            throw new Error(`Xác thực biên lai thất bại với mã trạng thái: ${data.status}`);
-        }
-        return data;
-    } catch (error) {
-        functions.logger.error("Lỗi khi gọi API xác thực của Apple:", error);
-        throw new HttpsError("internal", "Không thể kết nối đến server của Apple.");
+  const body = {
+    "receipt-data": receiptData,
+    "password": sharedSecret,
+    "exclude-old-transactions": true,
+  };
+
+  try {
+    functions.logger.log("🍎 Đang thử xác thực với server PRODUCTION của Apple...");
+    const response = await axios.post(APPLE_VERIFY_RECEIPT_URL_PRODUCTION, body);
+    const data = response.data;
+    functions.logger.log("🍎 Phản hồi từ server PRODUCTION:", data);
+
+    // Apple trả về mã 21007 khi biên lai là của môi trường Sandbox
+    if (data.status === 21007) {
+      functions.logger.log("🕵️ Mã trạng thái 21007. Đây là biên lai Sandbox. Đang thử lại với server SANDBOX...");
+      const sandboxResponse = await axios.post(APPLE_VERIFY_RECEIPT_URL_SANDBOX, body);
+      functions.logger.log("🕵️ Phản hồi từ server SANDBOX:", sandboxResponse.data);
+
+      // Kiểm tra lại trạng thái từ Sandbox
+      if (sandboxResponse.data.status !== 0) {
+        throw new Error(`Xác thực Sandbox thất bại với mã trạng thái: ${sandboxResponse.data.status}`);
+      }
+      return sandboxResponse.data;
     }
+
+    if (data.status !== 0) {
+      throw new Error(`Xác thực Production thất bại với mã trạng thái: ${data.status}`);
+    }
+
+    return data;
+
+  } catch (error: any) {
+    functions.logger.error("🔥 Lỗi nghiêm trọng khi gọi API xác thực của Apple:", {
+      message: error.message,
+      // Nếu có response lỗi từ axios, log nó ra
+      response: error.response ? {
+        status: error.response.status,
+        data: error.response.data
+      } : 'No response object',
+    });
+    throw new HttpsError("internal", "Không thể kết nối hoặc xác thực với server của Apple.");
+  }
 }
 
 async function upgradeUserAccount(
