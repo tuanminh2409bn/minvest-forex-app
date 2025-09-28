@@ -1,5 +1,3 @@
-//lib/main.dart
-
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -10,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:minvest_forex_app/app/auth_gate.dart';
 import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
+import 'package:minvest_forex_app/core/services/purchase_service.dart';
 import 'package:minvest_forex_app/features/auth/bloc/auth_bloc.dart';
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 import 'package:minvest_forex_app/features/notifications/providers/notification_provider.dart';
@@ -57,6 +56,8 @@ Future<void> main() async {
           ),
         ),
         ChangeNotifierProvider(create: (context) => NotificationProvider()),
+        // --- THAY ĐỔI 2: ĐƯA PURCHASE_SERVICE LÊN TẦNG CAO NHẤT ---
+        ChangeNotifierProvider(create: (context) => PurchaseService()),
       ],
       child: const MyApp(),
     ),
@@ -77,7 +78,8 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _initializeServices();
+    // Đổi tên hàm để bao quát hơn
+    _initializeCoreServices();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print("[DEBUG_LOGOUT] initState: Bắt đầu đăng ký listener...");
@@ -110,7 +112,13 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  Future<void> _initializeServices() async {
+  // --- THAY ĐỔI 3: KHỞI TẠO PURCHASE_SERVICE NGAY KHI APP CHẠY ---
+  Future<void> _initializeCoreServices() async {
+    // Khởi tạo PurchaseService ngay lập tức để bắt đầu lắng nghe
+    context.read<PurchaseService>().initialize();
+    debugPrint("✅ Đã gọi initialize() cho PurchaseService từ MyApp.");
+
+    // Logic cũ của bạn vẫn được giữ nguyên
     if (!kIsWeb) {
       const DarwinInitializationSettings initializationSettingsIOS =
       DarwinInitializationSettings(

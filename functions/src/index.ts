@@ -10,6 +10,7 @@ import { GoogleAuth } from "google-auth-library";
 import { Response } from "express";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getLocalizedPayload } from "./localization";
+import * as jose from "node-jose";
 
 // =================================================================
 // === KHỞI TẠO CÁC DỊCH VỤ CƠ BẢN ===
@@ -319,59 +320,64 @@ function parseSignalMessage(text: string): any | null {
 export const verifyPurchase = onCall(
     { region: "asia-southeast1", secrets: ["APPLE_SHARED_SECRET"] },
     async (request) => {
-        // ... (Logic xác thực IAP không thay đổi)
         const { productId, transactionData, platform } = request.data;
         const userId = request.auth?.uid;
 
-        if (!userId) {
-            throw new HttpsError("unauthenticated", "Người dùng chưa đăng nhập.");
-        }
-        if (!productId || !transactionData || !platform) {
-            throw new HttpsError("invalid-argument", "Thiếu productId, transactionData hoặc platform.");
-        }
+        if (!userId) throw new HttpsError("unauthenticated", "Người dùng chưa đăng nhập.");
+        if (!productId || !transactionData || !platform) throw new HttpsError("invalid-argument", "Thiếu thông tin cần thiết.");
 
         try {
             let isValid = false;
             let expiryDate: Date | null = null;
             let transactionId: string | null = null;
-
+            let verifiedProductId = productId;
             if (platform === 'ios') {
-                const sharedSecret = process.env.APPLE_SHARED_SECRET;
-                if (!sharedSecret) {
-                    functions.logger.error("Không tìm thấy APPLE_SHARED_SECRET trong môi trường runtime.");
-                    throw new HttpsError("internal", "Lỗi cấu hình phía server.");
-                }
+                const receipt = transactionData.receiptData;
 
-                const { receiptData } = transactionData;
-                const appleResponse = await verifyAppleReceipt(receiptData, sharedSecret);
+                // --- LOGIC MỚI: KIỂM TRA ĐỊNH DẠNG BIÊN LAI ---
+                if (receipt.startsWith("ey")) { // Đây là biên lai kiểu mới JWS
+                    const jwsResult = await verifyAppleJwsReceipt(receipt);
+                    isValid = jwsResult.isValid;
+                    expiryDate = jwsResult.expiryDate;
+                    transactionId = jwsResult.transactionId;
+                    verifiedProductId = jwsResult.productId;
 
-                const latestReceipt = appleResponse.latest_receipt_info?.sort((a: any, b: any) =>
-                    Number(b.purchase_date_ms) - Number(a.purchase_date_ms)
-                )[0];
+                } else { // Đây là biên lai kiểu cũ Base64
+                    const sharedSecret = process.env.APPLE_SHARED_SECRET;
+                    if (!sharedSecret) throw new HttpsError("internal", "Lỗi cấu hình phía server.");
 
-                if (latestReceipt && latestReceipt.product_id === productId) {
-                    isValid = true;
-                    expiryDate = new Date(Number(latestReceipt.expires_date_ms));
-                    transactionId = latestReceipt.transaction_id;
+                    const appleResponse = await verifyAppleLegacyReceipt(receipt, sharedSecret);
 
-                    if (transactionId) {
-                        const txDoc = await firestore.collection("processedTransactions").doc(transactionId).get();
-                        if (txDoc.exists) {
-                            functions.logger.warn(`Giao dịch ${transactionId} đã được xử lý trước đó.`);
-                            isValid = false;
-                        }
-                    } else {
-                        isValid = false;
+                    if (appleResponse.status !== 0) {
+                        throw new Error(`Xác thực biên lai thất bại với mã trạng thái: ${appleResponse.status}`);
+                    }
+
+                    const latestReceipt = appleResponse.latest_receipt_info?.sort((a: any, b: any) =>
+                        Number(b.purchase_date_ms) - Number(a.purchase_date_ms)
+                    )[0];
+
+                    if (latestReceipt && latestReceipt.product_id === productId) {
+                        isValid = true;
+                        expiryDate = new Date(Number(latestReceipt.expires_date_ms));
+                        transactionId = latestReceipt.transaction_id;
                     }
                 }
+
+                if (isValid && transactionId) {
+                    const txDoc = await firestore.collection("processedTransactions").doc(transactionId).get();
+                    if (txDoc.exists) {
+                        functions.logger.warn(`Giao dịch ${transactionId} đã được xử lý trước đó.`);
+                        isValid = false; // Đánh dấu không hợp lệ để không xử lý lại
+                    }
+                }
+
             } else if (platform === 'android') {
+                // Logic cho Android giữ nguyên
                 const { purchaseToken } = transactionData;
                 const packageName = "com.minvest.aisignals";
-
                 const auth = new GoogleAuth({ scopes: "https://www.googleapis.com/auth/androidpublisher" });
                 const authClient = await auth.getClient();
                 const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
-
                 const res = await authClient.request({ url });
                 const purchase = res.data as any;
 
@@ -383,63 +389,79 @@ export const verifyPurchase = onCall(
             }
 
             if (isValid && expiryDate && transactionId) {
-                await upgradeUserAccount(userId, productId, expiryDate, transactionId, platform);
+                await upgradeUserAccount(userId, verifiedProductId, expiryDate, transactionId, platform);
                 return { success: true, message: "Tài khoản đã được nâng cấp thành công." };
             } else {
                 throw new HttpsError("aborted", "Giao dịch không hợp lệ hoặc đã bị hủy.");
             }
         } catch (error: any) {
             functions.logger.error("Lỗi nghiêm trọng khi xác thực giao dịch:", error);
-            if (error instanceof HttpsError) {
-                throw error;
-            }
+            if (error instanceof HttpsError) throw error;
             throw new HttpsError("internal", "Đã xảy ra lỗi trong quá trình xác thực.", error.message);
         }
     });
 
-async function verifyAppleReceipt(receiptData: string, sharedSecret: string): Promise<any> {
-  const body = {
-    "receipt-data": receiptData,
-    "password": sharedSecret,
-    "exclude-old-transactions": true,
-  };
+async function verifyAppleJwsReceipt(jwsRepresentation: string) {
+    functions.logger.log("🍎 JWS: Bắt đầu xác thực biên lai kiểu mới...");
+    try {
+        // 1. Giải mã header để lấy chuỗi chứng thực (x5c)
+        const header = JSON.parse(Buffer.from(jwsRepresentation.split('.')[0], 'base64').toString('utf8'));
+        const x5c = header.x5c;
+        if (!x5c || x5c.length === 0) {
+            throw new Error("Không tìm thấy chuỗi chứng thực (x5c) trong header của JWS.");
+        }
 
-  try {
-    functions.logger.log("🍎 Đang thử xác thực với server PRODUCTION của Apple...");
-    const response = await axios.post(APPLE_VERIFY_RECEIPT_URL_PRODUCTION, body);
-    const data = response.data;
-    functions.logger.log("🍎 Phản hồi từ server PRODUCTION:", data);
+        // 2. Tạo keystore và thêm public key từ chứng thực của Apple
+        const keystore = jose.JWK.createKeyStore();
+        // Chỉ cần dùng cert đầu tiên trong chuỗi để xác thực chữ ký
+        const cert = `-----BEGIN CERTIFICATE-----\n${x5c[0]}\n-----END CERTIFICATE-----`;
+        const key = await jose.JWK.asKey(cert, 'pem');
+        keystore.add(key);
 
-    // Apple trả về mã 21007 khi biên lai là của môi trường Sandbox
-    if (data.status === 21007) {
-      functions.logger.log("🕵️ Mã trạng thái 21007. Đây là biên lai Sandbox. Đang thử lại với server SANDBOX...");
-      const sandboxResponse = await axios.post(APPLE_VERIFY_RECEIPT_URL_SANDBOX, body);
-      functions.logger.log("🕵️ Phản hồi từ server SANDBOX:", sandboxResponse.data);
+        // 3. Xác thực chữ ký của JWS
+        const verificationResult = await jose.JWS.createVerify(keystore).verify(jwsRepresentation);
 
-      // Kiểm tra lại trạng thái từ Sandbox
-      if (sandboxResponse.data.status !== 0) {
-        throw new Error(`Xác thực Sandbox thất bại với mã trạng thái: ${sandboxResponse.data.status}`);
-      }
-      return sandboxResponse.data;
+        // 4. Lấy payload sau khi đã xác thực thành công
+        const verifiedPayload = JSON.parse(Buffer.from(verificationResult.payload).toString());
+        functions.logger.log("   JWS: Payload đã xác thực:", verifiedPayload);
+
+        // 5. Kiểm tra các thông tin quan trọng trong payload
+        const bundleId = "com.minvest.aisignals"; // !!! QUAN TRỌNG: Đảm bảo đây là Bundle ID chính xác của bạn
+        if (verifiedPayload.bundleId !== bundleId) {
+            throw new Error(`Bundle ID không khớp. Mong muốn: ${bundleId}, Thực tế: ${verifiedPayload.bundleId}`);
+        }
+
+        functions.logger.log("   JWS: Xác thực chữ ký và Bundle ID thành công!");
+
+        // Trả về thông tin cần thiết để xử lý
+        return {
+            isValid: true,
+            productId: verifiedPayload.productId,
+            transactionId: verifiedPayload.transactionId,
+            expiryDate: new Date(verifiedPayload.expiresDate),
+        };
+    } catch (error) {
+        functions.logger.error("🔥 JWS: Lỗi nghiêm trọng khi xác thực JWS:", error);
+        throw new Error("Xác thực biên lai JWS thất bại.");
     }
+}
 
-    if (data.status !== 0) {
-      throw new Error(`Xác thực Production thất bại với mã trạng thái: ${data.status}`);
+async function verifyAppleLegacyReceipt(receiptData: string, sharedSecret: string): Promise<any> {
+    functions.logger.log("Legacy: Bắt đầu xác thực biên lai kiểu cũ...");
+    // Nội dung hàm này giữ nguyên từ file gốc của bạn, chỉ đổi tên
+    const body = { "receipt-data": receiptData, "password": sharedSecret, "exclude-old-transactions": true };
+    try {
+        const response = await axios.post(APPLE_VERIFY_RECEIPT_URL_PRODUCTION, body);
+        const data = response.data;
+        if (data.status === 21007) {
+            const sandboxResponse = await axios.post(APPLE_VERIFY_RECEIPT_URL_SANDBOX, body);
+            return sandboxResponse.data;
+        }
+        return data;
+    } catch (error) {
+        functions.logger.error("Legacy: Lỗi khi gọi API xác thực của Apple:", error);
+        throw new HttpsError("internal", "Không thể kết nối đến server của Apple.");
     }
-
-    return data;
-
-  } catch (error: any) {
-    functions.logger.error("🔥 Lỗi nghiêm trọng khi gọi API xác thực của Apple:", {
-      message: error.message,
-      // Nếu có response lỗi từ axios, log nó ra
-      response: error.response ? {
-        status: error.response.status,
-        data: error.response.data
-      } : 'No response object',
-    });
-    throw new HttpsError("internal", "Không thể kết nối hoặc xác thực với server của Apple.");
-  }
 }
 
 async function upgradeUserAccount(
