@@ -411,14 +411,16 @@ async function verifyAppleJwsReceipt(jwsRepresentation: string) {
             throw new Error("Không tìm thấy chuỗi chứng thực (x5c) trong header của JWS.");
         }
 
-        // 2. Tạo keystore và thêm public key từ chứng thực của Apple
+        // --- THAY ĐỔI QUAN TRỌNG: THÊM TẤT CẢ CHỨNG THỰC VÀO KEYSTORE ---
         const keystore = jose.JWK.createKeyStore();
-        // Chỉ cần dùng cert đầu tiên trong chuỗi để xác thực chữ ký
-        const cert = `-----BEGIN CERTIFICATE-----\n${x5c[0]}\n-----END CERTIFICATE-----`;
-        const key = await jose.JWK.asKey(cert, 'pem');
-        keystore.add(key);
+        for (const certStr of x5c) {
+            const cert = `-----BEGIN CERTIFICATE-----\n${certStr}\n-----END CERTIFICATE-----`;
+            const key = await jose.JWK.asKey(cert, 'pem');
+            await keystore.add(key);
+        }
+        // --- KẾT THÚC THAY ĐỔI ---
 
-        // 3. Xác thực chữ ký của JWS
+        // 3. Xác thực chữ ký của JWS bằng keystore đã chứa đầy đủ chứng thực
         const verificationResult = await jose.JWS.createVerify(keystore).verify(jwsRepresentation);
 
         // 4. Lấy payload sau khi đã xác thực thành công
