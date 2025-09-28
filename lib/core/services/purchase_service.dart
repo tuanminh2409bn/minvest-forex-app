@@ -13,7 +13,7 @@ class PurchaseService extends ChangeNotifier {
   StreamSubscription<List<PurchaseDetails>>? _subscription;
 
   final Set<String> _androidIds = {'elite_1_month', 'elite_12_months'};
-  final Set<String> _iosIds = {'minvest.1month', 'minvest.12month'};
+  final Set<String> _iosIds = {'minvest.01', 'minvest.12'};
 
   List<ProductDetails> _products = [];
   List<ProductDetails> get products => _products;

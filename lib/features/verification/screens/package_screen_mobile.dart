@@ -23,7 +23,7 @@ class _PackageScreenState extends State<PackageScreen> {
   bool _isPurchasing = false;
   String _loadingError = '';
   final Set<String> _kIds = Platform.isIOS
-      ? {'minvest.1month', 'minvest.12month'}
+      ? {'minvest.01', 'minvest.12'}
       : {'elite_1_month', 'elite_12_months'};
 
   bool _isInitialized = false;
@@ -198,8 +198,8 @@ class _PackageScreenState extends State<PackageScreen> {
     if (!_isAvailable || _loadingError.isNotEmpty) {
       return _buildErrorWidget(context, _loadingError);
     }
-    final product1Month = _products[Platform.isIOS ? 'minvest.1month' : 'elite_1_month'];
-    final product12Months = _products[Platform.isIOS ? 'minvest.12month' : 'elite_12_months'];
+    final product1Month = _products[Platform.isIOS ? 'minvest.01' : 'elite_1_month'];
+    final product12Months = _products[Platform.isIOS ? 'minvest.12' : 'elite_12_months'];
     final features = [
       l10n.featureReceiveAllSignals,
       l10n.featureAnalyzeReason,

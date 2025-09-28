@@ -22,8 +22,8 @@ const translateClient = new translate.Translate();
 const PRODUCT_PRICES: { [key: string]: number } = {
   'elite_1_month': 78,
   'elite_12_months': 460,
-  'minvest.1month': 78,
-  'minvest.12month': 460,
+  'minvest.01': 78,
+  'minvest.12': 460,
 };
 
 const APPLE_VERIFY_RECEIPT_URL_PRODUCTION = "https://buy.itunes.apple.com/verifyReceipt";
