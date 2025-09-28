@@ -43,6 +43,7 @@ dependencies:
   device_info_plus:
   crypto:
   uuid:
+  in_app_purchase_storekit:
 
 dev_dependencies:
   flutter_test:

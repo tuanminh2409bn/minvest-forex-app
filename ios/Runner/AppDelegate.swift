@@ -2,9 +2,11 @@ import UIKit
 import Flutter
 import Firebase
 import FBSDKCoreKit
+import StoreKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, SKPaymentTransactionObserver {
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -12,6 +14,8 @@ import FBSDKCoreKit
 
     FirebaseApp.configure()
     GeneratedPluginRegistrant.register(with: self)
+
+    SKPaymentQueue.default().add(self)
 
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
@@ -24,6 +28,14 @@ import FBSDKCoreKit
     )
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  nonisolated func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+  }
+
+  override func applicationWillTerminate(_ application: UIApplication) {
+      SKPaymentQueue.default().remove(self)
+      super.applicationWillTerminate(application)
   }
 
   override func application(_ application: UIApplication,
