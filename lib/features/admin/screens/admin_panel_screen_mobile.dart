@@ -95,44 +95,46 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             )
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').orderBy('displayName').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('Không có người dùng nào.'));
-          }
-          final users = snapshot.data!.docs;
-          return ListView.builder(
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final userDoc = users[index];
-              final userData = userDoc.data() as Map<String, dynamic>;
-              final userId = userDoc.id;
-              final isSelected = _selectedUserIds.contains(userId);
+      body: SafeArea( // <-- Thêm SafeArea ở đây
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('users').orderBy('displayName').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Text('Không có người dùng nào.'));
+            }
+            final users = snapshot.data!.docs;
+            return ListView.builder(
+              itemCount: users.length,
+              itemBuilder: (context, index) {
+                final userDoc = users[index];
+                final userData = userDoc.data() as Map<String, dynamic>;
+                final userId = userDoc.id;
+                final isSelected = _selectedUserIds.contains(userId);
 
-              return Container(
-                color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
-                child: ExpansionTile(
-                  leading: Checkbox(
-                    value: isSelected,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        if (value == true) _selectedUserIds.add(userId);
-                        else _selectedUserIds.remove(userId);
-                      });
-                    },
+                return Container(
+                  color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                  child: ExpansionTile(
+                    leading: Checkbox(
+                      value: isSelected,
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value == true) _selectedUserIds.add(userId);
+                          else _selectedUserIds.remove(userId);
+                        });
+                      },
+                    ),
+                    title: _buildUserTitle(userData),
+                    subtitle: Text(userData['email'] ?? 'N/A'),
+                    children: [_buildUserDetails(userData)],
                   ),
-                  title: _buildUserTitle(userData),
-                  subtitle: Text(userData['email'] ?? 'N/A'),
-                  children: [_buildUserDetails(userData)],
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
       bottomNavigationBar: _selectedUserIds.isNotEmpty
           ? BottomAppBar(

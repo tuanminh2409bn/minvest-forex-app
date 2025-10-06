@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/features/auth/screens/profile_screen.dart';
-import 'package:minvest_forex_app/features/chart/screens/chart_screen.dart';
+// import 'package:minvest_forex_app/features/chart/screens/chart_screen.dart'; // <-- BƯỚC 1: COMMENT DÒNG NÀY
 import 'package:minvest_forex_app/features/signals/screens/signal_screen.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 
@@ -16,10 +16,19 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // ▼▼▼ SỬA LỖI Ở ĐÂY ▼▼▼
+  // ▼▼▼ THAY ĐỔI Ở ĐÂY ▼▼▼
   final List<Widget> _pages = [
     const SignalScreen(),
-    const ChartScreen(),
+    // const ChartScreen(), // <-- BƯỚC 2: COMMENT LẠI MÀN HÌNH CHART
+
+    // THAY THẾ BẰNG MỘT MÀN HÌNH TRỐNG
+    Container(
+      color: const Color(0xFF0D1117), // Dùng màu nền tương tự để không bị chói
+      child: const Center(
+        child: Text('Đang bảo trì', style: TextStyle(color: Colors.white)),
+      ),
+    ),
+
     const ProfileScreen(),
   ];
 
@@ -34,9 +43,11 @@ class _MainScreenState extends State<MainScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
+      body: SafeArea(
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: _pages,
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[

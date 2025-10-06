@@ -35,24 +35,22 @@ class _SignalScreenState extends State<SignalScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final userTier = userProvider.userTier ?? 'free';
     final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0.0, 0.5, 1.0],
-            ),
+      body: Container( // Giữ Container này ở ngoài để gradient tràn viền
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0D1117), Color(0xFF161B22), Color.fromARGB(255, 20, 29, 110)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0.0, 0.5, 1.0],
           ),
+        ),
+        child: SafeArea( // <-- Di chuyển SafeArea vào đây
           child: Column(
             children: [
-              // ▼▼▼ KHU VỰC ĐÃ SỬA ĐỔI ▼▼▼
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
                 child: Row(
@@ -63,7 +61,7 @@ class _SignalScreenState extends State<SignalScreen> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const _LanguageSwitcher(), // Thêm nút chuyển ngôn ngữ
+                          const _LanguageSwitcher(),
                           const SizedBox(width: 4),
                           Consumer<NotificationProvider>(
                             builder: (context, notificationProvider, child) {
@@ -103,7 +101,6 @@ class _SignalScreenState extends State<SignalScreen> {
                   ],
                 ),
               ),
-              // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: _buildFilters(l10n),

@@ -57,17 +57,19 @@ class _ChartScreenState extends State<ChartScreen> {
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_isLoading)
-            Container(
-              color: const Color(0xFF0D1117),
-              child: const Center(
-                child: CircularProgressIndicator(),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            WebViewWidget(controller: _controller),
+            if (_isLoading)
+              Container(
+                color: const Color(0xFF0D1117),
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

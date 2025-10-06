@@ -123,11 +123,13 @@ class SignalDetailScreen extends StatelessWidget {
             stops: [0.0, 0.5, 1.0],
           ),
         ),
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            _buildDetailCard(context, canViewReason, statusText, statusColor, l10n),
-          ],
+        child: SafeArea( // <-- Thêm SafeArea ở đây
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              _buildDetailCard(context, canViewReason, statusText, statusColor, l10n),
+            ],
+          ),
         ),
       ),
     );

@@ -141,10 +141,14 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: _buildContent(l10n),
+        // --- THAY ĐỔI NẰM Ở ĐÂY ---
+        child: SafeArea( // 1. Thêm SafeArea ở đây
+          child: Padding(   // 2. Để Padding và nội dung bên trong nó
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: _buildContent(l10n),
+          ),
         ),
+        // --- KẾT THÚC THAY ĐỔI ---
       ),
     );
   }

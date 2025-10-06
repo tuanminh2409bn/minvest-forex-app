@@ -170,7 +170,7 @@ class _PackageScreenState extends State<PackageScreen> {
                 end: Alignment.bottomCenter,
               ),
             ),
-            child: _buildIapContent(l10n),
+            child: SafeArea(child: _buildIapContent(l10n)), // <-- Thêm SafeArea ở đây
           ),
           if (_isPurchasing)
             Container(

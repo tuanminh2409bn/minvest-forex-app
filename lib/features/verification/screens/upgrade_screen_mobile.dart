@@ -43,57 +43,59 @@ class UpgradeScreen extends StatelessWidget {
             stops: [0.0, 0.5, 1.0],
           ),
         ),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                Center(
-                  child: Text(
-                    l10n.compareTiers,
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+        child: SafeArea( // <-- Thêm SafeArea ở đây
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  Center(
+                    child: Text(
+                      l10n.compareTiers,
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                _buildTiersTable(l10n),
-                const SizedBox(height: 30),
-                if (!isIos) ...[
+                  const SizedBox(height: 24),
+                  _buildTiersTable(l10n),
+                  const SizedBox(height: 30),
+                  if (!isIos) ...[
+                    _buildActionButton(
+                      context,
+                      text: l10n.openExnessAccount,
+                      onPressed: () {
+                        _launchURL('https://my.exmarkets.guide/accounts/sign-up/303589?utm_source=partners&ex_ol=1');
+                      },
+                      isPrimary: false,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildActionButton(
+                      context,
+                      text: l10n.accountVerificationWithExness,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AccountVerificationScreen()),
+                        );
+                      },
+                      isPrimary: true,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _buildActionButton(
                     context,
-                    text: l10n.openExnessAccount,
-                    onPressed: () {
-                      _launchURL('https://my.exmarkets.guide/accounts/sign-up/303589?utm_source=partners&ex_ol=1');
-                    },
-                    isPrimary: false,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildActionButton(
-                    context,
-                    text: l10n.accountVerificationWithExness,
+                    text: l10n.payInAppToUpgrade,
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const AccountVerificationScreen()),
+                        MaterialPageRoute(builder: (context) => const PackageScreen()),
                       );
                     },
                     isPrimary: true,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 30),
                 ],
-                _buildActionButton(
-                  context,
-                  text: l10n.payInAppToUpgrade,
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PackageScreen()),
-                    );
-                  },
-                  isPrimary: true,
-                ),
-                const SizedBox(height: 30),
-              ],
+              ),
             ),
           ),
         ),

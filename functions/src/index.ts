@@ -331,48 +331,28 @@ export const verifyPurchase = onCall(
             let expiryDate: Date | null = null;
             let transactionId: string | null = null;
             let verifiedProductId = productId;
+
             if (platform === 'ios') {
                 const receipt = transactionData.receiptData;
-
-                // --- LOGIC MỚI: KIỂM TRA ĐỊNH DẠNG BIÊN LAI ---
-                if (receipt.startsWith("ey")) { // Đây là biên lai kiểu mới JWS
+                if (receipt.startsWith("ey")) {
                     const jwsResult = await verifyAppleJwsReceipt(receipt);
                     isValid = jwsResult.isValid;
                     expiryDate = jwsResult.expiryDate;
                     transactionId = jwsResult.transactionId;
                     verifiedProductId = jwsResult.productId;
-
-                } else { // Đây là biên lai kiểu cũ Base64
+                } else {
                     const sharedSecret = process.env.APPLE_SHARED_SECRET;
                     if (!sharedSecret) throw new HttpsError("internal", "Lỗi cấu hình phía server.");
-
                     const appleResponse = await verifyAppleLegacyReceipt(receipt, sharedSecret);
-
-                    if (appleResponse.status !== 0) {
-                        throw new Error(`Xác thực biên lai thất bại với mã trạng thái: ${appleResponse.status}`);
-                    }
-
-                    const latestReceipt = appleResponse.latest_receipt_info?.sort((a: any, b: any) =>
-                        Number(b.purchase_date_ms) - Number(a.purchase_date_ms)
-                    )[0];
-
+                    if (appleResponse.status !== 0) throw new Error(`Xác thực biên lai thất bại với mã trạng thái: ${appleResponse.status}`);
+                    const latestReceipt = appleResponse.latest_receipt_info?.sort((a: any, b: any) => Number(b.purchase_date_ms) - Number(a.purchase_date_ms))[0];
                     if (latestReceipt && latestReceipt.product_id === productId) {
                         isValid = true;
                         expiryDate = new Date(Number(latestReceipt.expires_date_ms));
                         transactionId = latestReceipt.transaction_id;
                     }
                 }
-
-                if (isValid && transactionId) {
-                    const txDoc = await firestore.collection("processedTransactions").doc(transactionId).get();
-                    if (txDoc.exists) {
-                        functions.logger.warn(`Giao dịch ${transactionId} đã được xử lý trước đó.`);
-                        isValid = false; // Đánh dấu không hợp lệ để không xử lý lại
-                    }
-                }
-
             } else if (platform === 'android') {
-                // Logic cho Android giữ nguyên
                 const { purchaseToken } = transactionData;
                 const packageName = "com.minvest.aisignals";
                 const auth = new GoogleAuth({ scopes: "https://www.googleapis.com/auth/androidpublisher" });
@@ -380,7 +360,6 @@ export const verifyPurchase = onCall(
                 const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
                 const res = await authClient.request({ url });
                 const purchase = res.data as any;
-
                 if (purchase && purchase.purchaseState === 0) {
                     isValid = true;
                     expiryDate = new Date(Number(purchase.expiryTimeMillis));
@@ -389,7 +368,34 @@ export const verifyPurchase = onCall(
             }
 
             if (isValid && expiryDate && transactionId) {
-                await upgradeUserAccount(userId, verifiedProductId, expiryDate, transactionId, platform);
+                const userRef = firestore.collection("users").doc(userId);
+                const processedTxRef = firestore.collection("processedTransactions").doc(transactionId);
+
+                await firestore.runTransaction(async (transaction) => {
+                    const processedDoc = await transaction.get(processedTxRef);
+                    if (processedDoc.exists) {
+                        functions.logger.warn(`Giao dịch ${transactionId} đã được xử lý trong một transaction khác. Bỏ qua.`);
+                        return;
+                    }
+                    const amountPaid = PRODUCT_PRICES[verifiedProductId] ?? 0;
+                    const userTransactionRef = userRef.collection("transactions").doc(transactionId!);
+                    transaction.set(userRef, {
+                        subscriptionTier: "elite",
+                        subscriptionExpiryDate: admin.firestore.Timestamp.fromDate(expiryDate!),
+                        totalPaidAmount: admin.firestore.FieldValue.increment(amountPaid),
+                    }, { merge: true });
+                    transaction.set(userTransactionRef, {
+                        amount: amountPaid,
+                        productId: verifiedProductId,
+                        paymentMethod: `in_app_purchase_${platform}`,
+                        transactionDate: admin.firestore.FieldValue.serverTimestamp(),
+                    });
+                    transaction.set(processedTxRef, {
+                        userId,
+                        processedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                functions.logger.log(`Giao dịch ${transactionId} đã được xử lý thành công.`);
                 return { success: true, message: "Tài khoản đã được nâng cấp thành công." };
             } else {
                 throw new HttpsError("aborted", "Giao dịch không hợp lệ hoặc đã bị hủy.");
@@ -399,7 +405,8 @@ export const verifyPurchase = onCall(
             if (error instanceof HttpsError) throw error;
             throw new HttpsError("internal", "Đã xảy ra lỗi trong quá trình xác thực.", error.message);
         }
-    });
+    }
+);
 
 async function verifyAppleJwsReceipt(jwsRepresentation: string) {
     functions.logger.log("🍎 JWS: Bắt đầu xác thực biên lai kiểu mới...");
@@ -466,39 +473,6 @@ async function verifyAppleLegacyReceipt(receiptData: string, sharedSecret: strin
     }
 }
 
-async function upgradeUserAccount(
-  userId: string,
-  productId: string,
-  expiryDate: Date,
-  transactionId: string,
-  platform: 'ios' | 'android'
-) {
-  const userRef = firestore.collection("users").doc(userId);
-  const amountPaid = PRODUCT_PRICES[productId] ?? 0;
-  const transactionRef = userRef.collection("transactions").doc(transactionId);
-  const batch = firestore.batch();
-
-  batch.set(userRef, {
-      subscriptionTier: "elite",
-      subscriptionExpiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-      totalPaidAmount: admin.firestore.FieldValue.increment(amountPaid),
-  }, { merge: true });
-
-  batch.set(transactionRef, {
-      amount: amountPaid,
-      productId: productId,
-      paymentMethod: `in_app_purchase_${platform}`,
-      transactionDate: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  if (platform === 'ios') {
-      const processedTxRef = firestore.collection("processedTransactions").doc(transactionId);
-      batch.set(processedTxRef, { userId, processedAt: admin.firestore.FieldValue.serverTimestamp() });
-  }
-
-  await batch.commit();
-}
-
 // =================================================================
 // === HỆ THỐNG GỬI THÔNG BÁO ===
 // =================================================================
@@ -513,175 +487,207 @@ const sendAndStoreNotifications = async (
     usersData: { id: string; token?: string; lang: string }[],
     payload: any
 ) => {
+    functions.logger.log(`[sendAndStoreNotifications] Chuẩn bị gửi đến ${usersData.length} người dùng.`);
     if (usersData.length === 0) return;
 
+    // Logic lưu thông báo vào subcollection (giữ nguyên)
     const batchStore = firestore.batch();
-    const notificationData = {
-        ...payload,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        isRead: false,
-    };
+    const notificationData = { ...payload, timestamp: admin.firestore.FieldValue.serverTimestamp(), isRead: false };
     usersData.forEach((user) => {
         const notificationRef = firestore.collection("users").doc(user.id).collection("notifications").doc();
         batchStore.set(notificationRef, notificationData);
     });
 
-    const messages: admin.messaging.Message[] = [];
+    // ▼▼▼ PHẦN THAY ĐỔI BẮT ĐẦU TỪ ĐÂY ▼▼▼
 
+    const messages: admin.messaging.Message[] = [];
     usersData.forEach((user) => {
         if (user.token) {
             const lang = user.lang as "vi" | "en";
             const title = payload.title_loc[lang];
             const body = payload.body_loc[lang];
 
+            const dataPayload: { [key: string]: string } = {
+                type: payload.type,
+                signalId: payload.signalId,
+                // Không cần gửi title/body trong data nữa vì nó đã có trong notification
+            };
+
             messages.push({
                 token: user.token,
-                data: {
-                    ...payload,
-                    title,
-                    body,
+                // 1. Gói tin cho hệ điều hành hiển thị
+                notification: {
+                    title: title,
+                    body: body,
                 },
-                android: { priority: "high" },
+                // 2. Dữ liệu bổ sung cho ứng dụng xử lý khi người dùng nhấn vào
+                data: dataPayload,
+                android: {
+                    priority: "high",
+                    notification: {
+                      channelId: "minvest_channel_id", // Thêm channelId cho Android
+                    }
+                },
                 apns: {
-                    headers: { "apns-priority": "10" },
-                    payload: { aps: { "content-available": 1 } },
+                    headers: {
+                        "apns-priority": "10",
+                    },
+                    payload: {
+                        aps: {
+                            sound: "default", // Thêm âm thanh cho iOS
+                            badge: 1,         // Cập nhật biểu tượng số trên icon app
+                        },
+                    },
                 },
             });
         }
     });
 
+    // ▼▼▼ KẾT THÚC PHẦN THAY ĐỔI ▼▼▼
+
     if (messages.length > 0) {
-        await admin.messaging().sendEach(messages);
-    }
+        functions.logger.log(`[sendAndStoreNotifications] Đang gửi ${messages.length} tin nhắn...`);
+        const response = await admin.messaging().sendEach(messages);
+        functions.logger.log(`[sendAndStoreNotifications] Gửi hoàn tất! Thành công: ${response.successCount}, Thất bại: ${response.failureCount}`);
 
-    await batchStore.commit();
-};
-
-async function triggerNotifications(payload: any) {
-    const isGolden = isGoldenHour();
-    const allEligibleUsersDocs: admin.firestore.DocumentSnapshot[] = [];
-
-    const eliteQuery = firestore.collection("users").where("subscriptionTier", "==", "elite").get();
-    const timeRestrictedPromises: Promise<admin.firestore.QuerySnapshot>[] = [];
-
-    if (isGolden) {
-        const vipQuery = firestore.collection("users").where("subscriptionTier", "==", "vip").get();
-        const demoQuery = firestore.collection("users").where("subscriptionTier", "==", "demo").where("notificationCount", "<", 8).get();
-        timeRestrictedPromises.push(vipQuery, demoQuery);
-    }
-
-    const [eliteSnapshot, ...timeRestrictedSnapshots] = await Promise.all([eliteQuery, ...timeRestrictedPromises]);
-    eliteSnapshot.forEach((doc) => allEligibleUsersDocs.push(doc));
-    timeRestrictedSnapshots.forEach((snapshot) => snapshot.forEach((doc) => allEligibleUsersDocs.push(doc)));
-
-    if (allEligibleUsersDocs.length === 0) {
-        functions.logger.log("Không có người dùng nào đủ điều kiện nhận thông báo.");
-        return;
-    }
-
-    type UserNotificationData = {
-        id: string;
-        token?: string;
-        lang: "vi" | "en";
-        tier: string;
-    };
-
-    const usersData = allEligibleUsersDocs
-        .map((doc): UserNotificationData | null => {
-            const data = doc.data();
-            if (!data) {
-                return null;
-            }
-            return {
-                id: doc.id,
-                token: data.activeSession?.fcmToken,
-                lang: data.languageCode === "en" ? "en" : "vi",
-                tier: data.subscriptionTier,
-            };
-        })
-        .filter((user): user is UserNotificationData => user !== null);
-
-    await sendAndStoreNotifications(usersData, payload);
-
-    const demoUsersToUpdate = usersData
-        .filter((user) => user.tier === "demo")
-        .map((user) => user.id);
-
-    if (demoUsersToUpdate.length > 0) {
-        const batchUpdate = firestore.batch();
-        demoUsersToUpdate.forEach((userId) => {
-            const userRef = firestore.collection("users").doc(userId);
-            batchUpdate.update(userRef, { notificationCount: admin.firestore.FieldValue.increment(1) });
-        });
-        await batchUpdate.commit();
-    }
-}
-
-export const onNewSignalCreated = onDocumentCreated({ document: "signals/{signalId}", region: "asia-southeast1", memory: "256MiB" }, async (event) => {
-    const signalData = event.data?.data();
-    if (!signalData) return;
-
-    const localizedPayload = await getLocalizedPayload(
-        "new_signal",
-        signalData.type.toUpperCase(),
-        signalData.symbol,
-        signalData.entryPrice,
-        signalData.stopLoss
-    );
-
-    const finalPayload = {
-      type: "new_signal",
-      signalId: event.params.signalId,
-      ...localizedPayload,
-    };
-
-    await triggerNotifications(finalPayload);
-});
-
-export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}", region: "asia-southeast1", memory: "256MiB" }, async (event) => {
-    const beforeData = event.data?.before.data();
-    const afterData = event.data?.after.data();
-    if (!beforeData || !afterData) return;
-
-    let notificationType: string | null = null;
-    let payloadArgs: (string | number)[] = [];
-    const { symbol, type, entryPrice } = afterData;
-
-    if (beforeData.isMatched === false && afterData.isMatched === true) {
-        notificationType = "signal_matched";
-        payloadArgs = [type.toUpperCase(), symbol, entryPrice];
-    } else if (beforeData.result !== afterData.result) {
-        switch(afterData.result) {
-            case "TP1 Hit":
-                notificationType = "tp1_hit";
-                payloadArgs = [type.toUpperCase(), symbol];
-                break;
-            case "TP2 Hit":
-                notificationType = "tp2_hit";
-                payloadArgs = [type.toUpperCase(), symbol];
-                break;
-            case "TP3 Hit":
-                notificationType = "tp3_hit";
-                payloadArgs = [type.toUpperCase(), symbol];
-                break;
-            case "SL Hit":
-                notificationType = "sl_hit";
-                payloadArgs = [type.toUpperCase(), symbol];
-                break;
+        if (response.failureCount > 0) {
+            response.responses.forEach((resp, idx) => {
+                if (!resp.success) {
+                    functions.logger.error(`[sendAndStoreNotifications] Lỗi gửi đến user ${usersData[idx].id}:`, resp.error);
+                }
+            });
         }
     }
 
-    if (notificationType) {
+    await batchStore.commit();
+    functions.logger.log(`[sendAndStoreNotifications] Đã lưu ${usersData.length} thông báo vào Firestore.`);
+};
+
+async function triggerNotifications(payload: any) {
+  functions.logger.log("[triggerNotifications] Bắt đầu trigger với payload:", payload);
+  const isGolden = isGoldenHour();
+  const allEligibleUsersDocs: admin.firestore.DocumentSnapshot[] = [];
+
+  const eliteQuery = firestore.collection("users").where("subscriptionTier", "==", "elite").get();
+  const timeRestrictedPromises: Promise<admin.firestore.QuerySnapshot>[] = [];
+
+  if (isGolden) {
+      functions.logger.log("[triggerNotifications] Đang trong giờ vàng, lấy thêm user VIP và DEMO.");
+      const vipQuery = firestore.collection("users").where("subscriptionTier", "==", "vip").get();
+      const demoQuery = firestore.collection("users").where("subscriptionTier", "==", "demo").where("notificationCount", "<", 8).get();
+      timeRestrictedPromises.push(vipQuery, demoQuery);
+  }
+
+  const [eliteSnapshot, ...timeRestrictedSnapshots] = await Promise.all([eliteQuery, ...timeRestrictedPromises]);
+  eliteSnapshot.forEach((doc) => allEligibleUsersDocs.push(doc));
+  timeRestrictedSnapshots.forEach((snapshot) => snapshot.forEach((doc) => allEligibleUsersDocs.push(doc)));
+
+  if (allEligibleUsersDocs.length === 0) {
+      functions.logger.warn("[triggerNotifications] Không có người dùng nào đủ điều kiện nhận thông báo.");
+      return;
+  }
+
+  type UserNotificationData = { id: string; token?: string; lang: "vi" | "en"; tier: string; };
+
+  const usersData = allEligibleUsersDocs
+      .map((doc): UserNotificationData | null => {
+          const data = doc.data();
+          if (!data) return null;
+          return {
+              id: doc.id,
+              token: data.activeSession?.fcmToken,
+              lang: data.languageCode === "en" ? "en" : "vi",
+              tier: data.subscriptionTier,
+          };
+      })
+      .filter((user): user is UserNotificationData => user !== null && typeof user.token === 'string' && user.token.length > 0);
+
+  await sendAndStoreNotifications(usersData, payload);
+
+  const demoUsersToUpdate = usersData
+      .filter((user) => user.tier === "demo")
+      .map((user) => user.id);
+
+  if (demoUsersToUpdate.length > 0) {
+      const batchUpdate = firestore.batch();
+      demoUsersToUpdate.forEach((userId) => {
+          const userRef = firestore.collection("users").doc(userId);
+          batchUpdate.update(userRef, { notificationCount: admin.firestore.FieldValue.increment(1) });
+      });
+      await batchUpdate.commit();
+      functions.logger.log(`[triggerNotifications] Đã cập nhật notificationCount cho ${demoUsersToUpdate.length} user DEMO.`);
+  }
+}
+
+// --- HÀM TRIGGER CHÍNH (ĐÃ BỌC TRY-CATCH) ---
+export const onNewSignalCreated = onDocumentCreated({ document: "signals/{signalId}", region: "asia-southeast1", memory: "256MiB" }, async (event) => {
+    functions.logger.log(`🔥🔥🔥 onNewSignalCreated triggered cho signalId: ${event.params.signalId}`);
+    try {
+        const signalData = event.data?.data();
+        if (!signalData) {
+            functions.logger.warn("Không có dữ liệu tín hiệu, kết thúc.");
+            return;
+        }
+
         const localizedPayload = await getLocalizedPayload(
-            notificationType as any,
-            ...payloadArgs
+            "new_signal",
+            signalData.type.toUpperCase(),
+            signalData.symbol,
+            signalData.entryPrice,
+            signalData.stopLoss
         );
+
         const finalPayload = {
-            type: notificationType,
-            signalId: event.params.signalId,
-            ...localizedPayload
+          type: "new_signal",
+          signalId: event.params.signalId,
+          ...localizedPayload,
         };
+
         await triggerNotifications(finalPayload);
+    } catch (error) {
+        functions.logger.error("🚨🚨🚨 Lỗi nghiêm trọng trong onNewSignalCreated:", error);
+    }
+});
+
+export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}", region: "asia-southeast1", memory: "256MiB" }, async (event) => {
+    functions.logger.log(`🔥🔥🔥 onSignalUpdated triggered cho signalId: ${event.params.signalId}`);
+    try {
+        const beforeData = event.data?.before.data();
+        const afterData = event.data?.after.data();
+        if (!beforeData || !afterData) {
+            functions.logger.warn("Không có dữ liệu before/after, kết thúc.");
+            return;
+        }
+
+        let notificationType: string | null = null;
+        let payloadArgs: (string | number)[] = [];
+        const { symbol, type, entryPrice } = afterData;
+
+        if (beforeData.isMatched === false && afterData.isMatched === true) {
+            notificationType = "signal_matched";
+            payloadArgs = [type.toUpperCase(), symbol, entryPrice];
+        } else if (beforeData.result !== afterData.result) {
+            switch(afterData.result) {
+                case "TP1 Hit": notificationType = "tp1_hit"; payloadArgs = [type.toUpperCase(), symbol]; break;
+                case "TP2 Hit": notificationType = "tp2_hit"; payloadArgs = [type.toUpperCase(), symbol]; break;
+                case "TP3 Hit": notificationType = "tp3_hit"; payloadArgs = [type.toUpperCase(), symbol]; break;
+                case "SL Hit": notificationType = "sl_hit"; payloadArgs = [type.toUpperCase(), symbol]; break;
+            }
+        }
+
+        if (notificationType) {
+            const localizedPayload = await getLocalizedPayload(notificationType as any, ...payloadArgs);
+            const finalPayload = {
+                type: notificationType,
+                signalId: event.params.signalId,
+                ...localizedPayload
+            };
+            await triggerNotifications(finalPayload);
+        } else {
+            functions.logger.log("Không có thay đổi trạng thái cần gửi thông báo.");
+        }
+    } catch (error) {
+        functions.logger.error("🚨🚨🚨 Lỗi nghiêm trọng trong onSignalUpdated:", error);
     }
 });
 
