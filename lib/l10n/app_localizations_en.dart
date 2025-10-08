@@ -461,6 +461,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signalEntry => 'Entry';
 
   @override
+  String get price1Month => '\$78';
+
+  @override
+  String get price12Months => '\$460';
+
+  @override
+  String get foreignTraderSupport =>
+      'For foreign traders, please contact us via WhatsApp (+84969.15.6969) for support';
+
+  @override
   String get signalSl => 'SL';
 
   @override

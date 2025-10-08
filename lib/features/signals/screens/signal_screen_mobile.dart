@@ -1,7 +1,7 @@
 // lib/features/signals/screens/signal_screen_mobile.dart
 
 import 'package:flutter/material.dart';
-import 'package:minvest_forex_app/core/providers/language_provider.dart'; // <<< THÊM MỚI
+import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -37,7 +37,7 @@ class _SignalScreenState extends State<SignalScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Container( // Giữ Container này ở ngoài để gradient tràn viền
+      body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
@@ -48,7 +48,7 @@ class _SignalScreenState extends State<SignalScreen> {
             stops: [0.0, 0.5, 1.0],
           ),
         ),
-        child: SafeArea( // <-- Di chuyển SafeArea vào đây
+        child: SafeArea(
           child: Column(
             children: [
               Padding(
@@ -56,13 +56,17 @@ class _SignalScreenState extends State<SignalScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildTabs(l10n),
-                    if (userTier != 'free')
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const _LanguageSwitcher(),
-                          const SizedBox(width: 4),
+                    // ▼▼▼ BẮT ĐẦU SỬA LỖI OVERFLOW ▼▼▼
+                    Flexible(
+                      child: _buildTabs(l10n),
+                    ),
+                    // ▲▲▲ KẾT THÚC SỬA LỖI OVERFLOW ▲▲▲
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const _LanguageSwitcher(),
+                        const SizedBox(width: 4),
+                        if (userTier != 'free')
                           Consumer<NotificationProvider>(
                             builder: (context, notificationProvider, child) {
                               final bool hasUnread = notificationProvider.unreadCount > 0;
@@ -96,8 +100,8 @@ class _SignalScreenState extends State<SignalScreen> {
                               );
                             },
                           ),
-                        ],
-                      )
+                      ],
+                    )
                   ],
                 ),
               ),
@@ -115,6 +119,7 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
+  // ... (Tất cả các hàm còn lại giữ nguyên, không cần thay đổi)
   Widget _buildContent(String userTier, AppLocalizations l10n) {
     if (userTier == 'free') {
       return _buildFreeUserView(l10n);
@@ -278,7 +283,7 @@ class _SignalScreenState extends State<SignalScreen> {
 
   Widget _buildTabs(AppLocalizations l10n) {
     return Container(
-      height: 32, // Giữ nguyên chiều cao 32 ở đây
+      height: 32,
       decoration: BoxDecoration(
         color: const Color(0xFF161B22),
         borderRadius: BorderRadius.circular(8),
@@ -286,7 +291,6 @@ class _SignalScreenState extends State<SignalScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Đã loại bỏ SizedBox để nút tự co dãn
           _buildTabItem(l10n.live, _isLive, () => setState(() => _isLive = true)),
           _buildTabItem(l10n.end, !_isLive, () => setState(() => _isLive = false)),
         ],
@@ -298,7 +302,6 @@ class _SignalScreenState extends State<SignalScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        // Thêm padding ngang để tạo không gian cho chữ
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
         decoration: BoxDecoration(
           gradient: isSelected
@@ -341,7 +344,6 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 }
 
-// ▼▼▼ WIDGET MỚI ĐƯỢC THÊM VÀO ▼▼▼
 class _LanguageSwitcher extends StatelessWidget {
   const _LanguageSwitcher();
 
@@ -372,8 +374,6 @@ class _LanguageSwitcher extends StatelessWidget {
     );
   }
 }
-// ▲▲▲ KẾT THÚC WIDGET MỚI ▲▲▲
-
 
 class _GradientFilterButton extends StatelessWidget {
   final String text;

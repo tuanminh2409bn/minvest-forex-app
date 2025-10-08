@@ -1,7 +1,7 @@
 // lib/features/signals/screens/signal_screen_web.dart
 
 import 'package:flutter/material.dart';
-import 'package:minvest_forex_app/core/providers/language_provider.dart'; // <<< THÊM MỚI
+import 'package:minvest_forex_app/core/providers/language_provider.dart';
 import 'package:minvest_forex_app/core/providers/user_provider.dart';
 import 'package:minvest_forex_app/features/signals/models/signal_model.dart';
 import 'package:minvest_forex_app/features/signals/services/signal_service.dart';
@@ -59,9 +59,11 @@ class _SignalScreenState extends State<SignalScreen> {
                     const SizedBox(width: 40),
                     _buildFilters(l10n),
                     const Spacer(),
-                    if (userTier != 'free') ...[
-                      const _LanguageSwitcher(),
-                      const SizedBox(width: 16),
+                    // ▼▼▼ BẮT ĐẦU SỬA ĐỔI ▼▼▼
+                    const _LanguageSwitcher(), // Luôn hiển thị lá cờ
+                    const SizedBox(width: 16),
+                    // Chỉ hiển thị chuông thông báo cho user đã đăng nhập
+                    if (userTier != 'free')
                       Consumer<NotificationProvider>(
                         builder: (context, notificationProvider, child) {
                           final bool hasUnread = notificationProvider.unreadCount > 0;
@@ -95,11 +97,10 @@ class _SignalScreenState extends State<SignalScreen> {
                           );
                         },
                       ),
-                    ]
+                    // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
                   ],
                 ),
               ),
-              // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
               Expanded(
                 child: _buildContent(userTier, l10n),
               ),
@@ -110,6 +111,7 @@ class _SignalScreenState extends State<SignalScreen> {
     );
   }
 
+  // ... (Các hàm còn lại giữ nguyên không thay đổi)
   Widget _buildContent(String userTier, AppLocalizations l10n) {
     if (userTier == 'free') {
       return _buildFreeUserView(l10n);
@@ -302,7 +304,6 @@ class _SignalScreenState extends State<SignalScreen> {
   }
 }
 
-// ▼▼▼ WIDGET MỚI ĐƯỢC THÊM VÀO ▼▼▼
 class _LanguageSwitcher extends StatelessWidget {
   const _LanguageSwitcher();
 
@@ -333,8 +334,6 @@ class _LanguageSwitcher extends StatelessWidget {
     );
   }
 }
-// ▲▲▲ KẾT THÚC WIDGET MỚI ▲▲▲
-
 
 class _GradientFilterButton extends StatelessWidget {
   final String text;

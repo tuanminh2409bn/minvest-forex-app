@@ -31,7 +31,7 @@ android {
 
     defaultConfig {
         applicationId = "com.minvest.aisignals"
-        minSdkVersion(23)
+        minSdkVersion(24)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -42,7 +42,6 @@ android {
             if (keyPropertiesFile.exists()) {
                 keyAlias = keyProperties.getProperty("keyAlias")
                 keyPassword = keyProperties.getProperty("keyPassword")
-                // SỬA Ở ĐÂY: Đường dẫn giờ đã chính xác
                 storeFile = file(keyProperties.getProperty("storeFile"))
                 storePassword = keyProperties.getProperty("storePassword")
             }

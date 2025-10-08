@@ -944,6 +944,24 @@ abstract class AppLocalizations {
   /// **'Entry'**
   String get signalEntry;
 
+  /// No description provided for @price1Month.
+  ///
+  /// In en, this message translates to:
+  /// **'\$78'**
+  String get price1Month;
+
+  /// No description provided for @price12Months.
+  ///
+  /// In en, this message translates to:
+  /// **'\$460'**
+  String get price12Months;
+
+  /// No description provided for @foreignTraderSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'For foreign traders, please contact us via WhatsApp (+84969.15.6969) for support'**
+  String get foreignTraderSupport;
+
   /// No description provided for @signalSl.
   ///
   /// In en, this message translates to:

@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:minvest_forex_app/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/gestures.dart'; // <<< THÊM MỚI
 
 class PackageScreen extends StatelessWidget {
   const PackageScreen({super.key});
@@ -16,11 +17,9 @@ class PackageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final features = [
-      l10n.featureReceiveAllSignals,
-      l10n.featureAnalyzeReason,
-      l10n.featureHighPrecisionAI,
-    ];
+
+    // Yêu cầu 1: Danh sách features giờ đã được chuyển vào trong _PackageCard
+    // để xử lý đa ngôn ngữ cho dòng ghi chú mới.
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -50,16 +49,16 @@ class PackageScreen extends StatelessWidget {
                   _PackageCard(
                     tier: l10n.tierElite,
                     duration: l10n.duration1Month,
-                    price: '\$78',
-                    features: features,
+                    // Yêu cầu 1: Sử dụng giá tiền từ file đa ngôn ngữ
+                    price: l10n.price1Month,
                     onPressed: () => _launchURL('https://zalo.me/0969156969'),
                   ),
                   const SizedBox(height: 24),
                   _PackageCard(
                     tier: l10n.tierElite,
                     duration: l10n.duration12Months,
-                    price: '\$460',
-                    features: features,
+                    // Yêu cầu 1: Sử dụng giá tiền từ file đa ngôn ngữ
+                    price: l10n.price12Months,
                     onPressed: () => _launchURL('https://zalo.me/0969156969'),
                   ),
                 ],
@@ -71,22 +70,31 @@ class PackageScreen extends StatelessWidget {
     );
   }
 }
+
 class _PackageCard extends StatelessWidget {
   final String tier;
   final String duration;
   final String price;
-  final List<String> features;
   final VoidCallback? onPressed;
+
   const _PackageCard({
     required this.tier,
     required this.duration,
     required this.price,
-    required this.features,
     this.onPressed,
   });
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
+    // Danh sách features gốc
+    final features = [
+      l10n.featureReceiveAllSignals,
+      l10n.featureAnalyzeReason,
+      l10n.featureHighPrecisionAI,
+    ];
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -129,6 +137,7 @@ class _PackageCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              // Hiển thị các features gốc
               ...features.map((feature) => Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
@@ -139,6 +148,32 @@ class _PackageCard extends StatelessWidget {
                   ],
                 ),
               )),
+              // ▼▼▼ YÊU CẦU 2: THÊM DÒNG GHI CHÚ ĐA NGÔN NGỮ ▼▼▼
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0, left: 26.0), // Căn lề với dấu tick
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontFamily: 'Roboto'),
+                    children: [
+                      TextSpan(text: l10n.foreignTraderSupport.split('+84969.15.6969')[0]),
+                      TextSpan(
+                        text: '+84969.15.6969',
+                        style: const TextStyle(
+                          color: Colors.cyanAccent,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () async {
+                            final Uri url = Uri.parse('https://wa.me/84969156969');
+                            if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {}
+                          },
+                      ),
+                      TextSpan(text: l10n.foreignTraderSupport.split('+84969.15.6969')[1]),
+                    ],
+                  ),
+                ),
+              ),
+              // ▲▲▲ KẾT THÚC THÊM MỚI ▲▲▲
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -167,6 +202,7 @@ class _PackageCard extends StatelessWidget {
     );
   }
 }
+
 Widget _buildActionButton(
     {required String text,
       required VoidCallback? onPressed,
