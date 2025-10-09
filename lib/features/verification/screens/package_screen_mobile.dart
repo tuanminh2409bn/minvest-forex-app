@@ -170,7 +170,7 @@ class _PackageScreenState extends State<PackageScreen> {
                 end: Alignment.bottomCenter,
               ),
             ),
-            child: SafeArea(child: _buildIapContent(l10n)), // <-- Thêm SafeArea ở đây
+            child: SafeArea(child: _buildIapContent(l10n)),
           ),
           if (_isPurchasing)
             Container(
@@ -240,23 +240,21 @@ class _PackageScreenState extends State<PackageScreen> {
             const Icon(Icons.error_outline, color: Colors.red, size: 60),
             const SizedBox(height: 20),
             Text(
-              l10n.errorLoadingPackages, // "Lỗi Tải Gói Nâng Cấp"
+              l10n.errorLoadingPackages,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 10),
             Text(
-              errorMessage, // Hiển thị chi tiết lỗi mà bạn đã có
+              errorMessage,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, color: Colors.white70),
             ),
             const SizedBox(height: 30),
-            // NÚT "THỬ LẠI" QUYỀN LỰC
             ElevatedButton.icon(
               icon: const Icon(Icons.refresh),
-              label: Text(l10n.retry), // "Thử lại"
+              label: Text(l10n.retry),
               onPressed: () {
-                // Gọi lại hàm initStoreInfo để tải lại sản phẩm
                 _initStoreInfo();
               },
               style: ElevatedButton.styleFrom(
@@ -270,13 +268,14 @@ class _PackageScreenState extends State<PackageScreen> {
     );
   }
 }
-// ... (Các Widget con _PackageCard và _buildActionButton giữ nguyên)
+
 class _PackageCard extends StatelessWidget {
   final String tier;
   final String duration;
   final String price;
   final List<String> features;
   final VoidCallback? onPressed;
+
   const _PackageCard({
     required this.tier,
     required this.duration,
@@ -284,6 +283,7 @@ class _PackageCard extends StatelessWidget {
     required this.features,
     this.onPressed,
   });
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -339,27 +339,25 @@ class _PackageCard extends StatelessWidget {
                   ],
                 ),
               )),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Text(
+              const SizedBox(height: 24),
+              // ▼▼▼ BẮT ĐẦU SỬA ĐỔI ▼▼▼
+              Center(
+                child: Column(
+                  children: [
+                    Text(
                       price,
-                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.amber),
-                      softWrap: false,
-                      overflow: TextOverflow.fade,
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.amber),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildActionButton(
-                    text: l10n.startNow,
-                    onPressed: onPressed,
-                    isPrimary: true,
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    _buildActionButton(
+                      text: l10n.startNow,
+                      onPressed: onPressed,
+                      isPrimary: true,
+                    ),
+                  ],
+                ),
               ),
+              // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
             ],
           ),
         ),
@@ -367,14 +365,16 @@ class _PackageCard extends StatelessWidget {
     );
   }
 }
+
 Widget _buildActionButton(
     {required String text,
       required VoidCallback? onPressed,
       required bool isPrimary}) {
   final bool isEnabled = onPressed != null;
+  // ▼▼▼ BẮT ĐẦU SỬA ĐỔI ▼▼▼
   return SizedBox(
     height: 45,
-    width: 140,
+    width: double.infinity, // Kéo dài nút ra toàn bộ chiều rộng
     child: ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
@@ -399,18 +399,23 @@ Widget _buildActionButton(
         ),
         child: Container(
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: isEnabled ? Colors.white : Colors.grey,
+          padding: const EdgeInsets.symmetric(horizontal: 16), // Thêm padding ngang
+          child: FittedBox( // Tự động co chữ nếu cần, nhưng ưu tiên không xuống dòng
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16, // Tăng nhẹ cỡ chữ cho nút
+                color: isEnabled ? Colors.white : Colors.grey,
+              ),
+              maxLines: 1, // Đảm bảo chỉ có 1 dòng
             ),
           ),
         ),
       ),
     ),
   );
+  // ▲▲▲ KẾT THÚC SỬA ĐỔI ▲▲▲
 }

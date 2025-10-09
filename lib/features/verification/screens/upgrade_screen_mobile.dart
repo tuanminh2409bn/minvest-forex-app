@@ -43,7 +43,7 @@ class UpgradeScreen extends StatelessWidget {
             stops: [0.0, 0.5, 1.0],
           ),
         ),
-        child: SafeArea( // <-- Thêm SafeArea ở đây
+        child: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -66,7 +66,7 @@ class UpgradeScreen extends StatelessWidget {
                       onPressed: () {
                         _launchURL('https://my.exmarkets.guide/accounts/sign-up/303589?utm_source=partners&ex_ol=1');
                       },
-                      isPrimary: false,
+                      isPrimary: true,
                     ),
                     const SizedBox(height: 16),
                     _buildActionButton(
@@ -92,6 +92,15 @@ class UpgradeScreen extends StatelessWidget {
                       );
                     },
                     isPrimary: true,
+                  ),
+                  const SizedBox(height: 24),
+                  _buildActionButton(
+                    context,
+                    text: l10n.contactUs, // "Liên Hệ Hỗ Trợ"
+                    onPressed: () {
+                      _launchURL('https://t.me/HotlineMinvest');
+                    },
+                    isPrimary: false, // Nút kiểu phụ (viền)
                   ),
                   const SizedBox(height: 30),
                 ],
@@ -180,6 +189,7 @@ class UpgradeScreen extends StatelessWidget {
   Widget _buildActionButton(BuildContext context, {required String text, required VoidCallback onPressed, required bool isPrimary}) {
     return SizedBox(
       height: 50,
+      width: double.infinity, // Thêm để nút luôn rộng tối đa
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(

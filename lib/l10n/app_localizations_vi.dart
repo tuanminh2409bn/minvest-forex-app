@@ -461,6 +461,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get signalStatusClosed => 'ĐÃ ĐÓNG';
 
   @override
+  String get contactUs => 'Liên Hệ Hỗ Trợ';
+
+  @override
   String get signalEntry => 'Vùng vào lệnh';
 
   @override

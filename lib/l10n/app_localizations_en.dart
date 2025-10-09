@@ -458,6 +458,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signalStatusClosed => 'CLOSED';
 
   @override
+  String get contactUs => 'Contact Us';
+
+  @override
   String get signalEntry => 'Entry';
 
   @override

@@ -938,6 +938,12 @@ abstract class AppLocalizations {
   /// **'CLOSED'**
   String get signalStatusClosed;
 
+  /// No description provided for @contactUs.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get contactUs;
+
   /// No description provided for @signalEntry.
   ///
   /// In en, this message translates to:

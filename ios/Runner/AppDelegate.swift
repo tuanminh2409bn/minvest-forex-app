@@ -1,3 +1,5 @@
+// ios/Runner/AppDelegate.swift
+
 import UIKit
 import Flutter
 import Firebase
@@ -16,12 +18,6 @@ import StoreKit
     GeneratedPluginRegistrant.register(with: self)
 
     SKPaymentQueue.default().add(self)
-
-    if #available(iOS 10.0, *) {
-      UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
-    }
-    application.registerForRemoteNotifications()
-
     ApplicationDelegate.shared.application(
         application,
         didFinishLaunchingWithOptions: launchOptions

@@ -3,37 +3,26 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:minvest_forex_app/firebase_options.dart';
 
-// --- BƯỚC 1: TẠO MỘT INSTANCE CỦA PLUGIN THÔNG BÁO CỤC BỘ Ở TOP-LEVEL ---
-final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-FlutterLocalNotificationsPlugin();
+final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-// Kênh thông báo cho Android (đưa ra ngoài để cả background handler cũng dùng được)
 const AndroidNotificationChannel channel = AndroidNotificationChannel(
-  'minvest_channel_id', // id
-  'Minvest Forex Signals', // title
-  description: 'Kênh nhận thông báo tín hiệu từ Minvest.', // description
+  'minvest_channel_id',
+  'Minvest Forex Signals',
+  description: 'Kênh nhận thông báo tín hiệu từ Minvest.',
   importance: Importance.max,
   playSound: true,
 );
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Bạn vẫn cần dòng này để các plugin khác (nếu có) có thể hoạt động ở chế độ nền.
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Chỉ cần log lại là đủ. Không cần làm gì khác để hiển thị thông báo.
-  debugPrint("🔥 [FCM_SERVICE] Background message handled (no local notification needed).");
-  debugPrint("   - Message data: ${message.data}");
-  if (message.notification != null) {
-    debugPrint("   - Message also contained a notification: ${message.notification!.title}");
-  }
+  debugPrint("🔥 [FCM_SERVICE] Background message handled by OS.");
 }
 
-
-// PHẦN CLASS SERVICE GIỮ NGUYÊN NHƯ TRƯỚC
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -53,6 +42,7 @@ class NotificationService {
 
     await _requestPermissions();
 
+    // Để hệ điều hành tự hiển thị thông báo khi app ở foreground
     await _firebaseMessaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
@@ -60,9 +50,7 @@ class NotificationService {
     );
 
     await _createAndroidChannel();
-
     await _initializeLocalNotifications(onNotificationTapped);
-
     _setupMessageListeners(onNotificationTapped);
 
     _isInitialized = true;
@@ -71,20 +59,11 @@ class NotificationService {
 
   Future<void> _requestPermissions() async {
     debugPrint("🔐 [FCM_SERVICE] Đang xin quyền nhận thông báo...");
-    NotificationSettings settings = await _firebaseMessaging.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
-    debugPrint("🔐 [FCM_SERVICE] Trạng thái quyền: ${settings.authorizationStatus}");
+    await _firebaseMessaging.requestPermission();
   }
 
   Future<void> _createAndroidChannel() async {
-    if (!kIsWeb) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       debugPrint("📡 [FCM_SERVICE] Đang tạo kênh thông báo cho Android...");
       await _flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -120,24 +99,17 @@ class NotificationService {
   void _setupMessageListeners(Function(Map<String, dynamic>) onNotificationTapped) {
     debugPrint("🎧 [FCM_SERVICE] Đang cài đặt các trình lắng nghe tin nhắn...");
 
-    // ▼▼▼ THAY ĐỔI Ở ĐÂY ▼▼▼
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint("🟢 [FCM_SERVICE] Foreground message received: ${message.data}");
-
-      // Lấy title và body từ message.notification thay vì message.data
       final RemoteNotification? notification = message.notification;
-      final String? title = notification?.title;
-      final String? body = notification?.body;
-
-      if (title != null && body != null) {
+      if (notification != null && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         _showLocalNotification(
-          title: title,
-          body: body,
+          title: notification.title ?? '',
+          body: notification.body ?? '',
           payload: message.data['signalId'] ?? '',
         );
       }
     });
-    // ▲▲▲ KẾT THÚC THAY ĐỔI ▲▲▲
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint("🔵 [FCM_SERVICE] Background message tapped: ${message.data}");
