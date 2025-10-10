@@ -90,8 +90,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 final isSelected = _selectedUserIds.contains(userId);
                 return Container(
                   color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+                  // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
                   child: ExpansionTile(
-                    key: PageStorageKey(userId), // Giữ Key duy nhất cho mỗi ExpansionTile
+                    key: PageStorageKey(userId), // Cung cấp Key duy nhất cho mỗi ExpansionTile
+                    // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
                     leading: Checkbox(
                       value: isSelected,
                       onChanged: (bool? value) {
@@ -151,10 +153,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final Timestamp? expiryDate = userData['subscriptionExpiryDate'];
     final createdDateString = createdAt != null ? DateFormat('dd/MM/yyyy HH:mm').format(createdAt.toDate()) : 'N/A';
     final expiryDateString = expiryDate != null ? DateFormat('dd/MM/yyyy').format(expiryDate.toDate()) : 'N/A';
-
-    // ▼▼▼ BẮT ĐẦU SỬA LỖI 1: Hợp nhất các trường lý do để đảm bảo luôn hiển thị ▼▼▼
     final reason = userData['sessionResetReason'] ?? userData['updateReason'] ?? userData['downgradeReason'] ?? '';
-    // ▲▲▲ KẾT THÚC SỬA LỖI 1 ▲▲▲
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -170,8 +169,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           _buildDetailRow(Icons.payment, 'Payment:', _formatPayment(userData['totalPaidAmount'])),
           _buildDetailRow(Icons.date_range, 'Ngày tạo:', createdDateString),
           _buildDetailRow(Icons.timer_off_outlined, 'Ngày hết hạn:', expiryDateString),
-          if (reason.isNotEmpty)
-            _buildDetailRow(Icons.info_outline, 'Lý do Cập nhật:', reason),
+          if (userData['sessionResetReason'] != null && (userData['sessionResetReason'] as String).isNotEmpty)
+            _buildDetailRow(Icons.info_outline, 'Lý do Cập nhật:', userData['sessionResetReason']),
         ],
       ),
     );
@@ -187,7 +186,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           const SizedBox(width: 8),
           Text(title, style: TextStyle(color: Colors.grey.shade400)),
           const SizedBox(width: 8),
-          // ▼▼▼ BẮT ĐẦU SỬA LỖI 2: Cho phép text hiển thị đầy đủ, không bị cắt ▼▼▼
           Expanded(
             child: Text(
               value,
@@ -195,7 +193,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               // Đã loại bỏ `overflow: TextOverflow.ellipsis`
             ),
           ),
-          // ▲▲▲ KẾT THÚC SỬA LỖI 2 ▲▲▲
           if (canCopy && value != 'N/A')
             InkWell(
               onTap: () {
@@ -262,7 +259,6 @@ class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
               border: OutlineInputBorder(),
             ),
             autofocus: true,
-            // Cho phép nhập nhiều dòng trong Dialog
             maxLines: null,
           ),
         ],

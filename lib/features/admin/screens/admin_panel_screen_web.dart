@@ -17,18 +17,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final AdminService _adminService = AdminService();
   final Set<String> _selectedUserIds = {};
 
-  // ▼▼▼ BẮT ĐẦU SỬA LỖI 1: Dùng ScrollController để giữ vị trí cuộn ▼▼▼
-  final ScrollController _verticalScrollController = ScrollController();
-  final ScrollController _horizontalScrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _verticalScrollController.dispose();
-    _horizontalScrollController.dispose();
-    super.dispose();
-  }
-  // ▲▲▲ KẾT THÚC SỬA LỖI 1 ▲▲▲
-
   void _handleUpdateUsers() {
     if (_selectedUserIds.isEmpty) return;
 
@@ -88,14 +76,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           }
           final userDocs = snapshot.data!.docs;
 
-          // ▼▼▼ BẮT ĐẦU SỬA LỖI 1: Gắn controller vào widget và bỏ Key ▼▼▼
+          // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
           return SingleChildScrollView(
-            controller: _verticalScrollController,
+            key: const PageStorageKey('admin_user_list_web_vertical'),
             scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
-              controller: _horizontalScrollController,
+              key: const PageStorageKey('admin_user_list_web_horizontal'), // Thêm Key cho cuộn ngang
               scrollDirection: Axis.horizontal,
-              // ▲▲▲ KẾT THÚC SỬA LỖI 1 ▲▲▲
+              // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
               child: DataTable(
                 showCheckboxColumn: true,
                 columns: const [
@@ -116,10 +104,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   final isSelected = _selectedUserIds.contains(userId);
                   final Timestamp? createdAt = userData['createdAt'];
                   final Timestamp? expiryDate = userData['subscriptionExpiryDate'];
-
-                  // ▼▼▼ BẮT ĐẦU SỬA LỖI 2: Hợp nhất các trường lý do để đảm bảo luôn hiển thị ▼▼▼
                   final reason = userData['sessionResetReason'] ?? userData['updateReason'] ?? userData['downgradeReason'] ?? '';
-                  // ▲▲▲ KẾT THÚC SỬA LỖI 2 ▲▲▲
 
                   return DataRow(
                     selected: isSelected,
@@ -154,14 +139,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           child: const Text('Active'),
                         ),
                       ),
-                      // ▼▼▼ BẮT ĐẦU SỬA LỖI 3: Cho phép lý do xuống dòng ▼▼▼
                       DataCell(
                         Container(
                           constraints: const BoxConstraints(maxWidth: 250), // Đặt chiều rộng tối đa cho ô
                           child: Text(reason, softWrap: true), // softWrap cho phép tự động xuống dòng
                         ),
                       ),
-                      // ▲▲▲ KẾT THÚC SỬA LỖI 3 ▲▲▲
                       DataCell(Text(_formatPayment(userData['totalPaidAmount']))),
                       DataCell(_buildCopyableCell(userData['activeSession']?['deviceId'])),
                       DataCell(_buildCopyableCell(userData['exnessClientUid'])),
@@ -261,7 +244,6 @@ class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
                 border: OutlineInputBorder(),
               ),
               autofocus: true,
-              maxLines: null,
             ),
           ],
         ),
