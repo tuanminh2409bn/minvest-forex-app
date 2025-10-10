@@ -4,19 +4,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// THÊM IMPORT NÀY
 import 'package:minvest_forex_app/features/auth/services/auth_service.dart';
 
-enum UserDataStatus {
-  initial,
-  loading,
-  fromCache,
-  fromServer,
-  error
-}
+enum UserDataStatus { initial, loading, fromCache, fromServer, error }
 
 class UserProvider with ChangeNotifier {
-  // THÊM MỚI: AuthService là nguồn xác thực duy nhất
   final AuthService _authService;
 
   String? _uid;
@@ -25,44 +17,42 @@ class UserProvider with ChangeNotifier {
   String? _verificationError;
   String? _role;
   UserDataStatus _status = UserDataStatus.initial;
-  bool _requiresDowngradeAcknowledgement = false;
-  String? _downgradeReason;
+
+  // --- THAY ĐỔI 1: Thay thế các trường cũ bằng trường mới chung hơn ---
+  bool _requiresSessionReset = false;
+  String? _sessionResetReason;
 
   String? get userTier => _userTier;
   String? get verificationStatus => _verificationStatus;
   String? get verificationError => _verificationError;
   String? get role => _role;
   UserDataStatus get status => _status;
-  bool get requiresDowngradeAcknowledgement => _requiresDowngradeAcknowledgement;
-  String? get downgradeReason => _downgradeReason;
+
+  // --- THAY ĐỔI 2: Cung cấp getter cho các thuộc tính mới ---
+  bool get requiresSessionReset => _requiresSessionReset;
+  String? get sessionResetReason => _sessionResetReason;
 
   StreamSubscription<DocumentSnapshot>? _userSubscription;
-  // THÊM MỚI: Subscription để lắng nghe trạng thái đăng nhập
   StreamSubscription<User?>? _authStateSubscription;
 
-  // THAY ĐỔI LỚN: Constructor giờ đây nhận AuthService
   UserProvider({required AuthService authService}) : _authService = authService {
-    // Tự động lắng nghe sự thay đổi trạng thái đăng nhập ngay khi được tạo
-    _authStateSubscription = _authService.authStateChanges.listen(_onAuthStateChanged);
+    _authStateSubscription =
+        _authService.authStateChanges.listen(_onAuthStateChanged);
   }
 
-  // Hàm này sẽ được gọi tự động khi người dùng đăng nhập hoặc đăng xuất
   void _onAuthStateChanged(User? firebaseUser) {
     if (firebaseUser != null) {
-      // Nếu có user, bắt đầu lắng nghe document của họ
       _listenToUserDocument(firebaseUser.uid);
     } else {
-      // Nếu không có user (đã đăng xuất), dọn dẹp
       stopListeningAndReset();
     }
   }
 
-  // Đổi tên hàm `listenToUserData` thành `_listenToUserDocument` để rõ ràng hơn
   void _listenToUserDocument(String uid) {
     _uid = uid;
     _userSubscription?.cancel();
     _status = UserDataStatus.loading;
-    notifyListeners(); // Thông báo trạng thái loading
+    notifyListeners();
 
     _userSubscription = FirebaseFirestore.instance
         .collection('users')
@@ -76,9 +66,13 @@ class UserProvider with ChangeNotifier {
         _verificationStatus = data['verificationStatus'];
         _verificationError = data['verificationError'];
         _role = data['role'] ?? 'user';
-        _requiresDowngradeAcknowledgement = data['requiresDowngradeAcknowledgement'] ?? false;
-        _downgradeReason = data['downgradeReason'];
-        _status = isFromCache ? UserDataStatus.fromCache : UserDataStatus.fromServer;
+
+        // --- THAY ĐỔI 3: Đọc dữ liệu từ các trường mới trên Firestore ---
+        _requiresSessionReset = data['requiresSessionReset'] ?? false;
+        _sessionResetReason = data['sessionResetReason'];
+
+        _status =
+        isFromCache ? UserDataStatus.fromCache : UserDataStatus.fromServer;
       } else {
         _resetState();
         _status = UserDataStatus.fromServer;
@@ -92,16 +86,18 @@ class UserProvider with ChangeNotifier {
     });
   }
 
-  Future<void> acknowledgeDowngrade() async {
+  // --- THAY ĐỔI 4: Hàm mới để xác nhận và xóa cờ hiệu ---
+  Future<void> acknowledgeSessionReset() async {
     if (_uid != null) {
       try {
         await FirebaseFirestore.instance.collection('users').doc(_uid!).update({
-          'requiresDowngradeAcknowledgement': FieldValue.delete(),
+          'requiresSessionReset': FieldValue.delete(),
+          'sessionResetReason': FieldValue.delete(),
         });
-        _requiresDowngradeAcknowledgement = false;
+        _requiresSessionReset = false;
         notifyListeners();
       } catch (e) {
-        print("Lỗi khi xác nhận hạ cấp: $e");
+        print("Lỗi khi xác nhận reset session: $e");
       }
     }
   }
@@ -120,8 +116,9 @@ class UserProvider with ChangeNotifier {
     _verificationStatus = null;
     _verificationError = null;
     _role = null;
-    _requiresDowngradeAcknowledgement = false;
-    _downgradeReason = null;
+    // --- THAY ĐỔI 5: Reset các trường mới ---
+    _requiresSessionReset = false;
+    _sessionResetReason = null;
   }
 
   void clearVerificationStatus() {
@@ -134,7 +131,7 @@ class UserProvider with ChangeNotifier {
   @override
   void dispose() {
     _userSubscription?.cancel();
-    _authStateSubscription?.cancel(); // Dọn dẹp subscription mới
+    _authStateSubscription?.cancel();
     super.dispose();
   }
 }

@@ -16,69 +16,43 @@ class AdminPanelScreen extends StatefulWidget {
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final AdminService _adminService = AdminService();
   final Set<String> _selectedUserIds = {};
-  final TextEditingController _reasonController = TextEditingController();
 
-  void _handleDowngradeUsers() {
+  void _handleUpdateUsers() {
     if (_selectedUserIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn ít nhất một tài khoản.')),
+      );
       return;
     }
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hạ cấp tài khoản về Free'),
-        content: TextField(
-          controller: _reasonController,
-          decoration: const InputDecoration(hintText: 'Nhập lý do hạ cấp (bắt buộc)...'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Hủy')),
-          FilledButton(
-            onPressed: () async {
-              final reason = _reasonController.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lý do không được để trống.')));
-                return;
-              }
-              Navigator.of(context).pop();
-              _executeDowngradeAction(reason: reason);
-            },
-            child: const Text('Xác nhận hạ cấp'),
-          ),
-        ],
+      builder: (context) => _UpdateUserTierDialog(
+        onConfirm: (tier, reason) {
+          _executeUpdateAction(tier: tier, reason: reason);
+        },
       ),
     );
   }
 
-  Future<void> _executeDowngradeAction({required String reason}) async {
-    final message = await _adminService.downgradeUsersToFree(
+  Future<void> _executeUpdateAction({
+    required String tier,
+    required String reason,
+  }) async {
+    final message = await _adminService.updateUserSubscriptionTier(
       userIds: _selectedUserIds.toList(),
+      tier: tier,
       reason: reason,
     );
     setState(() => _selectedUserIds.clear());
-    _reasonController.clear();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
   String _formatPayment(dynamic amount) {
-    if (amount == null || amount is! num || amount == 0) {
-      return 'N/A';
-    }
-    final format = NumberFormat.currency(
-        locale: 'vi_VN',
-        symbol: '',
-        decimalDigits: 0
-    );
+    if (amount == null || amount is! num || amount == 0) return 'N/A';
+    final format = NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0);
     return '\$${format.format(amount)}'.trim();
-  }
-
-  @override
-  void dispose() {
-    _reasonController.dispose();
-    super.dispose();
   }
 
   @override
@@ -95,7 +69,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             )
         ],
       ),
-      body: SafeArea( // <-- Thêm SafeArea ở đây
+      body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance.collection('users').orderBy('displayName').snapshots(),
           builder: (context, snapshot) {
@@ -107,22 +81,26 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             }
             final users = snapshot.data!.docs;
             return ListView.builder(
+              key: const PageStorageKey('admin_user_list_mobile'),
               itemCount: users.length,
               itemBuilder: (context, index) {
                 final userDoc = users[index];
                 final userData = userDoc.data() as Map<String, dynamic>;
                 final userId = userDoc.id;
                 final isSelected = _selectedUserIds.contains(userId);
-
                 return Container(
                   color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
                   child: ExpansionTile(
+                    key: PageStorageKey(userId),
                     leading: Checkbox(
                       value: isSelected,
                       onChanged: (bool? value) {
                         setState(() {
-                          if (value == true) _selectedUserIds.add(userId);
-                          else _selectedUserIds.remove(userId);
+                          if (value == true) {
+                            _selectedUserIds.add(userId);
+                          } else {
+                            _selectedUserIds.remove(userId);
+                          }
                         });
                       },
                     ),
@@ -141,11 +119,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: ElevatedButton.icon(
-            onPressed: _handleDowngradeUsers,
-            icon: const Icon(Icons.arrow_downward),
-            label: const Text('Hạ cấp về Free'),
+            onPressed: _handleUpdateUsers,
+            icon: const Icon(Icons.edit),
+            label: const Text('Cập nhật vai trò'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade800,
+              backgroundColor: Colors.blue.shade700,
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 48),
             ),
@@ -174,6 +152,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final createdDateString = createdAt != null ? DateFormat('dd/MM/yyyy HH:mm').format(createdAt.toDate()) : 'N/A';
     final expiryDateString = expiryDate != null ? DateFormat('dd/MM/yyyy').format(expiryDate.toDate()) : 'N/A';
 
+    // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
+    // Hợp nhất lý do từ các trường cũ và mới để đảm bảo luôn hiển thị
+    final reason = userData['sessionResetReason'] ?? userData['updateReason'] ?? userData['downgradeReason'] ?? '';
+    // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       color: Colors.black.withOpacity(0.1),
@@ -188,14 +171,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           _buildDetailRow(Icons.payment, 'Payment:', _formatPayment(userData['totalPaidAmount'])),
           _buildDetailRow(Icons.date_range, 'Ngày tạo:', createdDateString),
           _buildDetailRow(Icons.timer_off_outlined, 'Ngày hết hạn:', expiryDateString),
-          if(userData['downgradeReason'] != null && (userData['downgradeReason'] as String).isNotEmpty)
-            _buildDetailRow(Icons.info_outline, 'Lý do hạ cấp:', userData['downgradeReason']),
+          if (reason.isNotEmpty)
+            _buildDetailRow(Icons.info_outline, 'Lý do Cập nhật:', reason, isReason: true),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String title, String value, {bool canCopy = false}) {
+  // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
+  Widget _buildDetailRow(IconData icon, String title, String value, {bool canCopy = false, bool isReason = false}) {
+    // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -206,7 +191,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           Text(title, style: TextStyle(color: Colors.grey.shade400)),
           const SizedBox(width: 8),
           Expanded(
-              child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
+            // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
+            // Cho phép text tự do xuống dòng, không giới hạn
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+              // Bỏ `overflow: TextOverflow.ellipsis` để text có thể xuống dòng
+            ),
+          ),
+          // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
           if (canCopy && value != 'N/A')
             InkWell(
               onTap: () {
@@ -217,6 +210,84 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             )
         ],
       ),
+    );
+  }
+}
+
+// ... Dialog widget không thay đổi ...
+class _UpdateUserTierDialog extends StatefulWidget {
+  final Function(String tier, String reason) onConfirm;
+  const _UpdateUserTierDialog({required this.onConfirm});
+  @override
+  State<_UpdateUserTierDialog> createState() => __UpdateUserTierDialogState();
+}
+
+class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
+  final _reasonController = TextEditingController();
+  String _selectedTier = 'free';
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cập nhật vai trò người dùng'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            value: _selectedTier,
+            decoration: const InputDecoration(
+              labelText: 'Chọn vai trò mới',
+              border: OutlineInputBorder(),
+            ),
+            items: ['free', 'demo', 'vip', 'elite']
+                .map((tier) => DropdownMenuItem(
+              value: tier,
+              child: Text(tier.toUpperCase()),
+            ))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedTier = value);
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _reasonController,
+            decoration: const InputDecoration(
+              hintText: 'Nhập lý do thay đổi (bắt buộc)...',
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+            maxLines: null, // Cho phép nhập nhiều dòng
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final reason = _reasonController.text.trim();
+            if (reason.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Lý do không được để trống.')),
+              );
+              return;
+            }
+            Navigator.of(context).pop();
+            widget.onConfirm(_selectedTier, reason);
+          },
+          child: const Text('Xác nhận'),
+        ),
+      ],
     );
   }
 }

@@ -16,59 +16,47 @@ class AdminPanelScreen extends StatefulWidget {
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final AdminService _adminService = AdminService();
   final Set<String> _selectedUserIds = {};
-  final TextEditingController _reasonController = TextEditingController();
+  final ScrollController _verticalScrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
 
-  void _handleDowngradeUsers() {
+  @override
+  void dispose() {
+    _verticalScrollController.dispose();
+    _horizontalScrollController.dispose();
+    super.dispose();
+  }
+
+  void _handleUpdateUsers() {
     if (_selectedUserIds.isEmpty) return;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hạ cấp tài khoản về Free'),
-        content: TextField(controller: _reasonController, decoration: const InputDecoration(hintText: 'Nhập lý do hạ cấp (bắt buộc)...'), autofocus: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Hủy')),
-          FilledButton(
-            onPressed: () {
-              final reason = _reasonController.text.trim();
-              if (reason.isEmpty) return;
-              Navigator.of(context).pop();
-              _executeDowngradeAction(reason: reason);
-            },
-            child: const Text('Xác nhận hạ cấp'),
-          ),
-        ],
+      builder: (context) => _UpdateUserTierDialog(
+        onConfirm: (tier, reason) {
+          _executeUpdateAction(tier: tier, reason: reason);
+        },
       ),
     );
   }
 
-  Future<void> _executeDowngradeAction({required String reason}) async {
-    final message = await _adminService.downgradeUsersToFree(
-        userIds: _selectedUserIds.toList(),
-        reason: reason
+  Future<void> _executeUpdateAction({
+    required String tier,
+    required String reason,
+  }) async {
+    final message = await _adminService.updateUserSubscriptionTier(
+      userIds: _selectedUserIds.toList(),
+      tier: tier,
+      reason: reason,
     );
     setState(() => _selectedUserIds.clear());
-    _reasonController.clear();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
   String _formatPayment(dynamic amount) {
-    if (amount == null || amount is! num || amount == 0) {
-      return 'N/A';
-    }
-    final format = NumberFormat.currency(
-        locale: 'vi_VN',
-        symbol: '',
-        decimalDigits: 0
-    );
+    if (amount == null || amount is! num || amount == 0) return 'N/A';
+    final format = NumberFormat.currency(locale: 'vi_VN', symbol: '', decimalDigits: 0);
     return '\$${format.format(amount)}'.trim();
-  }
-
-  @override
-  void dispose() {
-    _reasonController.dispose();
-    super.dispose();
   }
 
   @override
@@ -78,7 +66,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         title: Text('Bảng quản lý Admin (${_selectedUserIds.length} đã chọn)'),
         actions: [
           if (_selectedUserIds.isNotEmpty)
-            IconButton(icon: const Icon(Icons.clear_all), onPressed: () => setState(() => _selectedUserIds.clear()), tooltip: 'Bỏ chọn tất cả')
+            IconButton(
+              icon: const Icon(Icons.clear_all),
+              onPressed: () => setState(() => _selectedUserIds.clear()),
+              tooltip: 'Bỏ chọn tất cả',
+            )
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -93,8 +85,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           final userDocs = snapshot.data!.docs;
 
           return SingleChildScrollView(
+            controller: _verticalScrollController,
             scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
+              controller: _horizontalScrollController,
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 showCheckboxColumn: true,
@@ -102,7 +96,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   DataColumn(label: Text('Tên & Email')),
                   DataColumn(label: Text('Group')),
                   DataColumn(label: Text('Trạng thái')),
-                  DataColumn(label: Text('Lý do hạ cấp')),
+                  DataColumn(label: Text('Lý do Cập nhật')),
                   DataColumn(label: Text('Payment')),
                   DataColumn(label: Text('Mobile UID')),
                   DataColumn(label: Text('Exness Client UID')),
@@ -117,24 +111,32 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   final Timestamp? createdAt = userData['createdAt'];
                   final Timestamp? expiryDate = userData['subscriptionExpiryDate'];
 
+                  // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
+                  // Hợp nhất lý do từ các trường cũ và mới để đảm bảo luôn hiển thị
+                  final reason = userData['sessionResetReason'] ?? userData['updateReason'] ?? userData['downgradeReason'] ?? '';
+                  // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+
                   return DataRow(
                     selected: isSelected,
                     onSelectChanged: (selected) {
                       setState(() {
-                        if (selected == true) _selectedUserIds.add(userId);
-                        else _selectedUserIds.remove(userId);
+                        if (selected == true) {
+                          _selectedUserIds.add(userId);
+                        } else {
+                          _selectedUserIds.remove(userId);
+                        }
                       });
                     },
                     cells: [
                       DataCell(
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(userData['displayName'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text(userData['email'] ?? 'N/A', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-                            ],
-                          )
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(userData['displayName'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(userData['email'] ?? 'N/A', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                          ],
+                        ),
                       ),
                       DataCell(Text(userData['subscriptionTier']?.toUpperCase() ?? 'FREE')),
                       DataCell(
@@ -147,7 +149,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           child: const Text('Active'),
                         ),
                       ),
-                      DataCell(Text(userData['downgradeReason'] ?? '')),
+                      // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
+                      DataCell(
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 250), // Đặt chiều rộng tối đa
+                          child: Text(reason, softWrap: true), // Cho phép text xuống dòng
+                        ),
+                      ),
+                      // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
                       DataCell(Text(_formatPayment(userData['totalPaidAmount']))),
                       DataCell(_buildCopyableCell(userData['activeSession']?['deviceId'])),
                       DataCell(_buildCopyableCell(userData['exnessClientUid'])),
@@ -164,10 +173,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       ),
       floatingActionButton: _selectedUserIds.isNotEmpty
           ? FloatingActionButton.extended(
-        onPressed: _handleDowngradeUsers,
-        label: const Text('Hạ cấp về Free'),
-        icon: const Icon(Icons.arrow_downward),
-        backgroundColor: Colors.orange.shade800,
+        onPressed: _handleUpdateUsers,
+        label: const Text('Cập nhật vai trò'),
+        icon: const Icon(Icons.edit),
+        backgroundColor: Colors.blue.shade700,
       )
           : null,
     );
@@ -187,6 +196,87 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã sao chép!'), duration: Duration(seconds: 1)));
           },
           child: const Icon(Icons.copy, size: 14, color: Colors.blueAccent),
+        ),
+      ],
+    );
+  }
+}
+
+// ... Dialog widget không thay đổi ...
+class _UpdateUserTierDialog extends StatefulWidget {
+  final Function(String tier, String reason) onConfirm;
+  const _UpdateUserTierDialog({required this.onConfirm});
+  @override
+  State<_UpdateUserTierDialog> createState() => __UpdateUserTierDialogState();
+}
+
+class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
+  final _reasonController = TextEditingController();
+  String _selectedTier = 'free';
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cập nhật vai trò người dùng'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              value: _selectedTier,
+              decoration: const InputDecoration(
+                labelText: 'Chọn vai trò mới',
+                border: OutlineInputBorder(),
+              ),
+              items: ['free', 'demo', 'vip', 'elite']
+                  .map((tier) => DropdownMenuItem(
+                value: tier,
+                child: Text(tier.toUpperCase()),
+              ))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedTier = value);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _reasonController,
+              decoration: const InputDecoration(
+                hintText: 'Nhập lý do thay đổi (bắt buộc)...',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+              maxLines: null,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final reason = _reasonController.text.trim();
+            if (reason.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Lý do không được để trống.')),
+              );
+              return;
+            }
+            Navigator.of(context).pop();
+            widget.onConfirm(_selectedTier, reason);
+          },
+          child: const Text('Xác nhận'),
         ),
       ],
     );

@@ -748,43 +748,56 @@ export const manageUserSession = onCall({ region: "asia-southeast1" }, async (re
   }
 });
 
-export const downgradeUsersToFree = onCall({ region: "asia-southeast1" }, async (request) => {
+export const updateUserSubscriptionTier = onCall({ region: "asia-southeast1" }, async (request) => {
+    // 1. Xác thực quyền admin (giữ nguyên)
     const adminUid = request.auth?.uid;
     if (!adminUid) {
-        throw new functions.https.HttpsError("unauthenticated", "Bạn phải đăng nhập để thực hiện hành động này.");
+        throw new HttpsError("unauthenticated", "Bạn phải đăng nhập để thực hiện hành động này.");
     }
     const adminUserDoc = await firestore.collection("users").doc(adminUid).get();
     if (adminUserDoc.data()?.role !== "admin") {
-        throw new functions.https.HttpsError("permission-denied", "Bạn không có quyền thực hiện hành động này.");
+        throw new HttpsError("permission-denied", "Bạn không có quyền thực hiện hành động này.");
     }
 
-    const { userIds, reason } = request.data;
-    if (!userIds || !Array.isArray(userIds)) {
-        throw new functions.https.HttpsError("invalid-argument", "Dữ liệu 'userIds' gửi lên không hợp lệ.");
+    // 2. Lấy và kiểm tra các tham số đầu vào (giữ nguyên)
+    const { userIds, tier, reason } = request.data;
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        throw new HttpsError("invalid-argument", "Dữ liệu 'userIds' gửi lên không hợp lệ.");
+    }
+    const validTiers = ['free', 'demo', 'vip', 'elite'];
+    if (!tier || typeof tier !== 'string' || !validTiers.includes(tier)) {
+        throw new HttpsError("invalid-argument", `Gói '${tier}' không hợp lệ. Các gói hợp lệ là: ${validTiers.join(', ')}.`);
+    }
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+        throw new HttpsError("invalid-argument", "Lý do thay đổi không được để trống.");
     }
 
-    const hasCustomReason = reason && typeof reason === 'string' && reason.trim().length > 0;
-
+    // 3. Chuẩn bị nội dung thông báo cho người dùng (giữ nguyên)
     const reasonForNotification = {
-        vi: hasCustomReason ? reason : "Tài khoản của bạn đã được chuyển về gói Free do vi phạm chính sách. Vui lòng đăng nhập lại.",
-        en: hasCustomReason ? reason : "Your account has been downgraded to the Free plan due to a policy violation. Please log in again.",
+        vi: `Tài khoản của bạn đã được quản trị viên cập nhật thành gói ${tier.toUpperCase()}. Lý do: ${reason}. Vui lòng đăng nhập lại.`,
+        en: `Your account has been updated to the ${tier.toUpperCase()} plan by an administrator. Reason: ${reason}. Please log in again.`,
     };
 
     const batch = firestore.batch();
     const usersToNotify: { token: string; lang: string }[] = [];
 
+    // 4. Lặp qua danh sách user và cập nhật dữ liệu
     for (const userId of userIds) {
         if (userId === adminUid) continue;
 
         const userRef = firestore.collection("users").doc(userId);
 
+        // ▼▼▼ BẮT ĐẦU THAY ĐỔI ▼▼▼
         const updateData = {
-            subscriptionTier: 'free',
-            requiresDowngradeAcknowledgement: true,
-            downgradeReason: hasCustomReason ? reason : "Tài khoản của bạn đã được quản trị viên chuyển về gói Free.",
-            isSuspended: admin.firestore.FieldValue.delete(),
-            suspensionReason: admin.firestore.FieldValue.delete()
+            subscriptionTier: tier,
+            requiresSessionReset: true, // Thêm cờ hiệu để client bắt sự kiện
+            sessionResetReason: `Cập nhật thành ${tier.toUpperCase()}. Lý do: ${reason}`, // Lưu lý do vào trường mới
+            // Xóa các trường cũ không còn dùng
+            updateReason: admin.firestore.FieldValue.delete(),
+            requiresDowngradeAcknowledgement: admin.firestore.FieldValue.delete(),
+            downgradeReason: admin.firestore.FieldValue.delete(),
         };
+        // ▲▲▲ KẾT THÚC THAY ĐỔI ▲▲▲
         batch.update(userRef, updateData);
 
         const userDoc = await userRef.get();
@@ -798,8 +811,10 @@ export const downgradeUsersToFree = onCall({ region: "asia-southeast1" }, async 
         }
     }
 
+    // 5. Commit các thay đổi vào Firestore (giữ nguyên)
     await batch.commit();
 
+    // 6. Gửi thông báo đẩy đến các thiết bị của người dùng (giữ nguyên)
     if (usersToNotify.length > 0) {
         const promises = usersToNotify.map(user => {
             const message = {
@@ -812,13 +827,14 @@ export const downgradeUsersToFree = onCall({ region: "asia-southeast1" }, async 
                 android: { priority: "high" as const },
             };
             return admin.messaging().send(message).catch(err => {
-                functions.logger.error(`Lỗi gửi thông báo hạ cấp tới ${user.token}`, err);
+                functions.logger.error(`Lỗi gửi thông báo cập nhật gói tới ${user.token}`, err);
             });
         });
         await Promise.all(promises);
     }
 
-    return { status: "success", message: `Đã hạ cấp thành công ${userIds.length} tài khoản về Free.` };
+    // 7. Trả về kết quả thành công (giữ nguyên)
+    return { status: "success", message: `Đã cập nhật thành công ${userIds.length} tài khoản thành gói ${tier.toUpperCase()}.` };
 });
 
 export const resetDemoNotificationCounters = onSchedule({ schedule: "1 0 * * *", timeZone: "Asia/Ho_Chi_Minh", region: "asia-southeast1" }, async () => {

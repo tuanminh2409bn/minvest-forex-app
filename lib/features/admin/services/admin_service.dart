@@ -6,17 +6,21 @@ class AdminService {
   final FirebaseFunctions _functions =
   FirebaseFunctions.instanceFor(region: "asia-southeast1");
 
-  // Đổi tên hàm và tham số cho đúng nghiệp vụ
-  Future<String> downgradeUsersToFree({
+  /// Cập nhật vai trò (subscriptionTier) cho danh sách người dùng.
+  ///
+  /// Gọi đến Cloud Function `updateUserSubscriptionTier` để thay đổi vai trò
+  /// của người dùng thành [tier] với [reason] được cung cấp.
+  Future<String> updateUserSubscriptionTier({
     required List<String> userIds,
-    required String reason, // Lý do bây giờ là bắt buộc
+    required String tier,
+    required String reason,
   }) async {
     try {
-      // Gọi đúng tên Cloud Function mới
-      final callable = _functions.httpsCallable('downgradeUsersToFree');
+      // 1. Đổi tên hàm callable để khớp với Cloud Function mới
+      final callable = _functions.httpsCallable('updateUserSubscriptionTier');
       final result = await callable.call(<String, dynamic>{
         'userIds': userIds,
-        // Tham số `newStatus` không còn nữa, chỉ cần `reason`
+        'tier': tier, // 2. Thêm tham số 'tier' mới
         'reason': reason,
       });
       return result.data['message'] ?? 'Thao tác thành công!';

@@ -17,10 +17,12 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  bool _isDowngradeDialogShowing = false;
+  // --- THAY ĐỔI 1: Đổi tên biến cờ cho tổng quát ---
+  bool _isSessionResetDialogShowing = false;
 
   void _showErrorDialog(BuildContext context, String message) {
-    final displayMessage = message.startsWith('Exception: ') ? message.substring(11) : message;
+    final displayMessage =
+    message.startsWith('Exception: ') ? message.substring(11) : message;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -36,12 +38,12 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  void _showDowngradeDialog(BuildContext context, UserProvider userProvider) {
-    // SỬA LỖI: Sử dụng đúng tên biến đã khai báo
-    if (_isDowngradeDialogShowing) return;
+  // --- THAY ĐỔI 2: Cập nhật hàm hiển thị dialog ---
+  void _showSessionResetDialog(BuildContext context, UserProvider userProvider) {
+    if (_isSessionResetDialogShowing) return;
 
     setState(() {
-      _isDowngradeDialogShowing = true;
+      _isSessionResetDialogShowing = true;
     });
 
     showDialog(
@@ -51,15 +53,18 @@ class _AuthGateState extends State<AuthGate> {
         canPop: false,
         child: AlertDialog(
           title: const Text('Thông báo quan trọng'),
-          content: Text(userProvider.downgradeReason ?? 'Tài khoản của bạn đã được chuyển về gói Free.'),
+          // Sử dụng lý do từ sessionResetReason
+          content: Text(userProvider.sessionResetReason ??
+              'Tài khoản của bạn có sự thay đổi. Vui lòng đăng nhập lại.'),
           actions: [
             TextButton(
               onPressed: () async {
-                await userProvider.acknowledgeDowngrade();
+                // Gọi hàm mới để xóa cờ hiệu trên Firestore
+                await userProvider.acknowledgeSessionReset();
                 if (mounted) {
                   Navigator.of(dialogContext).pop();
                   setState(() {
-                    _isDowngradeDialogShowing = false;
+                    _isSessionResetDialogShowing = false;
                   });
                 }
               },
@@ -90,10 +95,12 @@ class _AuthGateState extends State<AuthGate> {
         return Consumer<UserProvider>(
           builder: (context, userProvider, child) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (userProvider.requiresDowngradeAcknowledgement &&
+              // --- THAY ĐỔI 3: Lắng nghe cờ hiệu mới ---
+              if (userProvider.requiresSessionReset &&
                   state.status == AuthStatus.authenticated &&
                   mounted) {
-                _showDowngradeDialog(context, userProvider);
+                // Gọi hàm hiển thị dialog mới
+                _showSessionResetDialog(context, userProvider);
               }
             });
 
