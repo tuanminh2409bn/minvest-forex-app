@@ -16,6 +16,8 @@ class AdminPanelScreen extends StatefulWidget {
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final AdminService _adminService = AdminService();
   final Set<String> _selectedUserIds = {};
+
+  // ▼▼▼ BẮT ĐẦU SỬA LỖI 1: Dùng ScrollController để giữ vị trí cuộn ▼▼▼
   final ScrollController _verticalScrollController = ScrollController();
   final ScrollController _horizontalScrollController = ScrollController();
 
@@ -25,9 +27,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _horizontalScrollController.dispose();
     super.dispose();
   }
+  // ▲▲▲ KẾT THÚC SỬA LỖI 1 ▲▲▲
 
   void _handleUpdateUsers() {
     if (_selectedUserIds.isEmpty) return;
+
     showDialog(
       context: context,
       builder: (context) => _UpdateUserTierDialog(
@@ -84,12 +88,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           }
           final userDocs = snapshot.data!.docs;
 
+          // ▼▼▼ BẮT ĐẦU SỬA LỖI 1: Gắn controller vào widget và bỏ Key ▼▼▼
           return SingleChildScrollView(
             controller: _verticalScrollController,
             scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
               controller: _horizontalScrollController,
               scrollDirection: Axis.horizontal,
+              // ▲▲▲ KẾT THÚC SỬA LỖI 1 ▲▲▲
               child: DataTable(
                 showCheckboxColumn: true,
                 columns: const [
@@ -111,10 +117,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   final Timestamp? createdAt = userData['createdAt'];
                   final Timestamp? expiryDate = userData['subscriptionExpiryDate'];
 
-                  // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
-                  // Hợp nhất lý do từ các trường cũ và mới để đảm bảo luôn hiển thị
+                  // ▼▼▼ BẮT ĐẦU SỬA LỖI 2: Hợp nhất các trường lý do để đảm bảo luôn hiển thị ▼▼▼
                   final reason = userData['sessionResetReason'] ?? userData['updateReason'] ?? userData['downgradeReason'] ?? '';
-                  // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+                  // ▲▲▲ KẾT THÚC SỬA LỖI 2 ▲▲▲
 
                   return DataRow(
                     selected: isSelected,
@@ -149,14 +154,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           child: const Text('Active'),
                         ),
                       ),
-                      // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
+                      // ▼▼▼ BẮT ĐẦU SỬA LỖI 3: Cho phép lý do xuống dòng ▼▼▼
                       DataCell(
                         Container(
-                          constraints: const BoxConstraints(maxWidth: 250), // Đặt chiều rộng tối đa
-                          child: Text(reason, softWrap: true), // Cho phép text xuống dòng
+                          constraints: const BoxConstraints(maxWidth: 250), // Đặt chiều rộng tối đa cho ô
+                          child: Text(reason, softWrap: true), // softWrap cho phép tự động xuống dòng
                         ),
                       ),
-                      // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+                      // ▲▲▲ KẾT THÚC SỬA LỖI 3 ▲▲▲
                       DataCell(Text(_formatPayment(userData['totalPaidAmount']))),
                       DataCell(_buildCopyableCell(userData['activeSession']?['deviceId'])),
                       DataCell(_buildCopyableCell(userData['exnessClientUid'])),
@@ -202,10 +207,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 }
 
-// ... Dialog widget không thay đổi ...
 class _UpdateUserTierDialog extends StatefulWidget {
   final Function(String tier, String reason) onConfirm;
+
   const _UpdateUserTierDialog({required this.onConfirm});
+
   @override
   State<_UpdateUserTierDialog> createState() => __UpdateUserTierDialogState();
 }
@@ -213,6 +219,7 @@ class _UpdateUserTierDialog extends StatefulWidget {
 class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
   final _reasonController = TextEditingController();
   String _selectedTier = 'free';
+
   @override
   void dispose() {
     _reasonController.dispose();

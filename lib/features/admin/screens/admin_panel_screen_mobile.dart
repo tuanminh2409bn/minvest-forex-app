@@ -91,7 +91,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 return Container(
                   color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
                   child: ExpansionTile(
-                    key: PageStorageKey(userId),
+                    key: PageStorageKey(userId), // Giữ Key duy nhất cho mỗi ExpansionTile
                     leading: Checkbox(
                       value: isSelected,
                       onChanged: (bool? value) {
@@ -152,10 +152,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final createdDateString = createdAt != null ? DateFormat('dd/MM/yyyy HH:mm').format(createdAt.toDate()) : 'N/A';
     final expiryDateString = expiryDate != null ? DateFormat('dd/MM/yyyy').format(expiryDate.toDate()) : 'N/A';
 
-    // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
-    // Hợp nhất lý do từ các trường cũ và mới để đảm bảo luôn hiển thị
+    // ▼▼▼ BẮT ĐẦU SỬA LỖI 1: Hợp nhất các trường lý do để đảm bảo luôn hiển thị ▼▼▼
     final reason = userData['sessionResetReason'] ?? userData['updateReason'] ?? userData['downgradeReason'] ?? '';
-    // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+    // ▲▲▲ KẾT THÚC SỬA LỖI 1 ▲▲▲
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -172,15 +171,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           _buildDetailRow(Icons.date_range, 'Ngày tạo:', createdDateString),
           _buildDetailRow(Icons.timer_off_outlined, 'Ngày hết hạn:', expiryDateString),
           if (reason.isNotEmpty)
-            _buildDetailRow(Icons.info_outline, 'Lý do Cập nhật:', reason, isReason: true),
+            _buildDetailRow(Icons.info_outline, 'Lý do Cập nhật:', reason),
         ],
       ),
     );
   }
 
-  // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
-  Widget _buildDetailRow(IconData icon, String title, String value, {bool canCopy = false, bool isReason = false}) {
-    // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+  Widget _buildDetailRow(IconData icon, String title, String value, {bool canCopy = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -190,16 +187,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           const SizedBox(width: 8),
           Text(title, style: TextStyle(color: Colors.grey.shade400)),
           const SizedBox(width: 8),
+          // ▼▼▼ BẮT ĐẦU SỬA LỖI 2: Cho phép text hiển thị đầy đủ, không bị cắt ▼▼▼
           Expanded(
-            // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
-            // Cho phép text tự do xuống dòng, không giới hạn
             child: Text(
               value,
               style: const TextStyle(fontWeight: FontWeight.w500),
-              // Bỏ `overflow: TextOverflow.ellipsis` để text có thể xuống dòng
+              // Đã loại bỏ `overflow: TextOverflow.ellipsis`
             ),
           ),
-          // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
+          // ▲▲▲ KẾT THÚC SỬA LỖI 2 ▲▲▲
           if (canCopy && value != 'N/A')
             InkWell(
               onTap: () {
@@ -214,10 +210,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 }
 
-// ... Dialog widget không thay đổi ...
 class _UpdateUserTierDialog extends StatefulWidget {
   final Function(String tier, String reason) onConfirm;
+
   const _UpdateUserTierDialog({required this.onConfirm});
+
   @override
   State<_UpdateUserTierDialog> createState() => __UpdateUserTierDialogState();
 }
@@ -225,6 +222,7 @@ class _UpdateUserTierDialog extends StatefulWidget {
 class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
   final _reasonController = TextEditingController();
   String _selectedTier = 'free';
+
   @override
   void dispose() {
     _reasonController.dispose();
@@ -264,7 +262,8 @@ class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
               border: OutlineInputBorder(),
             ),
             autofocus: true,
-            maxLines: null, // Cho phép nhập nhiều dòng
+            // Cho phép nhập nhiều dòng trong Dialog
+            maxLines: null,
           ),
         ],
       ),
