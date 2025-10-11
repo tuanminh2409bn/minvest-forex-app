@@ -461,6 +461,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactUs => 'Contact Us';
 
   @override
+  String get tabChat => 'Chat';
+
+  @override
   String get signalEntry => 'Entry';
 
   @override

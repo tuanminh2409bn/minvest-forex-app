@@ -694,6 +694,95 @@ export const onSignalUpdated = onDocumentUpdated({ document: "signals/{signalId}
 });
 
 // =================================================================
+// === FUNCTION GỬI THÔNG BÁO CHO LIVE CHAT ===
+// =================================================================
+export const onNewChatMessage = onDocumentCreated(
+  { document: "chat_rooms/{userId}/messages/{messageId}", region: "asia-southeast1", memory: "256MiB" },
+  async (event) => {
+    const messageData = event.data?.data();
+    if (!messageData) {
+      functions.logger.warn("Không có dữ liệu tin nhắn, kết thúc.");
+      return null;
+    }
+
+    const userId = event.params.userId;
+    const senderId = messageData.senderId;
+    const senderName = messageData.senderName || "Một ai đó";
+    const messageText = messageData.text || "Đã gửi một tin nhắn.";
+
+    // --- Trường hợp 1: Người dùng gửi tin nhắn cho Support ---
+    if (senderId === userId) {
+      functions.logger.log(`Người dùng ${userId} đã gửi tin nhắn. Báo cho các tài khoản support.`);
+
+      const supportUsersSnapshot = await firestore
+        .collection("users")
+        .where("role", "==", "support")
+        .get();
+
+      if (supportUsersSnapshot.empty) {
+        functions.logger.warn("Không tìm thấy tài khoản support nào để gửi thông báo.");
+        return null;
+      }
+
+      const tokens: string[] = [];
+      supportUsersSnapshot.forEach(doc => {
+        const token = doc.data().activeSession?.fcmToken;
+        if (token) {
+          tokens.push(token);
+        }
+      });
+
+      if (tokens.length === 0) {
+        functions.logger.warn("Không có tài khoản support nào có token để nhận thông báo.");
+        return null;
+      }
+
+      // ▼▼▼ THAY ĐỔI 1: SỬA LỖI - DÙNG `sendEachForMulticast` THAY CHO `sendToDevice` ▼▼▼
+      const messagePayload = {
+        notification: {
+          title: `Tin nhắn mới từ ${senderName}`,
+          body: messageText,
+        },
+        data: {
+          type: "new_chat_message",
+          chatRoomId: userId,
+        },
+      };
+
+      await admin.messaging().sendEachForMulticast({tokens, ...messagePayload});
+    }
+    // --- Trường hợp 2: Support trả lời người dùng ---
+    else {
+      functions.logger.log(`Support ${senderId} đã trả lời người dùng ${userId}.`);
+
+      const userDoc = await firestore.collection("users").doc(userId).get();
+      const userToken = userDoc.data()?.activeSession?.fcmToken;
+
+      if (!userToken) {
+        functions.logger.warn(`Người dùng ${userId} không có token để nhận thông báo trả lời.`);
+        return null;
+      }
+
+      // ▼▼▼ THAY ĐỔI 2: SỬA LỖI - DÙNG `send` THAY CHO `sendToDevice` CHO HIỆU QUẢ HƠN ▼▼▼
+      const message: admin.messaging.Message = {
+        token: userToken,
+        notification: {
+          title: `Phản hồi từ ${senderName}`,
+          body: messageText,
+        },
+        data: {
+          type: "new_chat_message",
+          chatRoomId: userId,
+        },
+      };
+
+      await admin.messaging().send(message);
+    }
+    return null;
+  }
+);
+
+// =================================================================
 // === FUNCTION QUẢN LÝ TIỆN ÍCH KHÁC ===
 // =================================================================
 export const manageUserSession = onCall({ region: "asia-southeast1" }, async (request) => {

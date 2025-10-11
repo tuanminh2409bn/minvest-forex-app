@@ -142,6 +142,7 @@
     "signalStatusRunning": "RUNNING",
     "signalStatusClosed": "CLOSED",
     "contactUs": "Contact Us",
+    "tabChat": "Chat",
     "signalEntry": "Entry",
     "price1Month": "$78",
     "price12Months": "$460",

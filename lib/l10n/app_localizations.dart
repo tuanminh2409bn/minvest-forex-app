@@ -944,6 +944,12 @@ abstract class AppLocalizations {
   /// **'Contact Us'**
   String get contactUs;
 
+  /// No description provided for @tabChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get tabChat;
+
   /// No description provided for @signalEntry.
   ///
   /// In en, this message translates to:

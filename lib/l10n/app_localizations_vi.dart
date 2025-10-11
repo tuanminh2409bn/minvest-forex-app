@@ -464,6 +464,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get contactUs => 'Liên Hệ Hỗ Trợ';
 
   @override
+  String get tabChat => 'Trò chuyện';
+
+  @override
   String get signalEntry => 'Vùng vào lệnh';
 
   @override
