@@ -76,15 +76,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           }
           final userDocs = snapshot.data!.docs;
 
-          // ▼▼▼ BẮT ĐẦU SỬA LỖI ▼▼▼
           return SingleChildScrollView(
             key: const PageStorageKey('admin_user_list_web_vertical'),
             scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
               key: const PageStorageKey('admin_user_list_web_horizontal'), // Thêm Key cho cuộn ngang
               scrollDirection: Axis.horizontal,
-              // ▲▲▲ KẾT THÚC SỬA LỖI ▲▲▲
               child: DataTable(
+                dataRowMinHeight: kMinInteractiveDimension,
+                dataRowMaxHeight: double.infinity,
                 showCheckboxColumn: true,
                 columns: const [
                   DataColumn(label: Text('Tên & Email')),
@@ -140,9 +140,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         ),
                       ),
                       DataCell(
-                        Container(
-                          constraints: const BoxConstraints(maxWidth: 250), // Đặt chiều rộng tối đa cho ô
-                          child: Text(reason, softWrap: true), // softWrap cho phép tự động xuống dòng
+                        Align(
+                          alignment: Alignment.topLeft,
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 250),
+                            padding: const EdgeInsets.symmetric(vertical: 8.0), // Thêm padding cho đẹp
+                            child: Text(reason, softWrap: true),
+                          ),
                         ),
                       ),
                       DataCell(Text(_formatPayment(userData['totalPaidAmount']))),
@@ -244,6 +248,7 @@ class __UpdateUserTierDialogState extends State<_UpdateUserTierDialog> {
                 border: OutlineInputBorder(),
               ),
               autofocus: true,
+              maxLines: null,
             ),
           ],
         ),
